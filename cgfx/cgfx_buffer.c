@@ -45,6 +45,10 @@ CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
     bufferDesc.mappedAtCreation = false;
 
     result.buffer = wgpuDeviceCreateBuffer(ctx->device, &bufferDesc);
+    wgpuQueueWriteBuffer(ctx->queue, result.buffer, 0, data, data_size);
+
+    result.size = data_size;
+    result.count = count;
 
     (void)ctx;
     (void)data;
@@ -131,6 +135,8 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
     bufferDesc.mappedAtCreation = false;
 
     result.buffer = wgpuDeviceCreateBuffer(ctx->device, &bufferDesc);
+    result.size = data_size;
+    result.count = count;
 
     (void)ctx;
     (void)data;
@@ -139,3 +145,11 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
 
     return result;
 }
+
+
+//   CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
+//                                  WGPUBufferUsageFlags usage,
+//                                  const void *data,    // NULL = don't upload
+//                                  uint64_t size) {
+//
+// }

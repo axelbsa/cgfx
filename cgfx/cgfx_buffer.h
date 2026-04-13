@@ -25,9 +25,10 @@
  * and can be used for vertex buffers (number of vertices) if desired.
  */
 typedef struct CgfxBuffer {
-    WGPUBuffer  buffer;  /**< The WebGPU buffer handle.                       */
+    WGPUBuffer  buffer;  /**< The WebGPU buffer handle.                        */
     uint64_t    size;    /**< Total size of the buffer in bytes.               */
     uint32_t    count;   /**< Number of elements (vertices or indices).        */
+    bool        ready;   /**< Set ready flag in callback                       */
 } CgfxBuffer;
 
 /**
@@ -105,5 +106,11 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
                                       const void *data,
                                       uint64_t data_size,
                                       uint32_t count);
+
+/* Create a generic buffer function */
+  CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
+                                 WGPUBufferUsageFlags usage,
+                                 const void *data,    // NULL = don't upload
+                                 uint64_t size);
 
 #endif /* CGFX_BUFFER_H */

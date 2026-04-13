@@ -26,5 +26,5 @@ endfunction()
 
 # --- Examples ---
 cgfx_add_example(triangle           triangle/main.c)
-cgfx_add_example(playing_with_buffers playing_with_buffers/main.c)
+cgfx_add_example(buffers            playing_with_buffers/main.c)
 cgfx_add_example(compute            compute/main.c)

@@ -6,6 +6,9 @@
  * This is the simplest possible cgfx application: create a context,
  * a shader, a pipeline, and render in a loop.
  */
+#include <stdio.h>
+#include <webgpu/wgpu.h>
+
 #include "cgfx.h"
 
 static const char *shader_source =
@@ -28,6 +31,26 @@ static const char *shader_source =
     "    return vec4f(0.8, 0.4, 1.0, 1.0);                                  \n"
     "}                                                                      \n";
 
+
+void onBuffer2Mapped(const WGPUBufferMapAsyncStatus status, void* pUserData ) {
+    CgfxBuffer *buffer = (CgfxBuffer*)pUserData;
+    if (status != WGPUBufferMapAsyncStatus_Success) return;
+    buffer->ready = true;
+    fprintf(stderr, "Buffer2 mapped with status %d\n", status);
+}
+
+// We define a function that hides implementation-specific variants of device polling:
+void wgpuPollEvents([[maybe_unused]] WGPUDevice device, [[maybe_unused]] bool yieldToWebBrowser) {
+#if defined(WEBGPU_BACKEND_DAWN)
+    wgpuDeviceTick(device);
+#elif defined(WEBGPU_BACKEND_WGPU)
+    wgpuDevicePoll(device, false, nullptr);
+#elif defined(WEBGPU_BACKEND_EMSCRIPTEN)
+    if (yieldToWebBrowser) {
+        emscripten_sleep(100);
+    }
+#endif
+}
 
 int main(void) {
     /* Initialize the rendering context: window, device, queue, surface */
@@ -59,16 +82,42 @@ int main(void) {
         return 1;
     }
 
-    /* Main render loop */
-    while (cgfx_ctx_is_running(&ctx)) {
-        CgfxFrame frame;
-        if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){ 0.1, 0.1, 0.2, 1.0 })) {
-            /* Record draw commands directly on the render pass */
-            wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
-            wgpuRenderPassEncoderDraw(frame.render_pass, 3, 1, 0, 0);
-            cgfx_frame_end(&ctx, &frame);
-        }
+    fprintf(stderr,"Sizeof uin64_t=%lu\n", sizeof(uint64_t));
+    uint64_t foo[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+    fprintf(stderr,"Sizeof foo=%lu\n", sizeof(foo));
+    CgfxBuffer buffer1 = cgfx_buffer_create_vertex(&ctx, (void*)foo, sizeof(foo), 16);
+    CgfxBuffer buffer2 = cgfx_buffer_create_mapping(&ctx, nullptr, sizeof(foo), 16);
+
+    WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(ctx.device, nullptr);
+    wgpuCommandEncoderCopyBufferToBuffer(encoder, buffer1.buffer, 0, buffer2.buffer, 0, sizeof(foo));
+    WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, nullptr);
+    wgpuCommandEncoderRelease(encoder);
+    wgpuQueueSubmit(ctx.queue, 1, &command);
+    wgpuCommandBufferRelease(command);
+
+    wgpuBufferMapAsync(buffer2.buffer, WGPUMapMode_Read, 0, 8, &onBuffer2Mapped, &buffer2);
+    while (!buffer2.ready) {
+        wgpuPollEvents(ctx.device, true /* yieldToBrowser */);
     }
+
+    const uint64_t* bufferData = (uint64_t*)wgpuBufferGetConstMappedRange(buffer2.buffer,0, 0);
+    fprintf(stderr, "bufferData = [");
+    for (int i = 0; i < 16; ++i) {
+        if (i > 0) fprintf(stderr, ", ");
+        fprintf(stderr,"%d",(int)bufferData[i]);
+    }
+    fprintf(stderr, "]\n");
+
+    /* Main render loop */
+    // while (cgfx_ctx_is_running(&ctx)) {
+    //     CgfxFrame frame;
+    //     if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){ 0.1, 0.1, 0.2, 1.0 })) {
+    //         /* Record draw commands directly on the render pass */
+    //         wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
+    //         wgpuRenderPassEncoderDraw(frame.render_pass, 3, 1, 0, 0);
+    //         cgfx_frame_end(&ctx, &frame);
+    //     }
+    // }
 
     /* Cleanup */
     wgpuRenderPipelineRelease(pipeline);
