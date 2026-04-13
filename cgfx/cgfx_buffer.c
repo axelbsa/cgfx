@@ -50,11 +50,6 @@ CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
     result.size = data_size;
     result.count = count;
 
-    (void)ctx;
-    (void)data;
-    (void)data_size;
-    (void)count;
-
     return result;
 }
 
@@ -91,14 +86,8 @@ CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
 
 
 void cgfx_buffer_destroy(CgfxBuffer *buf) {
-    /*
-     * TODO: Release the GPU buffer and zero out the struct.
-     *
-     * 1. if (buf->buffer) wgpuBufferRelease(buf->buffer);
-     * 2. memset(buf, 0, sizeof(*buf));  // or: *buf = (CgfxBuffer){0};
-     */
-
-    (void)buf;
+     if (buf->buffer) wgpuBufferRelease(buf->buffer);
+        memset(buf, 0, sizeof(*buf));  // or: *buf = (CgfxBuffer){0};
 }
 
 
@@ -109,24 +98,6 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
 
     CgfxBuffer result = { .buffer = nullptr, .size = 0, .count = 0 };
 
-    /*
-     * TODO: Create a vertex buffer and upload data.
-     *
-     * 1. Create a WGPUBufferDescriptor:
-     *    - .label = "cgfx vertex buffer"
-     *    - .size = data_size
-     *    - .usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_MapRead
-     *      (CopyDst is required because we upload via wgpuQueueWriteBuffer)
-     *    - .mappedAtCreation = false
-     *
-     * 2. result.buffer = wgpuDeviceCreateBuffer(ctx->device, &desc);
-     *
-     * 3. wgpuQueueWriteBuffer(ctx->queue, result.buffer, 0, data, data_size);
-     *    This copies the CPU-side vertex data to the GPU buffer.
-     *
-     * 4. Set result.size = data_size and result.count = count.
-     */
-
     WGPUBufferDescriptor bufferDesc = {};
     bufferDesc.nextInChain = nullptr;
     bufferDesc.label = "cgfx vertex buffer";
@@ -135,21 +106,40 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
     bufferDesc.mappedAtCreation = false;
 
     result.buffer = wgpuDeviceCreateBuffer(ctx->device, &bufferDesc);
+
+    if (data != nullptr && data_size > 0)
+    {
+        wgpuQueueWriteBuffer(ctx->queue, result.buffer, 0, data, data_size);
+    }
+
     result.size = data_size;
     result.count = count;
-
-    (void)ctx;
-    (void)data;
-    (void)data_size;
-    (void)count;
 
     return result;
 }
 
 
-//   CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
-//                                  WGPUBufferUsageFlags usage,
-//                                  const void *data,    // NULL = don't upload
-//                                  uint64_t size) {
-//
-// }
+CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
+                             const WGPUBufferUsageFlags usage,
+                             const void *data,
+                             uint64_t data_size) {
+
+    CgfxBuffer result = { .buffer = nullptr, .size = 0, .count = 0 };
+    WGPUBufferDescriptor bufferDesc = {};
+    bufferDesc.nextInChain = nullptr;
+    bufferDesc.label = "cgfx vertex buffer";
+    bufferDesc.usage = usage;
+    bufferDesc.size = data_size;
+    bufferDesc.mappedAtCreation = false;
+
+    result.buffer = wgpuDeviceCreateBuffer(ctx->device, &bufferDesc);
+
+    if (data != nullptr && data_size > 0)
+    {
+        wgpuQueueWriteBuffer(ctx->queue, result.buffer, 0, data, data_size);
+    }
+
+    result.size = data_size;
+
+    return result;
+}

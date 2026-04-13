@@ -95,12 +95,12 @@ int main(void) {
     wgpuQueueSubmit(ctx.queue, 1, &command);
     wgpuCommandBufferRelease(command);
 
-    wgpuBufferMapAsync(buffer2.buffer, WGPUMapMode_Read, 0, 8, &onBuffer2Mapped, &buffer2);
+    wgpuBufferMapAsync(buffer2.buffer, WGPUMapMode_Read, 0, sizeof(foo), &onBuffer2Mapped, &buffer2);
     while (!buffer2.ready) {
         wgpuPollEvents(ctx.device, true /* yieldToBrowser */);
     }
 
-    const uint64_t* bufferData = (uint64_t*)wgpuBufferGetConstMappedRange(buffer2.buffer,0, 0);
+    const uint64_t* bufferData = (uint64_t*)wgpuBufferGetConstMappedRange(buffer2.buffer,0, sizeof(foo));
     fprintf(stderr, "bufferData = [");
     for (int i = 0; i < 16; ++i) {
         if (i > 0) fprintf(stderr, ", ");
