@@ -7,7 +7,7 @@
  * behind a simple configuration struct with zero-init defaults.
  *
  * For advanced pipelines, you can always create WGPURenderPipeline
- * directly using ctx->device — this module is for the common case.
+ * directly using ctx->device -- this module is for the common case.
  */
 #ifndef CGFX_PIPELINE_H
 #define CGFX_PIPELINE_H
@@ -29,15 +29,36 @@
  *   - Automatic pipeline layout
  *   - Entry points: "vs_main" / "fs_main"
  *
- * The only required field is `shader`.
+ * ## Shader modules
  *
- * Example:
+ * There are two ways to provide shader modules:
+ *
+ * **Single module** (WGSL or combined SPIR-V): Set `shader` to a module
+ * containing both vertex and fragment entry points. This is the typical
+ * WGSL workflow.
+ *
  *   CgfxPipelineDesc desc = { .shader = my_shader };
- *   WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &desc);
+ *
+ * **Separate modules** (typical for SPIR-V from Slang/glslc): Set
+ * `vertex_shader` and `fragment_shader` individually. When set, these
+ * take precedence over `shader`.
+ *
+ *   CgfxPipelineDesc desc = {
+ *       .vertex_shader   = vs_module,
+ *       .fragment_shader  = fs_module,
+ *       .vertex_entry    = "main",
+ *       .fragment_entry  = "main",
+ *   };
  */
 typedef struct CgfxPipelineDesc {
-    WGPUShaderModule  shader;          /**< Required. The shader module containing
-                                            vertex and fragment entry points.         */
+    WGPUShaderModule  shader;          /**< Shader module containing both vertex and
+                                            fragment entry points. Used when
+                                            vertex_shader/fragment_shader are NULL.   */
+    WGPUShaderModule  vertex_shader;   /**< Optional: separate vertex shader module.
+                                            When set, overrides `shader` for vertex.  */
+    WGPUShaderModule  fragment_shader; /**< Optional: separate fragment shader module.
+                                            When set, overrides `shader` for fragment.*/
+
     const char       *vertex_entry;    /**< Vertex shader entry point. NULL = "vs_main". */
     const char       *fragment_entry;  /**< Fragment shader entry point. NULL = "fs_main". */
     WGPUPrimitiveTopology topology;    /**< Primitive topology. 0 = TriangleList.     */
@@ -59,12 +80,12 @@ typedef struct CgfxPipelineDesc {
  * Fills in all the verbose WebGPU pipeline descriptor fields:
  *
  *   Vertex state:
- *   - Uses the provided shader module and vertex entry point
+ *   - Uses vertex_shader (or shader) and vertex entry point
  *   - Attaches caller-provided vertex buffer layouts (or none for
  *     procedural vertex generation in the shader)
  *
  *   Fragment state:
- *   - Uses the provided shader module and fragment entry point
+ *   - Uses fragment_shader (or shader) and fragment entry point
  *   - Single color target matching ctx->surface_format
  *   - Standard alpha blending: srcAlpha / oneMinusSrcAlpha for color,
  *     zero / one for alpha channel
@@ -83,7 +104,7 @@ typedef struct CgfxPipelineDesc {
  *   - 1 sample per pixel, full mask, no alpha-to-coverage
  *
  *   Layout:
- *   - Automatic (nullptr) — WebGPU infers from shader bindings
+ *   - Automatic (nullptr) -- WebGPU infers from shader bindings
  *
  * @param ctx   Initialized context (uses ctx->device and ctx->surface_format).
  * @param desc  Pipeline configuration. Zero-init for defaults (shader required).

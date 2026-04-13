@@ -20,23 +20,20 @@
  * Gets the current surface texture from the swap chain, checks its status,
  * and creates a 2D texture view configured for rendering.
  *
- * Backend difference: On non-wgpu-native backends, the surface texture is
- * released after creating the view (the view holds a reference). On
- * wgpu-native, surface textures must NOT be manually released.
- *
  * @param surface  The window surface to acquire from.
  * @return         A texture view for rendering, or NULL if unavailable.
  */
 static WGPUTextureView cgfx__get_surface_texture_view(WGPUSurface surface) {
     WGPUSurfaceTexture surface_texture;
     wgpuSurfaceGetCurrentTexture(surface, &surface_texture);
-    if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+    if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal
+        && surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal) {
         return nullptr;
     }
 
     WGPUTextureViewDescriptor view_desc = {};
     view_desc.nextInChain = nullptr;
-    view_desc.label = "cgfx surface texture view";
+    view_desc.label = (WGPUStringView){ .data = "cgfx surface texture view", .length = WGPU_STRLEN };
     view_desc.format = wgpuTextureGetFormat(surface_texture.texture);
     view_desc.dimension = WGPUTextureViewDimension_2D;
     view_desc.baseMipLevel = 0;
@@ -46,15 +43,6 @@ static WGPUTextureView cgfx__get_surface_texture_view(WGPUSurface surface) {
     view_desc.aspect = WGPUTextureAspect_All;
 
     WGPUTextureView view = wgpuTextureCreateView(surface_texture.texture, &view_desc);
-
-#ifndef WEBGPU_BACKEND_WGPU
-    /*
-     * On Dawn and other backends, we release the texture after creating
-     * the view — the view holds its own reference.
-     * On wgpu-native, surface textures must NOT be manually released.
-     */
-    wgpuTextureRelease(surface_texture.texture);
-#endif
 
     return view;
 }
@@ -76,26 +64,23 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
      */
     WGPUCommandEncoderDescriptor encoder_desc = {};
     encoder_desc.nextInChain = nullptr;
-    encoder_desc.label = "cgfx frame encoder";
+    encoder_desc.label = (WGPUStringView){ .data = "cgfx frame encoder", .length = WGPU_STRLEN };
     frame->encoder = wgpuDeviceCreateCommandEncoder(ctx->device, &encoder_desc);
 
     /*
      * Set up the render pass color attachment:
      * - view: the surface texture we're rendering to
-     * - loadOp: Clear — fill with clear_color before rendering
-     * - storeOp: Store — keep the rendered result for presentation
-     * - depthSlice: required on non-wgpu-native backends
+     * - loadOp: Clear -- fill with clear_color before rendering
+     * - storeOp: Store -- keep the rendered result for presentation
+     * - depthSlice: WGPU_DEPTH_SLICE_UNDEFINED for non-3D textures
      */
     WGPURenderPassColorAttachment color_attachment = {};
     color_attachment.view = frame->target_view;
+    color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
     color_attachment.resolveTarget = nullptr;
     color_attachment.loadOp = WGPULoadOp_Clear;
     color_attachment.storeOp = WGPUStoreOp_Store;
     color_attachment.clearValue = clear_color;
-
-#ifndef WEBGPU_BACKEND_WGPU
-    color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
 
     /*
      * Begin the render pass. The descriptor specifies:
@@ -120,7 +105,7 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
 
 
 void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame) {
-    /* Finalize the render pass — no more draw commands after this */
+    /* Finalize the render pass -- no more draw commands after this */
     wgpuRenderPassEncoderEnd(frame->render_pass);
     wgpuRenderPassEncoderRelease(frame->render_pass);
 
@@ -131,7 +116,7 @@ void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame) {
      */
     WGPUCommandBufferDescriptor cmd_desc = {};
     cmd_desc.nextInChain = nullptr;
-    cmd_desc.label = "cgfx frame commands";
+    cmd_desc.label = (WGPUStringView){ .data = "cgfx frame commands", .length = WGPU_STRLEN };
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(frame->encoder, &cmd_desc);
     wgpuCommandEncoderRelease(frame->encoder);
 
@@ -139,7 +124,7 @@ void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame) {
     wgpuQueueSubmit(ctx->queue, 1, &commands);
     wgpuCommandBufferRelease(commands);
 
-    /* Release the texture view — we're done rendering to it */
+    /* Release the texture view -- we're done rendering to it */
     wgpuTextureViewRelease(frame->target_view);
 
     /*

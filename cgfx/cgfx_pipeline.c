@@ -9,28 +9,32 @@
 
 WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
                                          const CgfxPipelineDesc *desc) {
-    /* ── Apply defaults for zero-initialized fields ───────────── */
+    /* -- Apply defaults for zero-initialized fields ------------------- */
     const char *vs_entry = desc->vertex_entry  ? desc->vertex_entry  : "vs_main";
     const char *fs_entry = desc->fragment_entry ? desc->fragment_entry : "fs_main";
+
+    /* Resolve shader modules: separate modules override the single module */
+    WGPUShaderModule vs_module = desc->vertex_shader   ? desc->vertex_shader   : desc->shader;
+    WGPUShaderModule fs_module = desc->fragment_shader  ? desc->fragment_shader  : desc->shader;
 
     WGPUPrimitiveTopology topology = desc->topology ? desc->topology
                                                     : WGPUPrimitiveTopology_TriangleList;
     WGPUFrontFace front_face = desc->front_face ? desc->front_face
                                                 : WGPUFrontFace_CCW;
 
-    /* ── Build the pipeline descriptor ────────────────────────── */
+    /* -- Build the pipeline descriptor -------------------------------- */
     WGPURenderPipelineDescriptor pipeline_desc = {};
     pipeline_desc.nextInChain = nullptr;
 
     /*
      * Vertex state: configures the programmable vertex shader stage.
      * The vertex buffers array describes how vertex data is laid out
-     * in GPU memory — stride, step mode, and attribute formats/offsets.
+     * in GPU memory -- stride, step mode, and attribute formats/offsets.
      * When no vertex buffers are provided (count=0), the shader must
      * generate vertices procedurally (e.g., using vertex_index builtin).
      */
-    pipeline_desc.vertex.module = desc->shader;
-    pipeline_desc.vertex.entryPoint = vs_entry;
+    pipeline_desc.vertex.module = vs_module;
+    pipeline_desc.vertex.entryPoint = (WGPUStringView){ .data = vs_entry, .length = WGPU_STRLEN };
     pipeline_desc.vertex.constantCount = 0;
     pipeline_desc.vertex.constants = nullptr;
     pipeline_desc.vertex.bufferCount = desc->vertex_buffer_count;
@@ -54,8 +58,8 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
      * fragment shader writes to.
      */
     WGPUFragmentState fragment_state = {};
-    fragment_state.module = desc->shader;
-    fragment_state.entryPoint = fs_entry;
+    fragment_state.module = fs_module;
+    fragment_state.entryPoint = (WGPUStringView){ .data = fs_entry, .length = WGPU_STRLEN };
     fragment_state.constantCount = 0;
     fragment_state.constants = nullptr;
 

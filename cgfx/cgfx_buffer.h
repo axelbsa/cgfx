@@ -109,7 +109,7 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
 
 /* Create a generic buffer function */
   CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
-                                 WGPUBufferUsageFlags usage,
+                                 WGPUBufferUsage usage,
                                  const void *data,    // NULL = don't upload
                                  uint64_t size);
 

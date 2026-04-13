@@ -29,3 +29,16 @@ cgfx_add_example(triangle           triangle/main.c)
 cgfx_add_example(buffers            playing_with_buffers/main.c)
 cgfx_add_example(compute            compute/main.c)
 cgfx_add_example(vertex_attribute   vertex_attribute/main.c)
+
+# --- Slang triangle (Slang → WGSL → wgpu-native) ---
+set(SLANG_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/slang_triangle/triangle.slang")
+set(WGSL_DIR     "${CMAKE_CURRENT_BINARY_DIR}")
+
+cgfx_compile_slang(
+    SOURCE  "${SLANG_SHADER}"
+    ENTRIES "vertexMain vertex" "fragmentMain fragment"
+    OUTPUT  "${WGSL_DIR}/triangle.wgsl"
+)
+
+cgfx_add_example(slang_triangle slang_triangle/main.c)
+target_sources(slang_triangle PRIVATE "${WGSL_DIR}/triangle.wgsl")

@@ -39,7 +39,7 @@ CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
 
     WGPUBufferDescriptor bufferDesc = {};
     bufferDesc.nextInChain = nullptr;
-    bufferDesc.label = "cgfx vertex buffer";
+    bufferDesc.label = (WGPUStringView){ .data = "cgfx vertex buffer", .length = WGPU_STRLEN };
     bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc;
     bufferDesc.size = data_size;
     bufferDesc.mappedAtCreation = false;
@@ -100,7 +100,7 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
 
     WGPUBufferDescriptor bufferDesc = {};
     bufferDesc.nextInChain = nullptr;
-    bufferDesc.label = "cgfx vertex buffer";
+    bufferDesc.label = (WGPUStringView){ .data = "cgfx vertex buffer", .length = WGPU_STRLEN };
     bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead;
     bufferDesc.size = data_size;
     bufferDesc.mappedAtCreation = false;
@@ -120,14 +120,14 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
 
 
 CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
-                             const WGPUBufferUsageFlags usage,
+                             const WGPUBufferUsage usage,
                              const void *data,
                              uint64_t data_size) {
 
     CgfxBuffer result = { .buffer = nullptr, .size = 0, .count = 0 };
     WGPUBufferDescriptor bufferDesc = {};
     bufferDesc.nextInChain = nullptr;
-    bufferDesc.label = "cgfx vertex buffer";
+    bufferDesc.label = (WGPUStringView){ .data = "cgfx buffer", .length = WGPU_STRLEN };
     bufferDesc.usage = usage;
     bufferDesc.size = data_size;
     bufferDesc.mappedAtCreation = false;

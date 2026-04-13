@@ -1,6 +1,6 @@
 /**
  * @file cgfx_internal.h
- * @brief Internal helpers for cgfx — not part of the public API.
+ * @brief Internal helpers for cgfx -- not part of the public API.
  *
  * Contains synchronous wrappers around WebGPU's asynchronous adapter and
  * device request callbacks. These are used by cgfx_ctx_init() internally.
@@ -17,7 +17,7 @@
 #include <webgpu/webgpu.h>
 
 
-/* ── Adapter request (synchronous wrapper) ────────────────────────── */
+/* -- Adapter request (synchronous wrapper) -------------------------------- */
 
 typedef struct {
     WGPUAdapter adapter;
@@ -26,13 +26,16 @@ typedef struct {
 
 static void cgfx__on_adapter_request_ended(WGPURequestAdapterStatus status,
                                             WGPUAdapter adapter,
-                                            char const *message,
-                                            void *user_data) {
-    CgfxAdapterRequestData *data = user_data;
+                                            WGPUStringView message,
+                                            void *user_data1,
+                                            void *user_data2) {
+    (void)user_data2;
+    CgfxAdapterRequestData *data = user_data1;
     if (status == WGPURequestAdapterStatus_Success) {
         data->adapter = adapter;
     } else {
-        fprintf(stderr, "[cgfx] Could not get WebGPU adapter: %s\n", message);
+        fprintf(stderr, "[cgfx] Could not get WebGPU adapter: %.*s\n",
+                (int)message.length, message.data);
     }
     data->request_ended = true;
 }
@@ -52,9 +55,15 @@ static WGPUAdapter cgfx__request_adapter_sync(WGPUInstance instance,
                                                const WGPURequestAdapterOptions *options) {
     CgfxAdapterRequestData data = { .adapter = nullptr, .request_ended = false };
 
-    wgpuInstanceRequestAdapter(instance, options,
-                               &cgfx__on_adapter_request_ended,
-                               (void *)&data);
+    WGPURequestAdapterCallbackInfo callback_info = {
+        .nextInChain = nullptr,
+        .mode = WGPUCallbackMode_AllowSpontaneous,
+        .callback = &cgfx__on_adapter_request_ended,
+        .userdata1 = (void *)&data,
+        .userdata2 = nullptr,
+    };
+
+    wgpuInstanceRequestAdapter(instance, options, callback_info);
 
 #ifdef __EMSCRIPTEN__
     while (!data.request_ended) {
@@ -67,7 +76,7 @@ static WGPUAdapter cgfx__request_adapter_sync(WGPUInstance instance,
 }
 
 
-/* ── Device request (synchronous wrapper) ─────────────────────────── */
+/* -- Device request (synchronous wrapper) --------------------------------- */
 
 typedef struct {
     WGPUDevice device;
@@ -76,13 +85,16 @@ typedef struct {
 
 static void cgfx__on_device_request_ended(WGPURequestDeviceStatus status,
                                            WGPUDevice device,
-                                           char const *message,
-                                           void *user_data) {
-    CgfxDeviceRequestData *data = user_data;
+                                           WGPUStringView message,
+                                           void *user_data1,
+                                           void *user_data2) {
+    (void)user_data2;
+    CgfxDeviceRequestData *data = user_data1;
     if (status == WGPURequestDeviceStatus_Success) {
         data->device = device;
     } else {
-        fprintf(stderr, "[cgfx] Could not get WebGPU device: %s\n", message);
+        fprintf(stderr, "[cgfx] Could not get WebGPU device: %.*s\n",
+                (int)message.length, message.data);
     }
     data->request_ended = true;
 }
@@ -101,9 +113,15 @@ static WGPUDevice cgfx__request_device_sync(WGPUAdapter adapter,
                                              const WGPUDeviceDescriptor *descriptor) {
     CgfxDeviceRequestData data = { .device = nullptr, .request_ended = false };
 
-    wgpuAdapterRequestDevice(adapter, descriptor,
-                             &cgfx__on_device_request_ended,
-                             (void *)&data);
+    WGPURequestDeviceCallbackInfo callback_info = {
+        .nextInChain = nullptr,
+        .mode = WGPUCallbackMode_AllowSpontaneous,
+        .callback = &cgfx__on_device_request_ended,
+        .userdata1 = (void *)&data,
+        .userdata2 = nullptr,
+    };
+
+    wgpuAdapterRequestDevice(adapter, descriptor, callback_info);
 
 #ifdef __EMSCRIPTEN__
     while (!data.request_ended) {

@@ -35,6 +35,10 @@ typedef struct CgfxCtxDesc {
     const char      *title;         /**< Window title string.     NULL = "cgfx".       */
     bool             resizable;     /**< Allow window resize.     Default: true.       */
     WGPUPresentMode  present_mode;  /**< Surface present mode.    0 = Fifo (VSync).    */
+    bool             spirv;         /**< Kept for backward compatibility. SPIR-V shaders
+                                         now work via the standard WebGPU API (naga SPIR-V
+                                         frontend) and no special feature flag is needed.
+                                         This field is ignored.                         */
 } CgfxCtxDesc;
 
 /**
