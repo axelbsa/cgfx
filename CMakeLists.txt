@@ -15,6 +15,7 @@ endif()
 
 add_subdirectory(vendor/webgpu)
 add_subdirectory(vendor/glfw3webgpu)
+add_subdirectory(vendor/slang)
 
 # --- cgfx static library ---
 add_subdirectory(cgfx)

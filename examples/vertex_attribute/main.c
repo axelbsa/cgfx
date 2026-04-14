@@ -10,14 +10,10 @@
 
 #include "cgfx.h"
 
-static void onBuffer2Mapped(WGPUMapAsyncStatus status,
-                            WGPUStringView message,
-                            void *userdata1,
-                            void *userdata2) {
-    (void)message;
-    (void)userdata2;
-    CgfxBuffer *buffer = (CgfxBuffer*)userdata1;
-    if (status != WGPUMapAsyncStatus_Success) return;
+static void onBuffer2Mapped(WGPUBufferMapAsyncStatus status,
+                            void *userdata) {
+    CgfxBuffer *buffer = (CgfxBuffer*)userdata;
+    if (status != WGPUBufferMapAsyncStatus_Success) return;
     buffer->ready = true;
     fprintf(stderr, "Buffer2 mapped with status %d\n", status);
 }
@@ -91,14 +87,7 @@ int main(void) {
     wgpuQueueSubmit(ctx.queue, 1, &command);
     wgpuCommandBufferRelease(command);
 
-    WGPUBufferMapCallbackInfo map_cb = {
-        .nextInChain = nullptr,
-        .mode = WGPUCallbackMode_AllowSpontaneous,
-        .callback = &onBuffer2Mapped,
-        .userdata1 = &buffer2,
-        .userdata2 = nullptr,
-    };
-    wgpuBufferMapAsync(buffer2.buffer, WGPUMapMode_Read, 0, sizeof(foo), map_cb);
+    wgpuBufferMapAsync(buffer2.buffer, WGPUMapMode_Read, 0, sizeof(foo), onBuffer2Mapped, &buffer2);
     while (!buffer2.ready) {
         wgpuPollEvents(ctx.device, true /* yieldToBrowser */);
     }
