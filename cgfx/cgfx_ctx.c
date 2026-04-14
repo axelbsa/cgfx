@@ -121,6 +121,16 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
         return false;
     }
 
+#ifndef NDEBUG
+    cgfx__inspect_adapter(adapter);
+
+    WGPUSupportedLimits supported = {0};
+    supported.nextInChain = nullptr;
+    wgpuAdapterGetLimits(adapter, &supported);
+    cgfx__inspect_limits("Adapter supported", &supported.limits);
+    cgfx__inspect_limits("Requested", &desc->limits.limits);
+#endif
+
     /* ── Step 5: Request device ───────────────────────────────────
      * The device is the logical GPU connection we use for all operations:
      * creating buffers, shaders, pipelines, and submitting commands.
