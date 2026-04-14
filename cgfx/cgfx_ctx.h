@@ -30,11 +30,12 @@
  *   CgfxCtxDesc desc = { .width = 1920, .height = 1080, .title = "My App" };
  */
 typedef struct CgfxCtxDesc {
-    uint32_t         width;         /**< Window width in pixels.  0 = 1280.           */
-    uint32_t         height;        /**< Window height in pixels. 0 = 720.            */
-    const char      *title;         /**< Window title string.     NULL = "cgfx".       */
-    bool             resizable;     /**< Allow window resize.     Default: true.       */
-    WGPUPresentMode  present_mode;  /**< Surface present mode.    0 = Fifo (VSync).    */
+    uint32_t            width;         /**< Window width in pixels.  0 = 1280.           */
+    uint32_t            height;        /**< Window height in pixels. 0 = 720.            */
+    const char          *title;         /**< Window title string.     NULL = "cgfx".       */
+    bool                resizable;     /**< Allow window resize.     Default: true.       */
+    WGPUPresentMode     present_mode;  /**< Surface present mode.    0 = Fifo (VSync).    */
+    WGPURequiredLimits  limits;        /**< User defined limits.                          */
 } CgfxCtxDesc;
 
 /**
@@ -73,6 +74,16 @@ typedef struct CgfxCtx {
  * @param desc  Configuration. Pass a zero-initialized struct for defaults.
  * @return      true on success, false on failure (errors printed to stderr).
  */
+/**
+ * Return a WGPURequiredLimits with every limit set to "undefined" (no preference).
+ *
+ * Use this as a starting point, then override only the fields you need:
+ *
+ *   WGPURequiredLimits limits = cgfx_default_limits();
+ *   limits.limits.maxVertexAttributes = 2;
+ */
+WGPURequiredLimits cgfx_default_limits(void);
+
 bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc);
 
 /**

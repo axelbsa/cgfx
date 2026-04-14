@@ -33,11 +33,18 @@ void wgpuPollEvents([[maybe_unused]] WGPUDevice device, [[maybe_unused]] bool yi
 
 int main(void) {
     /* Initialize the rendering context: window, device, queue, surface */
+    WGPURequiredLimits limits = cgfx_default_limits();
+    limits.limits.maxVertexAttributes = 1;
+    limits.limits.maxVertexBuffers = 1;
+    limits.limits.maxBufferSize = 6 * 2 * sizeof(float);
+    limits.limits.maxVertexBufferArrayStride = 2 * sizeof(float);
+
     CgfxCtx ctx;
     if (!cgfx_ctx_init(&ctx, &(CgfxCtxDesc){
         .width = 1920,
         .height = 1080,
-        .title = "cgfx — triangle",
+        .title = "cgfx — vertex attribute",
+        .limits = limits,
     })) {
         return 1;
     }
@@ -45,11 +52,7 @@ int main(void) {
     /* Create shader module from WGSL source */
     static const char *shader_source =
         "@vertex\n"
-        "fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4f {\n"
-        "    var p = vec2f(0.0, 0.0);\n"
-        "    if (in_vertex_index == 0u) { p = vec2f(-0.5, -0.5); }\n"
-        "    else if (in_vertex_index == 1u) { p = vec2f(0.5, -0.5); }\n"
-        "    else { p = vec2f(0.0, 0.5); }\n"
+        "fn vs_main(@location(0) in_vertex_position: vec2f) -> @builtin(position) vec4f { \n"
         "    return vec4f(p, 0.0, 1.0);\n"
         "}\n"
         "@fragment\n"

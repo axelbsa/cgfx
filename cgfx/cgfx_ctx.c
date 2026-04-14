@@ -48,15 +48,22 @@ static void cgfx__device_error_callback(WGPUErrorType type,
     fprintf(stderr, "\n");
 }
 
+WGPURequiredLimits cgfx_default_limits(void) {
+    WGPURequiredLimits limits = {0};
+    limits.nextInChain = nullptr;
+    memset(&limits.limits, 0xFF, sizeof(limits.limits));
+    return limits;
+}
+
 
 /* ── Public API ───────────────────────────────────────────────────── */
 
 bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
     /* Apply defaults for zero-initialized fields */
-    uint32_t width  = desc->width  ? desc->width  : 1280;
-    uint32_t height = desc->height ? desc->height : 720;
+    const int32_t width  = desc->width  ? (int32_t)desc->width  : 1280;
+    const int32_t height = desc->height ? (int32_t)desc->height : 720;
     const char *title = desc->title ? desc->title : "cgfx";
-    WGPUPresentMode present_mode = desc->present_mode ? desc->present_mode
+    const WGPUPresentMode present_mode = desc->present_mode ? desc->present_mode
                                                       : WGPUPresentMode_Fifo;
 
     /* ── Step 1: Initialize GLFW and create window ────────────────
@@ -65,7 +72,7 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
      */
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, desc->resizable ? GLFW_TRUE : GLFW_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, desc->resizable ? GLFW_TRUE : GLFW_FALSE);
     ctx->window = glfwCreateWindow(width, height, title, nullptr, nullptr);
     if (!ctx->window) {
         fprintf(stderr, "[cgfx] Failed to create GLFW window\n");
@@ -123,7 +130,7 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
     device_desc.nextInChain = nullptr;
     device_desc.label = "cgfx device";
     device_desc.requiredFeatureCount = 0;
-    device_desc.requiredLimits = nullptr;
+    device_desc.requiredLimits = &desc->limits;
     device_desc.defaultQueue.nextInChain = nullptr;
     device_desc.defaultQueue.label = "cgfx default queue";
     device_desc.deviceLostCallback = &cgfx__device_lost_callback;
