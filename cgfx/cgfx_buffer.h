@@ -14,7 +14,6 @@
 
 #include <webgpu/webgpu.h>
 #include <stdint.h>
-#include <stddef.h>
 #include "cgfx_ctx.h"
 
 /**
@@ -57,9 +56,9 @@ typedef struct CgfxBuffer {
  * @return           A CgfxBuffer containing the GPU vertex buffer.
  */
 CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
-                                      const void *data,
-                                      uint64_t data_size,
-                                      uint32_t count);
+                                     const void *data,
+                                     uint64_t data_size,
+                                     uint32_t count);
 
 /**
  * Create a GPU index buffer and upload data to it.
@@ -86,8 +85,8 @@ CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
  * @return         A CgfxBuffer containing the GPU index buffer.
  */
 CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
-                                     const uint32_t *indices,
-                                     uint32_t count);
+                                    const uint32_t *indices,
+                                    uint32_t count);
 
 /**
  * Destroy a buffer and release its GPU resources.
@@ -100,17 +99,15 @@ CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
 void cgfx_buffer_destroy(CgfxBuffer *buf);
 
 
-/* More buffer types */
-
+/* Mapping buffer */
 CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
                                       const void *data,
                                       uint64_t data_size,
                                       uint32_t count);
 
 /* Create a generic buffer function */
-  CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
-                                 WGPUBufferUsageFlags usage,
-                                 const void *data,    // NULL = don't upload
-                                 uint64_t size);
-
+CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
+                              WGPUBufferUsageFlags usage,
+                              const void *data,    // NULL = don't upload
+                              uint64_t data_size);
 #endif /* CGFX_BUFFER_H */
