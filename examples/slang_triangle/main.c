@@ -62,6 +62,7 @@ int main(void) {
         .width  = 1920,
         .height = 1080,
         .title  = "cgfx — Slang triangle",
+        .limits = cgfx_default_limits()
     })) {
         return 1;
     }

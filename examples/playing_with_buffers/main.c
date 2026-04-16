@@ -59,6 +59,7 @@ int main(void) {
         .width = 1920,
         .height = 1080,
         .title = "cgfx — triangle",
+        .limits = cgfx_default_limits()
     })) {
         return 1;
     }
@@ -122,6 +123,9 @@ int main(void) {
     /* Cleanup */
     wgpuRenderPipelineRelease(pipeline);
     cgfx_ctx_destroy(&ctx);
+
+    uint32_t size = 2*sizeof(float);
+    fprintf(stderr,"Sizeof 2*float = %d %x\n", size, size);
 
     return 0;
 }

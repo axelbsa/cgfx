@@ -2,7 +2,6 @@
  * @file cgfx_buffer.c
  * @brief Implementation of GPU buffer creation and management.
  *
- * TODO: Fill in the implementations below. Each function documents
  * exactly what WebGPU calls are needed. The pattern is always:
  *   1. Fill a WGPUBufferDescriptor
  *   2. wgpuDeviceCreateBuffer()
@@ -22,7 +21,7 @@ CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
     WGPUBufferDescriptor bufferDesc = {};
     bufferDesc.nextInChain = nullptr;
     bufferDesc.label = "cgfx vertex buffer";
-    bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc;
+    bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
     bufferDesc.size = data_size;
     bufferDesc.mappedAtCreation = false;
 
@@ -45,7 +44,7 @@ CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
     WGPUBufferDescriptor bufferDesc = {};
     bufferDesc.nextInChain = nullptr;
     bufferDesc.label = "cgfx vertex buffer";
-    bufferDesc.usage = WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst;
+    bufferDesc.usage =  WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
     bufferDesc.size = size;
     bufferDesc.mappedAtCreation = false;
 

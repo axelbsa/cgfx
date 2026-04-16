@@ -90,7 +90,7 @@ WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void) {
         },
     };
 
-    WGPUVertexBufferLayout layout = {
+    const WGPUVertexBufferLayout layout = {
         .arrayStride = sizeof(CgfxVertex),
         .stepMode = WGPUVertexStepMode_Vertex,
         .attributeCount = 3,

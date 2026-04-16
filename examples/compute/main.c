@@ -36,6 +36,7 @@ int main(void) {
         .width = 1920,
         .height = 1080,
         .title = "cgfx — triangle",
+        .limits = cgfx_default_limits()
     })) {
         return 1;
     }
