@@ -50,7 +50,7 @@ typedef struct CgfxPipelineDesc {
     /** Vertex buffer layouts (optional). Pass the result of
      *  cgfx_mesh_vertex_layout() here when rendering meshes. */
     uint32_t                         vertex_buffer_count;
-    const WGPUVertexBufferLayout    *vertex_buffers;
+    const WGPUVertexBufferLayout    *vertex_layouts;
 } CgfxPipelineDesc;
 
 /**

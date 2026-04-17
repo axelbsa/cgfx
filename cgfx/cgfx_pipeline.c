@@ -34,7 +34,7 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
     pipeline_desc.vertex.constantCount = 0;
     pipeline_desc.vertex.constants = nullptr;
     pipeline_desc.vertex.bufferCount = desc->vertex_buffer_count;
-    pipeline_desc.vertex.buffers = desc->vertex_buffers;
+    pipeline_desc.vertex.buffers = desc->vertex_layouts;
 
     /*
      * Primitive state: controls how vertices are assembled into primitives.

@@ -30,7 +30,7 @@
  *
  * This matches the vertex buffer layout returned by cgfx_mesh_vertex_layout().
  * When creating a pipeline for mesh rendering, pass that layout to
- * CgfxPipelineDesc.vertex_buffers.
+ * CgfxPipelineDesc.vertex_layouts.
  */
 typedef struct CgfxVertex {
     float       position[3];  /**< XYZ position.                                    */
@@ -89,6 +89,41 @@ CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
 void cgfx_mesh_destroy(CgfxMesh *mesh);
 
 /**
+ * Record draw commands for a mesh on an active render pass.
+ *
+ * Issues the three draw-call boilerplate commands required to render
+ * an indexed mesh:
+ *   1. Bind the vertex buffer at slot 0.
+ *   2. Bind the index buffer with WGPUIndexFormat_Uint32.
+ *   3. Draw mesh->index_count indices as a single instance.
+ *
+ * The pipeline must already be set on the render pass before calling
+ * this function — pipelines and meshes are intentionally decoupled so
+ * the same mesh can be drawn with different pipelines (e.g., shadow
+ * pass and color pass).
+ *
+ * For instanced rendering or non-indexed draws, drop down to the raw
+ * WebGPU API (wgpuRenderPassEncoderDrawIndexed, etc.) using the buffer
+ * handles in mesh->vertex_buffer.buffer and mesh->index_buffer.buffer.
+ *
+ * Implementation should:
+ *   1. wgpuRenderPassEncoderSetVertexBuffer(pass, 0,
+ *          mesh->vertex_buffer.buffer, 0, mesh->vertex_buffer.size);
+ *   2. wgpuRenderPassEncoderSetIndexBuffer(pass,
+ *          mesh->index_buffer.buffer, WGPUIndexFormat_Uint32, 0,
+ *          mesh->index_buffer.size);
+ *   3. wgpuRenderPassEncoderDrawIndexed(pass, mesh->index_count, 1, 0, 0, 0);
+ *
+ * Usage:
+ *   wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
+ *   cgfx_mesh_draw(frame.render_pass, &mesh);
+ *
+ * @param pass  Active render pass encoder (from cgfx_frame_begin()).
+ * @param mesh  Mesh to draw. Must have valid vertex and index buffers.
+ */
+void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
+
+/**
  * Get the vertex buffer layout descriptor for CgfxVertex.
  *
  * Returns a WGPUVertexBufferLayout that describes the memory layout of
@@ -98,7 +133,7 @@ void cgfx_mesh_destroy(CgfxMesh *mesh);
  *   CgfxPipelineDesc desc = {
  *       .shader = shader,
  *       .vertex_buffer_count = 1,
- *       .vertex_buffers = &layout,
+ *       .vertex_layouts = &layout,
  *   };
  *
  * The layout describes 3 attributes at shader locations 0, 1, 2:

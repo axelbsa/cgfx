@@ -18,30 +18,74 @@ int main(void) {
     // limits.limits.maxBufferSize = 128*1024;
     // limits.limits.maxVertexBufferArrayStride = 2 * sizeof(float);
 
+    /*
+     *   CgfxVertex vertices[3] = {
+     *       // Top vertex
+     *       { .position = { 0.0f, h * 2.0f/3.0f, 0.0f },
+     *         .normal = { 0.0f, 0.0f, 1.0f },
+     *         .uv = { 0.5f, 1.0f } },
+     *       // Bottom-left vertex
+     *       { .position = { -size/2.0f, -h * 1.0f/3.0f, 0.0f },
+     *         .normal = { 0.0f, 0.0f, 1.0f },
+     *         .uv = { 0.0f, 0.0f } },
+     *       // Bottom-right vertex
+     *       { .position = { size/2.0f, -h * 1.0f/3.0f, 0.0f },
+     *         .normal = { 0.0f, 0.0f, 1.0f },
+     *         .uv = { 1.0f, 0.0f } },
+     *   };
+     *
+     *
+     *       -0.5, -0.5, // Point #0 (A)
+             +0.5, -0.5, // Point #1
+             +0.5, +0.5, // Point #2 (C)
+             -0.5, +0.5, // Point #3
+     * */
+
+    CgfxVertex vertex[4] = {
+            {.position = {-0.5f, -0.5f, -1.0f},
+                .normal = {0.0f, 0.0f, 0.1f},
+                .uv={0}},
+            {.position = {0.5f, -0.5f, -1.0f},
+             .normal = {0.0f, 0.0f, 0.1f},
+             .uv={0}},
+            {.position = {0.5f, 0.5f, -1.0f},
+             .normal = {0.0f, 0.0f, 0.1f},
+             .uv={0}},
+            {.position = {-0.5f, 0.5f, -1.0f},
+             .normal = {0.0f, 0.0f, 0.1f},
+             .uv={0}}
+    };
+
+    uint32_t indexData[] = {
+            0, 1, 2, // Triangle #0 connects points #0, #1 and #2
+            0, 2, 3  // Triangle #1 connects points #0, #2 and #3
+    };
+
     float vertexData[] = {
-        // x0, y0
-        -0.5, -0.5,
+        // x0, y0, z0
+        -0.5, -0.5, 0,
 
         // x1, y1
-        +0.5, -0.5,
+        +0.5, -0.5, 0,
 
         // x2, y2
-        +0.0, +0.5,
+        +0.0, +0.5, 0,
 
         // Add a second triangle:
-        -0.55f, -0.5,
-        -0.05f, +0.5,
-        -0.55f, +0.5
+        -0.55f, -0.5, 0,
+        -0.05f, +0.5, 0,
+        -0.55f, +0.5, 0
     };
 
     fprintf(stderr, "VertexCount %d\n", (int)(sizeof(vertexData) / sizeof(vertexData[0])/2));
-    uint32_t vertex_count = 6;
+    uint32_t vertex_count = (sizeof(vertexData) / sizeof(vertexData[0]) / 3);
+
 
     CgfxCtx ctx;
     if (!cgfx_ctx_init(&ctx, &(CgfxCtxDesc){
-        .width = 1920,
-        .height = 1080,
-        .title = "cgfx — vertex attribute",
+        .width = 1280,
+        .height = 720,
+        .title = "cgfx — multiple attribute",
         .limits = limits,
     })) {
         return 1;
@@ -64,25 +108,14 @@ int main(void) {
         return 1;
     }
 
-    CgfxBuffer vertex_buffer = cgfx_buffer_create_vertex(&ctx, (void*)vertexData, sizeof(vertexData), vertex_count);
-
-    WGPUVertexBufferLayout vertexBufferLayout = {0};
-    WGPUVertexAttribute positionAttrib;
-
-    positionAttrib.shaderLocation = 0;
-    positionAttrib.format = WGPUVertexFormat_Float32x2;
-    positionAttrib.offset = 0;
-
-    vertexBufferLayout.attributeCount = 1;
-    vertexBufferLayout.attributes = &positionAttrib;
-    vertexBufferLayout.arrayStride = 2 * sizeof(float);
-    vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+    CgfxMesh mesh = cgfx_mesh_create(&ctx, vertex, 4, indexData, 6);
 
     /* Create render pipeline with default settings */
+    WGPUVertexBufferLayout layout = cgfx_mesh_vertex_layout();
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
         .shader = shader,
         .vertex_buffer_count = 1,
-        .vertex_layouts = &vertexBufferLayout,
+        .vertex_layouts = &layout,
     });
     wgpuShaderModuleRelease(shader);
 
@@ -100,18 +133,19 @@ int main(void) {
 
             /* Record draw commands directly on the render pass */
             wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
+            cgfx_mesh_draw(frame.render_pass, &mesh);
             /* Set vertex buffer while encoding the render pass */
-            wgpuRenderPassEncoderSetVertexBuffer(frame.render_pass, 0, vertex_buffer.buffer, 0, wgpuBufferGetSize(vertex_buffer.buffer));
+            //wgpuRenderPassEncoderSetVertexBuffer(frame.render_pass, 0, vertex_buffer.buffer, 0, wgpuBufferGetSize(vertex_buffer.buffer));
             /* We use the `vertex_count` variable instead of hard-coding the vertex count */
-            wgpuRenderPassEncoderDraw(frame.render_pass, vertex_count, 1, 0, 0);
+            //wgpuRenderPassEncoderDraw(frame.render_pass, vertex_count, 1, 0, 0);
 
             cgfx_frame_end(&ctx, &frame);
         }
     }
 
     /* Cleanup */
+    cgfx_mesh_destroy(&mesh);
     wgpuRenderPipelineRelease(pipeline);
-    cgfx_buffer_destroy(&vertex_buffer);
     cgfx_ctx_destroy(&ctx);
 
     return 0;

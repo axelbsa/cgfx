@@ -16,6 +16,16 @@ CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
                             const uint32_t *indices, uint32_t index_count) {
     CgfxMesh mesh = {};
 
+    mesh.vertex_buffer = cgfx_buffer_create_vertex(
+            ctx,
+            vertices,
+            (uint64_t)vertex_count * sizeof(CgfxVertex),
+            vertex_count
+    );
+
+    mesh.index_buffer = cgfx_buffer_create_index(ctx, indices, index_count);
+    mesh.index_count = index_count;
+
     /*
      * TODO: Upload vertex and index data to GPU buffers.
      *
@@ -34,17 +44,15 @@ CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
      *    mesh.index_count = index_count;
      */
 
-    (void)ctx;
-    (void)vertices;
-    (void)vertex_count;
-    (void)indices;
-    (void)index_count;
-
     return mesh;
 }
 
 
 void cgfx_mesh_destroy(CgfxMesh *mesh) {
+    cgfx_buffer_destroy(&mesh->vertex_buffer);
+    cgfx_buffer_destroy(&mesh->index_buffer);
+    mesh->index_count = 0;
+
     /*
      * TODO: Release both GPU buffers.
      *
@@ -52,8 +60,18 @@ void cgfx_mesh_destroy(CgfxMesh *mesh) {
      * 2. cgfx_buffer_destroy(&mesh->index_buffer);
      * 3. mesh->index_count = 0;
      */
+}
 
-    (void)mesh;
+
+void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh) {
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 0,
+                                         mesh->vertex_buffer.buffer,
+                                         0, mesh->vertex_buffer.size);
+    wgpuRenderPassEncoderSetIndexBuffer(pass,
+                                        mesh->index_buffer.buffer,
+                                        WGPUIndexFormat_Uint32,
+                                        0, mesh->index_buffer.size);
+    wgpuRenderPassEncoderDrawIndexed(pass, mesh->index_count, 1, 0, 0, 0);
 }
 
 
