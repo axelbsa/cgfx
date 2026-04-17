@@ -88,7 +88,8 @@ WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void) {
      * Each attribute is assigned a shader location for use in WGSL:
      *   @location(0) position: vec3f
      *   @location(1) normal:   vec3f
-     *   @location(2) uv:       vec2f
+     *   @location(2) color:   vec3f
+     *   @location(3) uv:       vec2f
      */
     static WGPUVertexAttribute attributes[] = {
         {
@@ -102,16 +103,21 @@ WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void) {
             .shaderLocation = 1,
         },
         {
+            .format = WGPUVertexFormat_Float32x3,
+            .offset = offsetof(CgfxVertex, color),
+            .shaderLocation = 2,
+        },
+{
             .format = WGPUVertexFormat_Float32x2,
             .offset = offsetof(CgfxVertex, uv),
-            .shaderLocation = 2,
+            .shaderLocation = 3,
         },
     };
 
     const WGPUVertexBufferLayout layout = {
         .arrayStride = sizeof(CgfxVertex),
         .stepMode = WGPUVertexStepMode_Vertex,
-        .attributeCount = 3,
+        .attributeCount = 4,
         .attributes = attributes,
     };
 

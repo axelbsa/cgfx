@@ -35,6 +35,7 @@
 typedef struct CgfxVertex {
     float       position[3];  /**< XYZ position.                                    */
     float       normal[3];    /**< Surface normal (should be normalized).           */
+    float       color[3];    /**< Vertex color.                                     */
     float       uv[2];        /**< Texture coordinates (0.0-1.0 range typically).   */
 } CgfxVertex;
 
