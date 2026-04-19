@@ -99,6 +99,24 @@ CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
 void cgfx_buffer_destroy(CgfxBuffer *buf);
 
 
+/**
+ * Create a GPU uniform buffer and optionally upload initial data.
+ *
+ * Creates a buffer with WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst.
+ * If data is non-NULL, immediately uploads it via wgpuQueueWriteBuffer.
+ *
+ * Update data each frame with:
+ *   wgpuQueueWriteBuffer(ctx->queue, buf.buffer, 0, &data, sizeof(data));
+ *
+ * @param ctx        Initialized context.
+ * @param data       Initial data to upload, or NULL for uninitialized.
+ * @param data_size  Size of the uniform buffer in bytes.
+ * @return           A CgfxBuffer containing the GPU uniform buffer.
+ */
+CgfxBuffer cgfx_buffer_create_uniform(const CgfxCtx *ctx,
+                                      const void *data,
+                                      uint64_t data_size);
+
 /* Mapping buffer */
 CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
                                       const void *data,

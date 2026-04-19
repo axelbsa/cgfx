@@ -5,6 +5,16 @@ struct VSOutput {
     float3 color    : COLOR;
 };
 
+struct Light {
+    float3 color;
+    float intensity;
+
+    // Member function
+    float3 getRadiance() {
+        return this.color * this.intensity;
+    }
+};
+
 [shader("vertex")]
 VSOutput vertexMain(uint vertexIndex : SV_VertexID) {
     float2 positions[3] = {
@@ -19,9 +29,13 @@ VSOutput vertexMain(uint vertexIndex : SV_VertexID) {
         float3(0.2, 0.2, 1.0),
     };
 
+    Light lo;
+    lo.color = float3(0.4, 0.3, 0.1);
+    lo.intensity = 0.9;
+
     VSOutput output;
     output.position = float4(positions[vertexIndex], 0.0, 1.0);
-    output.color = colors[vertexIndex];
+    output.color = colors[vertexIndex] * lo.getRadiance();
     return output;
 }
 

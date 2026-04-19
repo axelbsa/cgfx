@@ -6,6 +6,7 @@ add_library(cgfx STATIC
     cgfx_buffer.c
     cgfx_mesh.c
     cgfx_primitives.c
+    cgfx_loader.c
 )
 
 target_include_directories(cgfx PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

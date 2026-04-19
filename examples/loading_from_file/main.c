@@ -29,30 +29,10 @@ int main(void) {
         return 1;
     }
 
-    /* Create shader module from WGSL source */
-    static const char *shader_source =
-        "struct VertexInput { \n"
-        "   @location(0) position: vec2f, \n"
-        "   @location(1) normal: vec3f, \n"
-        "   @location(2) color: vec3f, \n"
-        "}; \n"
-        "struct VertexOutput { \n"
-        "   @builtin(position) position: vec4f, \n"
-        "   @location(0) color: vec3f, \n"
-        "}; \n"
-        "@vertex\n"
-        "fn vs_main(in: VertexInput) -> VertexOutput { \n"
-        "    var out: VertexOutput; \n"
-        "    out.position = vec4f(in.position, 0.0, 1.0); \n"
-        "    out.color = in.color; \n"
-        "    return out;\n"
-        "}\n"
-        "@fragment\n"
-        "fn fs_main(@location(0) color: vec3f) -> @location(0) vec4f {\n"
-        "    return vec4f(color.x, color.y, color.z, 1.0);\n"
-        "}\n";
 
-    WGPUShaderModule shader = cgfx_shader_create(&ctx, "triangle shader", shader_source);
+    WGPUShaderModule shader = cgfx_shader_create_from_file(
+        &ctx, "my shader", "shaders/load_from_file.wgsl");
+
     if (!shader) {
         cgfx_ctx_destroy(&ctx);
         return 1;
@@ -88,7 +68,6 @@ int main(void) {
             .uv = {0.0f, 0.0f},
         };
     }
-
 
     uint32_t* indices = malloc(geo.index_count * sizeof(uint32_t));
     for (uint32_t i = 0; i < geo.index_count; i++)
