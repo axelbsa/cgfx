@@ -25,5 +25,6 @@
 #include "cgfx_buffer.h"
 #include "cgfx_mesh.h"
 #include "cgfx_primitives.h"
+#include "cgfx_loader.h"
 
 #endif /* CGFX_H */

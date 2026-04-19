@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 cmake . -B build
 cmake --build build
-./build/examples/triangle
+./build/examples/multiple_uniforms
 ```
 
 ## Architecture
@@ -19,24 +19,32 @@ This is a C23 rendering engine library (`cgfx`) wrapping WebGPU, with GLFW for w
 | Module | Purpose |
 |--------|---------|
 | `cgfx_ctx` | Context: window + device + queue + surface init/destroy |
-| `cgfx_shader` | WGSL string → WGPUShaderModule (hides chained-struct pattern) |
-| `cgfx_pipeline` | Render pipeline with zero-init defaults |
+| `cgfx_shader` | CgfxShader: WGSL compilation + bind group layouts + pipeline layout |
+| `cgfx_pipeline` | Render pipeline with zero-init defaults, reads layout from CgfxShader |
 | `cgfx_frame` | Per-frame begin/end cycle (acquire texture, encoder, pass, submit, present) |
-| `cgfx_buffer` | GPU vertex/index buffer creation (**stubbed — needs implementation**) |
-| `cgfx_mesh` | CgfxVertex (pos+normal+uv) + CgfxMesh + vertex layout (**stubbed**) |
+| `cgfx_buffer` | GPU buffer creation (vertex, index, uniform, mapping, generic) |
+| `cgfx_mesh` | CgfxVertex (pos+normal+color+uv) + CgfxMesh + vertex layout + draw |
 | `cgfx_primitives` | Plane, triangle, sphere, cube generators (**stubbed**) |
+| `cgfx_loader` | Load geometry from LearnWebGPU text format (temporary) |
 | `cgfx_internal.h` | Internal sync wrappers for async WebGPU requests |
 | `cgfx.h` | Umbrella header — includes all modules |
 
-Modules 1-4 (ctx, shader, pipeline, frame) are fully implemented with existing rendering code. Modules 5-7 (buffer, mesh, primitives) are stubbed with comprehensive TODO comments describing exact implementation steps.
+### Shader and bind group architecture
+
+`CgfxShader` owns the `WGPUShaderModule`, bind group layouts (`WGPUBindGroupLayout[]`), and pipeline layout (`WGPUPipelineLayout`). Bind groups themselves are **not** stored on the shader — they are created via `cgfx_shader_create_bind_group()` and owned by the caller. This enables the "same shader, different uniforms per object" pattern.
+
+The pipeline reads `shader->pipeline_layout` automatically. When a shader has no bind groups (desc is NULL), `pipeline_layout` is NULL and WebGPU uses automatic layout inference.
+
+Key types: `CgfxBindingDesc` → `CgfxGroupDesc` → `CgfxShaderDesc` → `CgfxShader`.
 
 ### Design conventions
 
-- **Transparent structs** — fields are public so users can access raw WebGPU handles (e.g., `ctx.device`)
+- **Transparent structs** — fields are public so users can access raw WebGPU handles (e.g., `ctx.device`, `shader.group_layouts[0]`)
 - **Context passed by pointer** — no global state
 - **Error handling** — functions return `bool`, errors go to stderr
 - **Frame recording** — between `cgfx_frame_begin`/`cgfx_frame_end`, user records draw commands directly on `frame.render_pass` using raw WebGPU calls
 - **Backend differences** — `#ifdef WEBGPU_BACKEND_WGPU`, `WEBGPU_BACKEND_DAWN`, `__EMSCRIPTEN__` are handled inside the library
+- **Shader owns layouts, caller owns bind groups** — bind groups are created from the shader's layouts but returned to the user for per-object flexibility
 
 ### External dependencies (vendored in `vendor/`)
 

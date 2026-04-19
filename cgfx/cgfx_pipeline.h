@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "cgfx_ctx.h"
+#include "cgfx_shader.h"
 
 /**
  * Configuration for creating a render pipeline.
@@ -26,25 +27,24 @@
  *   - Counter-clockwise front face
  *   - No depth testing
  *   - Standard alpha blending
- *   - Automatic pipeline layout
+ *   - Pipeline layout from shader (automatic if shader has no bind groups)
  *   - Entry points: "vs_main" / "fs_main"
  *
  * The only required field is `shader`.
  *
  * Example:
- *   CgfxPipelineDesc desc = { .shader = my_shader };
+ *   CgfxPipelineDesc desc = { .shader = &my_shader };
  *   WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &desc);
  */
 typedef struct CgfxPipelineDesc {
-    WGPUShaderModule  shader;          /**< Required. The shader module containing
-                                            vertex and fragment entry points.         */
-    const char       *vertex_entry;    /**< Vertex shader entry point. NULL = "vs_main". */
-    const char       *fragment_entry;  /**< Fragment shader entry point. NULL = "fs_main". */
-    WGPUPrimitiveTopology topology;    /**< Primitive topology. 0 = TriangleList.     */
-    WGPUCullMode      cull_mode;       /**< Face culling mode. 0 = None.              */
-    WGPUFrontFace     front_face;      /**< Front face winding. 0 = CCW.              */
-    bool              depth_test;      /**< Enable depth/stencil testing. Default: false. */
-    WGPUTextureFormat depth_format;    /**< Depth texture format (only if depth_test).
+    const CgfxShader        *shader;         /**< Required. Shader with module and layouts. */
+    const char              *vertex_entry;    /**< Vertex shader entry point. NULL = "vs_main". */
+    const char              *fragment_entry;  /**< Fragment shader entry point. NULL = "fs_main". */
+    WGPUPrimitiveTopology   topology;    /**< Primitive topology. 0 = TriangleList.     */
+    WGPUCullMode            cull_mode;       /**< Face culling mode. 0 = None.              */
+    WGPUFrontFace           front_face;      /**< Front face winding. 0 = CCW.              */
+    bool                    depth_test;      /**< Enable depth/stencil testing. Default: false. */
+    WGPUTextureFormat       depth_format;    /**< Depth texture format (only if depth_test).
                                             0 = Depth24Plus.                          */
 
     /** Vertex buffer layouts (optional). Pass the result of
@@ -83,7 +83,7 @@ typedef struct CgfxPipelineDesc {
  *   - 1 sample per pixel, full mask, no alpha-to-coverage
  *
  *   Layout:
- *   - Automatic (nullptr) — WebGPU infers from shader bindings
+ *   - Uses shader->pipeline_layout (NULL = automatic, when shader has no bind groups)
  *
  * @param ctx   Initialized context (uses ctx->device and ctx->surface_format).
  * @param desc  Pipeline configuration. Zero-init for defaults (shader required).

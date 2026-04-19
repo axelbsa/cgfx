@@ -29,7 +29,7 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
      * When no vertex buffers are provided (count=0), the shader must
      * generate vertices procedurally (e.g., using vertex_index builtin).
      */
-    pipeline_desc.vertex.module = desc->shader;
+    pipeline_desc.vertex.module = desc->shader->module;
     pipeline_desc.vertex.entryPoint = vs_entry;
     pipeline_desc.vertex.constantCount = 0;
     pipeline_desc.vertex.constants = nullptr;
@@ -54,7 +54,7 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
      * fragment shader writes to.
      */
     WGPUFragmentState fragment_state = {};
-    fragment_state.module = desc->shader;
+    fragment_state.module = desc->shader->module;
     fragment_state.entryPoint = fs_entry;
     fragment_state.constantCount = 0;
     fragment_state.constants = nullptr;
@@ -118,13 +118,7 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
     pipeline_desc.multisample.mask = ~0u;
     pipeline_desc.multisample.alphaToCoverageEnabled = false;
 
-    /*
-     * Pipeline layout: nullptr = automatic.
-     * WebGPU will infer the bind group layouts from the shader's
-     * @group/@binding declarations. For simple shaders with no
-     * uniforms/textures, this means no bind groups at all.
-     */
-    pipeline_desc.layout = nullptr;
+    pipeline_desc.layout = desc->shader->pipeline_layout;
 
     return wgpuDeviceCreateRenderPipeline(ctx->device, &pipeline_desc);
 }

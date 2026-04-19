@@ -65,6 +65,15 @@ void cgfx_buffer_destroy(CgfxBuffer *buf) {
 }
 
 
+CgfxBuffer cgfx_buffer_create_uniform(const CgfxCtx *ctx,
+                                      const void *data,
+                                      const uint64_t data_size) {
+    return cgfx_buffer_create(ctx,
+                              WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
+                              data, data_size);
+}
+
+
 CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
                                       const void *data,
                                       const uint64_t data_size,

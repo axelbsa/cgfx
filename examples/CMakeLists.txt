@@ -22,6 +22,16 @@ function(cgfx_add_example name source)
         set_target_properties(${name} PROPERTIES SUFFIX ".html")
         target_link_options(${name} PRIVATE -sASYNCIFY)
     endif()
+
+    # Copy .wgsl shaders from the example's source directory to the build output.
+    # Runs at build time so new shaders are picked up without reconfiguring.
+    get_filename_component(source_dir "${source}" DIRECTORY)
+    add_custom_command(TARGET ${name} POST_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/${source_dir}
+            -DDEST_DIR=$<TARGET_FILE_DIR:${name}>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/copy_shaders.cmake
+    )
 endfunction()
 
 # --- Slang triangle (Slang → WGSL → wgpu-native) ---
@@ -40,6 +50,8 @@ cgfx_add_example(buffers                playing_with_buffers/main.c)
 cgfx_add_example(compute                compute/main.c)
 cgfx_add_example(vertex_attribute       vertex_attribute/main.c)
 cgfx_add_example(multiple_attributes    multiple_attributes/main.c)
+cgfx_add_example(loading_from_file      loading_from_file/main.c)
+cgfx_add_example(multiple_uniforms     multiple_uniforms/main.c)
 
 # --- Slang Examples ---
 cgfx_add_example(slang_triangle         slang_triangle/main.c)
