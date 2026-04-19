@@ -30,22 +30,18 @@ int main(void) {
     }
 
 
-    WGPUShaderModule shader = cgfx_shader_create_from_file(
-        &ctx, "my shader", "shaders/load_from_file.wgsl");
-
-    if (!shader) {
-        cgfx_ctx_destroy(&ctx);
-        return 1;
-    }
+    CgfxShader shader = cgfx_shader_create_from_file(&ctx,
+                                                           "my shader",
+                                                           "shaders/load_from_file.wgsl",
+                                                           &(CgfxShaderDesc){});
 
     /* Create render pipeline with default settings */
     WGPUVertexBufferLayout layout = cgfx_mesh_vertex_layout();
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
-        .shader = shader,
+        .shader = &shader,
         .vertex_buffer_count = 1,
         .vertex_layouts = &layout,
     });
-    wgpuShaderModuleRelease(shader);
 
 
     if (!pipeline) {
@@ -91,6 +87,7 @@ int main(void) {
     /* Cleanup */
     cgfx_mesh_destroy(&mesh);
     wgpuRenderPipelineRelease(pipeline);
+    cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 
     free(vertices);

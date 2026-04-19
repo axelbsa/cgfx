@@ -51,6 +51,7 @@ static void cgfx__device_error_callback(WGPUErrorType type,
 WGPURequiredLimits cgfx_default_limits(void) {
     WGPURequiredLimits limits = {0};
     limits.nextInChain = nullptr;
+    /* Set all limits to 0xFF (meaning no limits or as high as they go) */
     memset(&limits.limits, 0xFF, sizeof(limits.limits));
     return limits;
 }

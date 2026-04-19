@@ -42,18 +42,14 @@ int main(void) {
     }
 
     /* Create shader module from WGSL source */
-    WGPUShaderModule shader = cgfx_shader_create(&ctx, "triangle shader", shader_source);
-    if (!shader) {
-        cgfx_ctx_destroy(&ctx);
-        return 1;
-    }
+    CgfxShader shader = cgfx_shader_create(&ctx, "triangle shader", shader_source,
+        &(CgfxShaderDesc){});
 
     /* Create render pipeline with default settings (no vertex buffers,
      * triangle list topology, no culling, alpha blending) */
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
-        .shader = shader,
+        .shader = &shader,
     });
-    wgpuShaderModuleRelease(shader);
 
     if (!pipeline) {
         cgfx_ctx_destroy(&ctx);
@@ -73,6 +69,7 @@ int main(void) {
 
     /* Cleanup */
     wgpuRenderPipelineRelease(pipeline);
+    cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 
     return 0;

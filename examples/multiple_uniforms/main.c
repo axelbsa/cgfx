@@ -9,43 +9,8 @@
 typedef struct {
     float color[4];   /* vec4f — rgba */
     float offset[4];  /* vec4f — xy = position, z = rotation angle, w = unused */
+    float time;
 } MyUniforms;
-
-static const char *shader_source =
-    "struct MyUniforms {                                                  \n"
-    "    color: vec4f,                                                    \n"
-    "    offset: vec4f,                                                   \n"
-    "};                                                                   \n"
-    "                                                                     \n"
-    "@group(0) @binding(0) var<uniform> u: MyUniforms;                    \n"
-    "                                                                     \n"
-    "struct VertexOutput {                                                 \n"
-    "    @builtin(position) position: vec4f,                              \n"
-    "    @location(0) color: vec4f,                                       \n"
-    "};                                                                   \n"
-    "                                                                     \n"
-    "@vertex                                                              \n"
-    "fn vs_main(@builtin(vertex_index) vi: u32) -> VertexOutput {         \n"
-    "    var p = array<vec2f, 3>(                                         \n"
-    "        vec2f(-0.25, -0.25),                                         \n"
-    "        vec2f( 0.25, -0.25),                                         \n"
-    "        vec2f( 0.0,   0.25),                                         \n"
-    "    );                                                               \n"
-    "    let angle = u.offset.z;                                          \n"
-    "    let c = cos(angle);                                              \n"
-    "    let s = sin(angle);                                              \n"
-    "    let rotated = vec2f(p[vi].x * c - p[vi].y * s,                  \n"
-    "                        p[vi].x * s + p[vi].y * c);                  \n"
-    "    var out: VertexOutput;                                           \n"
-    "    out.position = vec4f(rotated + u.offset.xy, 0.0, 1.0);          \n"
-    "    out.color = u.color;                                             \n"
-    "    return out;                                                      \n"
-    "}                                                                    \n"
-    "                                                                     \n"
-    "@fragment                                                            \n"
-    "fn fs_main(@location(0) color: vec4f) -> @location(0) vec4f {        \n"
-    "    return color;                                                    \n"
-    "}                                                                    \n";
 
 
 int main(void) {
@@ -60,7 +25,7 @@ int main(void) {
     }
 
     /* Create shader with one bind group: @group(0) @binding(0) */
-    CgfxShader shader = cgfx_shader_create(&ctx, "uniform shader", shader_source,
+    CgfxShader shader = cgfx_shader_create_from_file(&ctx, "uniform shader", "shaders/shader.wgsl",
         &(CgfxShaderDesc){
             .group_count = 1,
             .groups = (CgfxGroupDesc[]){{
