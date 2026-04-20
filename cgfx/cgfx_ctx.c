@@ -60,6 +60,7 @@ WGPURequiredLimits cgfx_default_limits(void) {
 /* ── Public API ───────────────────────────────────────────────────── */
 
 bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
+    *ctx = (CgfxCtx){};
     /* Apply defaults for zero-initialized fields */
     const int32_t width  = desc->width  ? (int32_t)desc->width  : 1280;
     const int32_t height = desc->height ? (int32_t)desc->height : 720;
@@ -194,6 +195,31 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
     ctx->width = width;
     ctx->height = height;
 
+    if (desc->depth_buffer) {
+        ctx->depth_format = WGPUTextureFormat_Depth24Plus;
+
+        WGPUTextureDescriptor depth_desc = {};
+        depth_desc.dimension = WGPUTextureDimension_2D;
+        depth_desc.format = ctx->depth_format;
+        depth_desc.mipLevelCount = 1;
+        depth_desc.sampleCount = 1;
+        depth_desc.size = (WGPUExtent3D){ctx->width, ctx->height, 1};
+        depth_desc.usage = WGPUTextureUsage_RenderAttachment;
+        depth_desc.viewFormatCount = 1;
+        depth_desc.viewFormats = &ctx->depth_format;
+        ctx->depth_texture = wgpuDeviceCreateTexture(ctx->device, &depth_desc);
+
+        WGPUTextureViewDescriptor depth_view_desc = {};
+        depth_view_desc.aspect = WGPUTextureAspect_DepthOnly;
+        depth_view_desc.baseArrayLayer = 0;
+        depth_view_desc.arrayLayerCount = 1;
+        depth_view_desc.baseMipLevel = 0;
+        depth_view_desc.mipLevelCount = 1;
+        depth_view_desc.dimension = WGPUTextureViewDimension_2D;
+        depth_view_desc.format = ctx->depth_format;
+        ctx->depth_texture_view = wgpuTextureCreateView(ctx->depth_texture, &depth_view_desc);
+    }
+
     return true;
 }
 
@@ -202,6 +228,10 @@ bool cgfx_ctx_is_running(const CgfxCtx *ctx) {
 }
 
 void cgfx_ctx_destroy(CgfxCtx *ctx) {
+    if (ctx->depth_texture_view) {
+        wgpuTextureViewRelease(ctx->depth_texture_view);
+        wgpuTextureRelease(ctx->depth_texture);
+    }
     wgpuSurfaceUnconfigure(ctx->surface);
     wgpuQueueRelease(ctx->queue);
     wgpuSurfaceRelease(ctx->surface);

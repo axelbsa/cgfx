@@ -5,10 +5,6 @@
  * Creates a vertex buffer, copies it to a mappable buffer, then reads
  * back the data to verify the copy.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <webgpu/wgpu.h>
-
 #include "cgfx.h"
 
 int main(void) {
@@ -49,27 +45,7 @@ int main(void) {
         return 1;
     }
 
-    CgfxGeometry geo;
-    cgfx_load_geometry("webgpu.txt", &geo);
-
-    const uint32_t vertex_count = geo.point_count / 5;
-    CgfxVertex* vertices = malloc(vertex_count * sizeof(CgfxVertex));
-    for (uint32_t i = 0; i < vertex_count; i++)
-    {
-        const float* p = &geo.point_data[i * 5];
-        vertices[i] = (CgfxVertex){
-            .position = {p[0], p[1], 0.0f},
-            .normal = {0.0f, 0.0f, 1.0f},
-            .color = {p[2], p[3], p[4]},
-            .uv = {0.0f, 0.0f},
-        };
-    }
-
-    uint32_t* indices = malloc(geo.index_count * sizeof(uint32_t));
-    for (uint32_t i = 0; i < geo.index_count; i++)
-        indices[i] = geo.index_data[i];
-
-    CgfxMesh mesh = cgfx_mesh_create(&ctx, vertices, vertex_count, indices, geo.index_count);
+    CgfxMesh mesh = cgfx_load_tutorial_mesh(&ctx, "webgpu.txt");
 
     /* Main render loop */
     while (cgfx_ctx_is_running(&ctx)) {
@@ -89,8 +65,6 @@ int main(void) {
     wgpuRenderPipelineRelease(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
-
-    free(vertices);
 
     return 0;
 }

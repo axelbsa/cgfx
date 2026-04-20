@@ -98,11 +98,23 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
      */
     WGPUDepthStencilState depth_stencil = {};
     if (desc->depth_test) {
-        WGPUTextureFormat depth_fmt = desc->depth_format ? desc->depth_format
-                                                         : WGPUTextureFormat_Depth24Plus;
+        WGPUStencilFaceState face_state = {};
+        face_state.compare = WGPUCompareFunction_Always;
+        face_state.failOp = WGPUStencilOperation_Keep;
+        face_state.depthFailOp = WGPUStencilOperation_Keep;
+        face_state.passOp = WGPUStencilOperation_Keep;
+
+        WGPUTextureFormat depth_fmt = desc->depth_format ? desc->depth_format : WGPUTextureFormat_Depth24Plus;
         depth_stencil.format = depth_fmt;
         depth_stencil.depthWriteEnabled = true;
         depth_stencil.depthCompare = WGPUCompareFunction_Less;
+        depth_stencil.stencilReadMask = 0xFFFFFFFF;
+        depth_stencil.stencilWriteMask = 0xFFFFFFFF;
+        depth_stencil.depthBias = 0;
+        depth_stencil.depthBiasSlopeScale = 0;
+        depth_stencil.depthBiasClamp = 0;
+        depth_stencil.stencilFront = face_state;
+        depth_stencil.stencilBack = face_state;
         /* Stencil defaults to no-op (all zeros from = {}) */
         pipeline_desc.depthStencil = &depth_stencil;
     } else {

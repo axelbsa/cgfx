@@ -34,6 +34,7 @@ typedef struct CgfxCtxDesc {
     uint32_t            height;        /**< Window height in pixels. 0 = 720.            */
     const char          *title;         /**< Window title string.     NULL = "cgfx".       */
     bool                resizable;     /**< Allow window resize.     Default: true.       */
+    bool                depth_buffer;  /**< Create a depth buffer at surface dimensions.  */
     WGPUPresentMode     present_mode;  /**< Surface present mode.    0 = Fifo (VSync).    */
     WGPURequiredLimits  limits;        /**< User defined limits.                          */
 } CgfxCtxDesc;
@@ -45,13 +46,16 @@ typedef struct CgfxCtxDesc {
  * Created with cgfx_ctx_init(), destroyed with cgfx_ctx_destroy().
  */
 typedef struct CgfxCtx {
-    GLFWwindow        *window;         /**< The GLFW window handle.                    */
-    WGPUDevice         device;         /**< The logical GPU device.                    */
-    WGPUQueue          queue;          /**< The default command queue.                 */
-    WGPUSurface        surface;        /**< The window surface for presenting frames.  */
-    WGPUTextureFormat  surface_format; /**< The preferred surface texture format.      */
-    uint32_t           width;          /**< Current window width in pixels.            */
-    uint32_t           height;         /**< Current window height in pixels.           */
+    GLFWwindow        *window;             /**< The GLFW window handle.                    */
+    WGPUDevice         device;             /**< The logical GPU device.                    */
+    WGPUQueue          queue;              /**< The default command queue.                 */
+    WGPUSurface        surface;            /**< The window surface for presenting frames.  */
+    WGPUTextureFormat  surface_format;     /**< The preferred surface texture format.      */
+    WGPUTexture        depth_texture;      /**< Depth buffer texture (NULL if disabled).   */
+    WGPUTextureView    depth_texture_view; /**< View into depth_texture (NULL if disabled).*/
+    WGPUTextureFormat  depth_format;       /**< Depth texture format (if enabled).         */
+    uint32_t           width;              /**< Current window width in pixels.            */
+    uint32_t           height;             /**< Current window height in pixels.           */
 } CgfxCtx;
 
 /**

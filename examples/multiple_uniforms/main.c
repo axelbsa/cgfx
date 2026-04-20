@@ -37,6 +37,7 @@ int main(void) {
             }},
         });
 
+
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
         .shader = &shader,
     });

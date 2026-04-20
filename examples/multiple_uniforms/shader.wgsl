@@ -17,6 +17,7 @@ fn vs_main(@builtin(vertex_index) vi: u32) -> VertexOutput {
         vec2f( 0.25, -0.25),
         vec2f( 0.0,   0.25),
     );
+    let ratio = 1280.0 / 720.0;
     let angle = u.offset.z;
     let c = cos(angle);
     let s = sin(angle);
