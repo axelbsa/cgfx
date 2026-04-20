@@ -17,13 +17,16 @@ fn vs_main(@builtin(vertex_index) vi: u32) -> VertexOutput {
         vec2f( 0.25, -0.25),
         vec2f( 0.0,   0.25),
     );
+    let ratio = 1280.0 / 720.0;
     let angle = u.offset.z;
     let c = cos(angle);
     let s = sin(angle);
     let rotated = vec2f(p[vi].x * c - p[vi].y * s,
                         p[vi].x * s + p[vi].y * c);
     var out: VertexOutput;
-    out.position = vec4f(rotated + u.offset.xy, 0.0, 1.0);
+    //out.position = vec4f(position.x, position.y * ratio, /* set the depth here */ 1.0);
+    out.position = vec4f(rotated.x, rotated.y * ratio, position.z * 0.5 + 0.5, 1.0);
+    //out.position = vec4f(rotated + u.offset.xy, 0.0, 1.0);
     out.color = u.color;
     return out;
 }
