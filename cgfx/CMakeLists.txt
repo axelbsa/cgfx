@@ -4,6 +4,7 @@ add_library(cgfx STATIC
     cgfx_pipeline.c
     cgfx_frame.c
     cgfx_buffer.c
+    cgfx_uniform.c
     cgfx_mesh.c
     cgfx_primitives.c
     cgfx_loader.c

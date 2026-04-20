@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @brief Multiple uniforms — two objects sharing one shader with different
- *        uniform data, demonstrating per-object bind groups.
+ *        uniform data, demonstrating per-object CgfxUniform.
  */
 #include <math.h>
 #include "cgfx.h"
@@ -51,11 +51,8 @@ int main(void) {
         .offset = { 0.4f, 0.0f, 0.0f, 0.0f},
     };
 
-    CgfxBuffer buf_left  = cgfx_buffer_create_uniform(&ctx, &uniforms_left,  sizeof(MyUniforms));
-    CgfxBuffer buf_right = cgfx_buffer_create_uniform(&ctx, &uniforms_right, sizeof(MyUniforms));
-
-    WGPUBindGroup bg_left  = cgfx_shader_create_bind_group(&ctx, &shader, 0, &buf_left,  1);
-    WGPUBindGroup bg_right = cgfx_shader_create_bind_group(&ctx, &shader, 0, &buf_right, 1);
+    CgfxUniform u_left  = cgfx_uniform_create(&ctx, &shader, 0, &uniforms_left,  sizeof(MyUniforms));
+    CgfxUniform u_right = cgfx_uniform_create(&ctx, &shader, 0, &uniforms_right, sizeof(MyUniforms));
 
     float time = 0.0f;
 
@@ -65,29 +62,25 @@ int main(void) {
         uniforms_left.offset[2]  =  time;
         uniforms_right.offset[2] = -time * 0.7f;
 
-        wgpuQueueWriteBuffer(ctx.queue, buf_left.buffer,
-                             0, &uniforms_left, sizeof(uniforms_left));
-        wgpuQueueWriteBuffer(ctx.queue, buf_right.buffer,
-                             0, &uniforms_right, sizeof(uniforms_right));
+        cgfx_uniform_write(&ctx, &u_left);
+        cgfx_uniform_write(&ctx, &u_right);
 
         CgfxFrame frame;
         if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){0.1, 0.1, 0.15, 1.0})) {
             wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
 
-            cgfx_shader_bind(frame.render_pass, &bg_left, 1);
+            cgfx_shader_bind(frame.render_pass, &u_left.bind_group, 1);
             wgpuRenderPassEncoderDraw(frame.render_pass, 3, 1, 0, 0);
 
-            cgfx_shader_bind(frame.render_pass, &bg_right, 1);
+            cgfx_shader_bind(frame.render_pass, &u_right.bind_group, 1);
             wgpuRenderPassEncoderDraw(frame.render_pass, 3, 1, 0, 0);
 
             cgfx_frame_end(&ctx, &frame);
         }
     }
 
-    wgpuBindGroupRelease(bg_left);
-    wgpuBindGroupRelease(bg_right);
-    cgfx_buffer_destroy(&buf_left);
-    cgfx_buffer_destroy(&buf_right);
+    cgfx_uniform_destroy(&u_left);
+    cgfx_uniform_destroy(&u_right);
     wgpuRenderPipelineRelease(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);

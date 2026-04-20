@@ -12,6 +12,7 @@
  *   cgfx_pipeline   — Render pipeline with sensible defaults
  *   cgfx_frame      — Per-frame begin/end rendering cycle
  *   cgfx_buffer     — GPU buffer creation (vertex/index)
+ *   cgfx_uniform    — Uniform buffer + bind group bundle
  *   cgfx_mesh       — Mesh: vertex + index buffers + layout
  *   cgfx_primitives — Primitive geometry generators
  */
@@ -23,6 +24,7 @@
 #include "cgfx_pipeline.h"
 #include "cgfx_frame.h"
 #include "cgfx_buffer.h"
+#include "cgfx_uniform.h"
 #include "cgfx_mesh.h"
 #include "cgfx_primitives.h"
 #include "cgfx_loader.h"
