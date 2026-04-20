@@ -98,62 +98,24 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
 #endif
 
 
-    /* THIS NEEDS REFACTORING, probably a candidate for its own type */
-    WGPUTextureDescriptor depthTextureDesc = {};
-    WGPUTextureFormat depthTextureFormat = WGPUTextureFormat_Depth24Plus;
-    depthTextureDesc.dimension = WGPUTextureDimension_2D;
-    depthTextureDesc.format = depthTextureFormat;
-    depthTextureDesc.mipLevelCount = 1;
-    depthTextureDesc.sampleCount = 1;
-    depthTextureDesc.size = (WGPUExtent3D){1280, 720, 1};
-    depthTextureDesc.usage = WGPUTextureUsage_RenderAttachment;
-    depthTextureDesc.viewFormatCount = 1;
-    depthTextureDesc.viewFormats = &depthTextureFormat;
-    WGPUTexture depthTexture = wgpuDeviceCreateTexture(ctx->device, &depthTextureDesc);
+    WGPURenderPassDepthStencilAttachment depth_stencil = {};
+    if (ctx->depth_texture_view) {
+        depth_stencil.view = ctx->depth_texture_view;
+        depth_stencil.depthClearValue = 1.0f;
+        depth_stencil.depthLoadOp = WGPULoadOp_Clear;
+        depth_stencil.depthStoreOp = WGPUStoreOp_Store;
+        depth_stencil.depthReadOnly = false;
+        depth_stencil.stencilClearValue = 0;
+        depth_stencil.stencilLoadOp = WGPULoadOp_Clear;
+        depth_stencil.stencilStoreOp = WGPUStoreOp_Store;
+        depth_stencil.stencilReadOnly = true;
+    }
 
-    // Create the view of the depth texture manipulated by the rasterizer
-    WGPUTextureViewDescriptor depthTextureViewDesc = {};
-    depthTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
-    depthTextureViewDesc.baseArrayLayer = 0;
-    depthTextureViewDesc.arrayLayerCount = 1;
-    depthTextureViewDesc.baseMipLevel = 0;
-    depthTextureViewDesc.mipLevelCount = 1;
-    depthTextureViewDesc.dimension = WGPUTextureViewDimension_2D;
-    depthTextureViewDesc.format = depthTextureFormat;
-    WGPUTextureView depthTextureView = wgpuTextureCreateView(depthTexture, &depthTextureViewDesc);
-
-    WGPURenderPassDepthStencilAttachment depthStencilAttachment;
-    // The view of the depth texture
-    depthStencilAttachment.view = depthTextureView;
-
-    // The initial value of the depth buffer, meaning "far"
-    depthStencilAttachment.depthClearValue = 1.0f;
-    // Operation settings comparable to the color attachment
-    depthStencilAttachment.depthLoadOp = WGPULoadOp_Clear;
-    depthStencilAttachment.depthStoreOp = WGPUStoreOp_Store;
-    // we could turn off writing to the depth buffer globally here
-    depthStencilAttachment.depthReadOnly = false;
-
-    // Stencil setup, mandatory but unused
-    depthStencilAttachment.stencilClearValue = 0;
-    depthStencilAttachment.stencilLoadOp = WGPULoadOp_Clear;
-    depthStencilAttachment.stencilStoreOp = WGPUStoreOp_Store;
-    depthStencilAttachment.stencilReadOnly = true;
-
-    /*
-     * Begin the render pass. The descriptor specifies:
-     * - One color attachment (the surface texture)
-     * - No depth/stencil attachment (for now)
-     * - No timestamp queries
-     *
-     * The returned render pass encoder is exposed to the user for
-     * recording draw commands.
-     */
     WGPURenderPassDescriptor pass_desc = {};
     pass_desc.nextInChain = nullptr;
     pass_desc.colorAttachmentCount = 1;
     pass_desc.colorAttachments = &color_attachment;
-    pass_desc.depthStencilAttachment = &depthStencilAttachment;
+    pass_desc.depthStencilAttachment = ctx->depth_texture_view ? &depth_stencil : nullptr;
     pass_desc.timestampWrites = nullptr;
 
     frame->render_pass = wgpuCommandEncoderBeginRenderPass(frame->encoder, &pass_desc);

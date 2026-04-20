@@ -40,7 +40,6 @@ int main(void) {
 
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
         .shader = &shader,
-        .depth_test = true,
     });
 
     /* Two objects — same shader, different uniform data */

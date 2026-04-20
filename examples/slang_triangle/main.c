@@ -75,23 +75,16 @@ int main(void) {
         return 1;
     }
 
-    WGPUShaderModule shader = cgfx_shader_create(&ctx, "slang triangle", wgsl);
+    CgfxShader shader = cgfx_shader_create(&ctx, "slang triangle", wgsl,
+        &(CgfxShaderDesc){});
     free(wgsl);
-
-    if (!shader) {
-        fprintf(stderr, "[slang_triangle] Failed to create shader module\n");
-        cgfx_ctx_destroy(&ctx);
-        return 1;
-    }
 
     /* Slang generates entry point names matching the Slang source */
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
-        .shader         = shader,
+        .shader         = &shader,
         .vertex_entry   = "vertexMain",
         .fragment_entry = "fragmentMain",
     });
-
-    wgpuShaderModuleRelease(shader);
 
     if (!pipeline) {
         fprintf(stderr, "[slang_triangle] Failed to create pipeline\n");
@@ -111,6 +104,7 @@ int main(void) {
 
     /* Cleanup */
     wgpuRenderPipelineRelease(pipeline);
+    cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 
     return 0;

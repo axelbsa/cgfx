@@ -95,22 +95,18 @@ int main(void) {
         "    return vec4f(color.x, color.y, color.z, 1.0);\n"
         "}\n";
 
-    WGPUShaderModule shader = cgfx_shader_create(&ctx, "triangle shader", shader_source);
-    if (!shader) {
-        cgfx_ctx_destroy(&ctx);
-        return 1;
-    }
+    CgfxShader shader = cgfx_shader_create(&ctx, "triangle shader", shader_source,
+        &(CgfxShaderDesc){});
 
     CgfxMesh mesh = cgfx_mesh_create(&ctx, vertex, 4, indexData, 6);
 
     /* Create render pipeline with default settings */
     WGPUVertexBufferLayout layout = cgfx_mesh_vertex_layout();
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
-        .shader = shader,
+        .shader = &shader,
         .vertex_buffer_count = 1,
         .vertex_layouts = &layout,
     });
-    wgpuShaderModuleRelease(shader);
 
 
     if (!pipeline) {
@@ -139,6 +135,7 @@ int main(void) {
     /* Cleanup */
     cgfx_mesh_destroy(&mesh);
     wgpuRenderPipelineRelease(pipeline);
+    cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 
     return 0;

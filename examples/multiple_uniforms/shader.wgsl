@@ -24,9 +24,7 @@ fn vs_main(@builtin(vertex_index) vi: u32) -> VertexOutput {
     let rotated = vec2f(p[vi].x * c - p[vi].y * s,
                         p[vi].x * s + p[vi].y * c);
     var out: VertexOutput;
-    //out.position = vec4f(position.x, position.y * ratio, /* set the depth here */ 1.0);
-    out.position = vec4f(rotated.x, rotated.y * ratio, position.z * 0.5 + 0.5, 1.0);
-    //out.position = vec4f(rotated + u.offset.xy, 0.0, 1.0);
+    out.position = vec4f(rotated + u.offset.xy, 0.0, 1.0);
     out.color = u.color;
     return out;
 }

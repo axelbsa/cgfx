@@ -38,15 +38,17 @@ bool cgfx_load_geometry(const char *path, CgfxGeometry *out) {
         } else if (line[0] == '#' || line[0] == '\0') {
             continue;
         } else if (section == SECTION_POINTS) {
-            float v[5];
-            if (sscanf(line, "%f %f %f %f %f", &v[0], &v[1], &v[2], &v[3], &v[4]) != 5)
-                continue;
-            if (out->point_count + 5 > point_cap) {
+            float v[6];
+            int n = sscanf(line, "%f %f %f %f %f %f",
+                           &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]);
+            if (n < 5) continue;
+            if (out->floats_per_point == 0) out->floats_per_point = (uint32_t)n;
+            if (out->point_count + (uint32_t)n > point_cap) {
                 point_cap = point_cap ? point_cap * 2 : 64;
                 out->point_data = realloc(out->point_data, point_cap * sizeof(float));
             }
-            memcpy(&out->point_data[out->point_count], v, sizeof(v));
-            out->point_count += 5;
+            memcpy(&out->point_data[out->point_count], v, (uint32_t)n * sizeof(float));
+            out->point_count += (uint32_t)n;
         } else if (section == SECTION_INDICES) {
             unsigned i0, i1, i2;
             if (sscanf(line, "%u %u %u", &i0, &i1, &i2) != 3)
@@ -69,4 +71,44 @@ void cgfx_free_geometry(CgfxGeometry *geo) {
     free(geo->point_data);
     free(geo->index_data);
     *geo = (CgfxGeometry){};
+}
+
+CgfxMesh cgfx_load_tutorial_mesh(const CgfxCtx *ctx, const char *path) {
+    CgfxGeometry geo;
+    if (!cgfx_load_geometry(path, &geo)) {
+        fprintf(stderr, "[cgfx] Failed to load geometry: %s\n", path);
+        return (CgfxMesh){};
+    }
+
+    uint32_t fpp = geo.floats_per_point;
+    uint32_t vertex_count = geo.point_count / fpp;
+    bool has_z = (fpp >= 6);
+
+    CgfxVertex *vertices = malloc(vertex_count * sizeof(CgfxVertex));
+    for (uint32_t i = 0; i < vertex_count; i++) {
+        const float *p = &geo.point_data[i * fpp];
+        if (has_z) {
+            vertices[i] = (CgfxVertex){
+                .position = {p[0], p[1], p[2]},
+                .color    = {p[3], p[4], p[5]},
+            };
+        } else {
+            vertices[i] = (CgfxVertex){
+                .position = {p[0], p[1], 0.0f},
+                .color    = {p[2], p[3], p[4]},
+            };
+        }
+    }
+
+    uint32_t *indices = malloc(geo.index_count * sizeof(uint32_t));
+    for (uint32_t i = 0; i < geo.index_count; i++)
+        indices[i] = geo.index_data[i];
+
+    CgfxMesh mesh = cgfx_mesh_create(ctx, vertices, vertex_count, indices, geo.index_count);
+
+    free(vertices);
+    free(indices);
+    cgfx_free_geometry(&geo);
+
+    return mesh;
 }
