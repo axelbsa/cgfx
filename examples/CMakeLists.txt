@@ -46,14 +46,14 @@ cgfx_compile_slang(
 
 # --- Examples ---
 cgfx_add_example(triangle               triangle/main.c)
-#cgfx_add_example(buffers                playing_with_buffers/main.c)
-#cgfx_add_example(compute                compute/main.c)
-#cgfx_add_example(vertex_attribute       vertex_attribute/main.c)
-#cgfx_add_example(multiple_attributes    multiple_attributes/main.c)
+cgfx_add_example(buffers                playing_with_buffers/main.c)
+cgfx_add_example(compute                compute/main.c)
+cgfx_add_example(vertex_attribute       vertex_attribute/main.c)
+cgfx_add_example(multiple_attributes    multiple_attributes/main.c)
 cgfx_add_example(loading_from_file      loading_from_file/main.c)
 cgfx_add_example(multiple_uniforms      multiple_uniforms/main.c)
 cgfx_add_example(depth_texture          depth_texture/main.c)
 
 # --- Slang Examples ---
-#cgfx_add_example(slang_triangle         slang_triangle/main.c)
-#target_sources(slang_triangle PRIVATE "${WGSL_DIR}/triangle.wgsl")
+cgfx_add_example(slang_triangle         slang_triangle/main.c)
+target_sources(slang_triangle PRIVATE "${WGSL_DIR}/triangle.wgsl")
