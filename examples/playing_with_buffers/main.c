@@ -82,7 +82,7 @@ int main(void) {
     fprintf(stderr,"Sizeof uin64_t=%lu\n", sizeof(uint64_t));
     uint64_t foo[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
     fprintf(stderr,"Sizeof foo=%lu\n", sizeof(foo));
-    CgfxBuffer buffer1 = cgfx_buffer_create_vertex(&ctx, (void*)foo, sizeof(foo), 16);
+    CgfxBuffer buffer1 = cgfx_buffer_create(&ctx, WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst, (void*)foo, sizeof(foo));
     CgfxBuffer buffer2 = cgfx_buffer_create_mapping(&ctx, nullptr, sizeof(foo), 16);
 
     WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(ctx.device, nullptr);
