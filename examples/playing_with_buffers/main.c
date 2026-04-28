@@ -40,7 +40,7 @@ void onBuffer2Mapped(const WGPUBufferMapAsyncStatus status, void* pUserData ) {
 }
 
 // We define a function that hides implementation-specific variants of device polling:
-void wgpuPollEvents([[maybe_unused]] WGPUDevice device, [[maybe_unused]] bool yieldToWebBrowser) {
+void wgpuPollEvents(WGPUDevice device, bool yieldToWebBrowser) {
 #if defined(WEBGPU_BACKEND_DAWN)
     wgpuDeviceTick(device);
 #elif defined(WEBGPU_BACKEND_WGPU)

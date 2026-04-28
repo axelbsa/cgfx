@@ -22,6 +22,7 @@ target_compile_definitions(cgfx PUBLIC
 target_link_libraries(cgfx PUBLIC glfw webgpu glfw3webgpu)
 
 if (MSVC)
+    set(CMAKE_C_STANDARD 23)
     target_compile_options(cgfx PRIVATE /W4)
 else()
     target_compile_options(cgfx PRIVATE -Werror -Wall -Wextra -pedantic -std=c23)

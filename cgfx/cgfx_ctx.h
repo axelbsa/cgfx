@@ -17,6 +17,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef _WIN32
+#ifndef nullptr
+#define nullptr (void*)0
+#endif
+#endif
+
 /**
  * Configuration for creating a cgfx context.
  *
