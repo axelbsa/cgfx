@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include "cgfx_ctx.h"
 #include "cgfx_buffer.h"
+#include "cgfx_export.h"
 
 /**
  * Standard vertex format used by all cgfx meshes.
@@ -75,7 +76,7 @@ typedef struct CgfxMesh {
  * @param index_count   Number of indices (should be a multiple of 3 for triangles).
  * @return              A CgfxMesh with GPU buffers. Call cgfx_mesh_destroy() to free.
  */
-CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
+CGFX_API CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
                             const CgfxVertex *vertices, uint32_t vertex_count,
                             const uint32_t *indices, uint32_t index_count);
 
@@ -87,7 +88,7 @@ CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
  *
  * @param mesh  Mesh to destroy.
  */
-void cgfx_mesh_destroy(CgfxMesh *mesh);
+CGFX_API void cgfx_mesh_destroy(CgfxMesh *mesh);
 
 /**
  * Record draw commands for a mesh on an active render pass.
@@ -122,7 +123,7 @@ void cgfx_mesh_destroy(CgfxMesh *mesh);
  * @param pass  Active render pass encoder (from cgfx_frame_begin()).
  * @param mesh  Mesh to draw. Must have valid vertex and index buffers.
  */
-void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
+CGFX_API void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
 
 /**
  * Get the vertex buffer layout descriptor for CgfxVertex.
@@ -154,6 +155,6 @@ void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
  *
  * @return  Vertex buffer layout matching CgfxVertex.
  */
-WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void);
+CGFX_API WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void);
 
 #endif /* CGFX_MESH_H */

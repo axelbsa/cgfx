@@ -15,6 +15,7 @@
 #include <webgpu/webgpu.h>
 #include <stdint.h>
 #include "cgfx_ctx.h"
+#include "cgfx_export.h"
 
 /**
  * A GPU buffer with associated metadata.
@@ -55,7 +56,7 @@ typedef struct CgfxBuffer {
  * @param count      Number of vertices in the data.
  * @return           A CgfxBuffer containing the GPU vertex buffer.
  */
-CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
+CGFX_API CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
                                      const void *data,
                                      uint64_t data_size,
                                      uint32_t count);
@@ -84,7 +85,7 @@ CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
  * @param count    Number of indices in the array.
  * @return         A CgfxBuffer containing the GPU index buffer.
  */
-CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
+CGFX_API CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
                                     const uint32_t *indices,
                                     uint32_t count);
 
@@ -96,7 +97,7 @@ CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
  *
  * @param buf  Buffer to destroy.
  */
-void cgfx_buffer_destroy(CgfxBuffer *buf);
+CGFX_API void cgfx_buffer_destroy(CgfxBuffer *buf);
 
 
 /**
@@ -113,18 +114,18 @@ void cgfx_buffer_destroy(CgfxBuffer *buf);
  * @param data_size  Size of the uniform buffer in bytes.
  * @return           A CgfxBuffer containing the GPU uniform buffer.
  */
-CgfxBuffer cgfx_buffer_create_uniform(const CgfxCtx *ctx,
+CGFX_API CgfxBuffer cgfx_buffer_create_uniform(const CgfxCtx *ctx,
                                       const void *data,
                                       uint64_t data_size);
 
 /* Mapping buffer */
-CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
+CGFX_API CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
                                       const void *data,
                                       uint64_t data_size,
                                       uint32_t count);
 
 /* Create a generic buffer function */
-CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
+CGFX_API CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
                               WGPUBufferUsageFlags usage,
                               const void *data,    // NULL = don't upload
                               uint64_t data_size);

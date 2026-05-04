@@ -16,6 +16,7 @@
 #include <GLFW/glfw3.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "cgfx_export.h"
 
 #ifdef _WIN32
 #ifndef nullptr
@@ -92,9 +93,40 @@ typedef struct CgfxCtx {
  *   WGPURequiredLimits limits = cgfx_default_limits();
  *   limits.limits.maxVertexAttributes = 2;
  */
-WGPURequiredLimits cgfx_default_limits(void);
+CGFX_API WGPURequiredLimits cgfx_default_limits(void);
 
-bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc);
+CGFX_API bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc);
+
+/**
+ * Configuration for creating a context from an externally-owned window.
+ *
+ * Used with cgfx_ctx_init_external() when the window is not created by GLFW
+ * (e.g., a WinForms Panel, a Win32 HWND from an editor host).
+ */
+typedef struct CgfxCtxExternalDesc {
+    void               *native_handle;  /**< Platform window handle (HWND on Windows). */
+    uint32_t            width;          /**< Render surface width in pixels.            */
+    uint32_t            height;         /**< Render surface height in pixels.           */
+    bool                depth_buffer;   /**< Create a depth buffer at surface dimensions. */
+    WGPUPresentMode     present_mode;   /**< Surface present mode. 0 = Fifo (VSync).   */
+    WGPURequiredLimits  limits;         /**< User defined limits.                       */
+} CgfxCtxExternalDesc;
+
+/**
+ * Initialize a cgfx context from an externally-owned window handle.
+ *
+ * Skips GLFW entirely — the caller owns the window and its event loop.
+ * Currently supports Win32 HWND; on other platforms this returns false.
+ *
+ * ctx->window will be NULL after this call. cgfx_ctx_is_running() always
+ * returns true for external contexts (the caller decides lifetime).
+ * cgfx_ctx_destroy() will skip GLFW teardown.
+ *
+ * @param ctx   Pointer to a caller-allocated CgfxCtx.
+ * @param desc  Configuration with the native window handle.
+ * @return      true on success, false on failure.
+ */
+CGFX_API bool cgfx_ctx_init_external(CgfxCtx *ctx, const CgfxCtxExternalDesc *desc);
 
 /**
  * Check if the context window is still open.
@@ -108,7 +140,7 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc);
  * @param ctx  Initialized context.
  * @return     true if the window is open and rendering should continue.
  */
-bool cgfx_ctx_is_running(const CgfxCtx *ctx);
+CGFX_API bool cgfx_ctx_is_running(const CgfxCtx *ctx);
 
 /**
  * Destroy the context and release all resources.
@@ -124,6 +156,6 @@ bool cgfx_ctx_is_running(const CgfxCtx *ctx);
  *
  * @param ctx  Context to destroy.
  */
-void cgfx_ctx_destroy(CgfxCtx *ctx);
+CGFX_API void cgfx_ctx_destroy(CgfxCtx *ctx);
 
 #endif /* CGFX_CTX_H */

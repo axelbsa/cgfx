@@ -117,6 +117,7 @@ int main(void) {
 
     /* Main render loop */
     while (cgfx_ctx_is_running(&ctx)) {
+        glfwPollEvents();
         CgfxFrame frame;
         if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){ 0.1, 0.1, 0.2, 1.0 })) {
 

@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include "cgfx_ctx.h"
 #include "cgfx_buffer.h"
+#include "cgfx_export.h"
 
 /**
  * Describes a single binding slot within a bind group layout.
@@ -94,7 +95,7 @@ typedef struct CgfxShader {
  * @param desc   Bind group layout description, or NULL for no bindings.
  * @return       A CgfxShader. Call cgfx_shader_destroy() to release.
  */
-CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
+CGFX_API CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
                                const char *label,
                                const char *wgsl,
                                const CgfxShaderDesc *desc);
@@ -111,7 +112,7 @@ CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
  * @param desc   Bind group layout description, or NULL.
  * @return       A CgfxShader. Call cgfx_shader_destroy() to release.
  */
-CgfxShader cgfx_shader_create_from_file(const CgfxCtx *ctx,
+CGFX_API CgfxShader cgfx_shader_create_from_file(const CgfxCtx *ctx,
                                          const char *label,
                                          const char *path,
                                          const CgfxShaderDesc *desc);
@@ -130,7 +131,7 @@ CgfxShader cgfx_shader_create_from_file(const CgfxCtx *ctx,
  * @param buffer_count  Number of buffers.
  * @return              Bind group handle. Caller releases with wgpuBindGroupRelease().
  */
-WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
+CGFX_API WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
                                             const CgfxShader *shader,
                                             uint32_t group_index,
                                             const CgfxBuffer *buffers,
@@ -146,7 +147,7 @@ WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
  * @param groups       Array of bind group handles.
  * @param group_count  Number of bind groups to set.
  */
-void cgfx_shader_bind(WGPURenderPassEncoder pass,
+CGFX_API void cgfx_shader_bind(WGPURenderPassEncoder pass,
                        const WGPUBindGroup *groups,
                        uint32_t group_count);
 
@@ -159,6 +160,6 @@ void cgfx_shader_bind(WGPURenderPassEncoder pass,
  *
  * @param shader  Shader to destroy.
  */
-void cgfx_shader_destroy(CgfxShader *shader);
+CGFX_API void cgfx_shader_destroy(CgfxShader *shader);
 
 #endif /* CGFX_SHADER_H */

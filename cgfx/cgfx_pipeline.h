@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include "cgfx_ctx.h"
 #include "cgfx_shader.h"
+#include "cgfx_export.h"
 
 /**
  * Configuration for creating a render pipeline.
@@ -90,7 +91,7 @@ typedef struct CgfxPipelineDesc {
  * @return      Pipeline handle, or NULL on failure.
  *              Caller must release with wgpuRenderPipelineRelease().
  */
-WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
+CGFX_API WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
                                          const CgfxPipelineDesc *desc);
 
 #endif /* CGFX_PIPELINE_H */

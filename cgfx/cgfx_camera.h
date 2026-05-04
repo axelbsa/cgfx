@@ -16,15 +16,16 @@
 #define CGFX_CAMERA_H
 
 #include <cglm/cglm.h>
+#include "cgfx_export.h"
 
 typedef struct CgfxCamera {
     mat4 projection;
     mat4 view;
 } CgfxCamera;
 
-void cgfx_camera_perspective(CgfxCamera *cam, float fovy,
+CGFX_API void cgfx_camera_perspective(CgfxCamera *cam, float fovy,
                              float aspect, float near_z, float far_z);
 
-void cgfx_camera_look_at(CgfxCamera *cam, vec3 eye, vec3 center, vec3 up);
+CGFX_API void cgfx_camera_look_at(CgfxCamera *cam, vec3 eye, vec3 center, vec3 up);
 
 #endif /* CGFX_CAMERA_H */

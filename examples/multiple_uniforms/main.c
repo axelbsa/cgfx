@@ -66,6 +66,7 @@ int main(void) {
         cgfx_uniform_write(&ctx, &u_left);
         cgfx_uniform_write(&ctx, &u_right);
 
+        glfwPollEvents();
         CgfxFrame frame;
         if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){0.1, 0.1, 0.15, 1.0})) {
             wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);

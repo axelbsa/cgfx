@@ -16,14 +16,13 @@
 #include <GLFW/glfw3.h>
 #include <glfw3webgpu.h>
 
+#ifdef _WIN32
+#include <hwnd3webgpu.h>
+#endif
+
 
 /* ── Internal error callbacks ─────────────────────────────────────── */
 
-/**
- * Called by WebGPU when the device is lost (e.g., GPU disconnect, driver crash).
- * Prints the reason and message to stderr. This is registered once during init
- * and should not be called directly.
- */
 static void cgfx__device_lost_callback(WGPUDeviceLostReason reason,
                                         char const *message,
                                         void *user_data) {
@@ -34,10 +33,6 @@ static void cgfx__device_lost_callback(WGPUDeviceLostReason reason,
     fprintf(stderr, "\n");
 }
 
-/**
- * Called by WebGPU for uncaptured device errors (validation errors, out-of-memory,
- * etc.). Prints the error type and message to stderr. Registered once during init.
- */
 static void cgfx__device_error_callback(WGPUErrorType type,
                                          char const *message,
                                          void *user_data) {
@@ -51,60 +46,27 @@ static void cgfx__device_error_callback(WGPUErrorType type,
 WGPURequiredLimits cgfx_default_limits(void) {
     WGPURequiredLimits limits = {0};
     limits.nextInChain = nullptr;
-    /* Set all limits to 0xFF (meaning no limits or as high as they go) */
     memset(&limits.limits, 0xFF, sizeof(limits.limits));
     return limits;
 }
 
 
-/* ── Public API ───────────────────────────────────────────────────── */
+/* ── Shared WebGPU initialization ─────────────────────────────────── */
 
-bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
-    *ctx = (CgfxCtx){};
-    /* Apply defaults for zero-initialized fields */
-    const int32_t width  = desc->width  ? (int32_t)desc->width  : 1280;
-    const int32_t height = desc->height ? (int32_t)desc->height : 720;
-    const char *title = desc->title ? desc->title : "cgfx";
-    const WGPUPresentMode present_mode = desc->present_mode ? desc->present_mode
-                                                      : WGPUPresentMode_Fifo;
-
-    /* ── Step 1: Initialize GLFW and create window ────────────────
-     * GLFW_CLIENT_API = GLFW_NO_API because WebGPU provides its own
-     * graphics context — we don't want GLFW to create an OpenGL one.
-     */
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, desc->resizable ? GLFW_TRUE : GLFW_FALSE);
-    ctx->window = glfwCreateWindow(width, height, title, nullptr, nullptr);
-    if (!ctx->window) {
-        fprintf(stderr, "[cgfx] Failed to create GLFW window\n");
-        glfwTerminate();
-        return false;
-    }
-
-    /* ── Step 2: Create WebGPU instance ───────────────────────────
-     * The instance is the entry point to the WebGPU API. We create it
-     * with default settings (empty descriptor).
-     */
-    WGPUInstanceDescriptor instance_desc = {};
-    WGPUInstance instance = wgpuCreateInstance(&instance_desc);
-    if (!instance) {
-        fprintf(stderr, "[cgfx] Failed to create WebGPU instance\n");
-        glfwDestroyWindow(ctx->window);
-        glfwTerminate();
-        return false;
-    }
-
-    /* ── Step 3: Create surface from GLFW window ──────────────────
-     * glfwGetWGPUSurface handles platform-specific surface creation:
-     * Metal on macOS, X11/Wayland on Linux, HWND on Windows, Canvas on Web.
-     */
-    ctx->surface = glfwGetWGPUSurface(instance, ctx->window);
-
-    /* ── Step 4: Request adapter ──────────────────────────────────
-     * The adapter represents a physical GPU. We request one that is
-     * compatible with our surface so it can render to the window.
-     */
+/**
+ * Complete WebGPU initialization after the surface has been created.
+ *
+ * ctx->surface must already be set. Requests an adapter and device,
+ * registers callbacks, gets the queue, configures the surface, and
+ * optionally creates a depth buffer.
+ */
+static bool cgfx__init_from_surface(CgfxCtx *ctx,
+                                    uint32_t width, uint32_t height,
+                                    WGPUPresentMode present_mode,
+                                    const WGPURequiredLimits *limits,
+                                    bool depth_buffer,
+                                    WGPUInstance instance) {
+    /* ── Request adapter ─────────────────────────────────────────── */
     fprintf(stderr, "[cgfx] Requesting adapter...\n");
     WGPURequestAdapterOptions adapter_opts = {};
     adapter_opts.nextInChain = nullptr;
@@ -112,14 +74,11 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
     WGPUAdapter adapter = cgfx__request_adapter_sync(instance, &adapter_opts);
     fprintf(stderr, "[cgfx] Got adapter: %p\n", (void *)&adapter);
 
-    /* Instance is no longer needed after adapter is obtained */
     wgpuInstanceRelease(instance);
 
     if (!adapter) {
         fprintf(stderr, "[cgfx] Failed to obtain WebGPU adapter\n");
         wgpuSurfaceRelease(ctx->surface);
-        glfwDestroyWindow(ctx->window);
-        glfwTerminate();
         return false;
     }
 
@@ -130,19 +89,16 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
     supported.nextInChain = nullptr;
     wgpuAdapterGetLimits(adapter, &supported);
     cgfx__inspect_limits("Adapter supported", &supported.limits);
-    cgfx__inspect_limits("Requested", &desc->limits.limits);
+    cgfx__inspect_limits("Requested", &limits->limits);
 #endif
 
-    /* ── Step 5: Request device ───────────────────────────────────
-     * The device is the logical GPU connection we use for all operations:
-     * creating buffers, shaders, pipelines, and submitting commands.
-     */
+    /* ── Request device ──────────────────────────────────────────── */
     fprintf(stderr, "[cgfx] Requesting device...\n");
     WGPUDeviceDescriptor device_desc = {};
     device_desc.nextInChain = nullptr;
     device_desc.label = "cgfx device";
     device_desc.requiredFeatureCount = 0;
-    device_desc.requiredLimits = &desc->limits;
+    device_desc.requiredLimits = limits;
     device_desc.defaultQueue.nextInChain = nullptr;
     device_desc.defaultQueue.label = "cgfx default queue";
     device_desc.deviceLostCallback = &cgfx__device_lost_callback;
@@ -153,27 +109,18 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
         fprintf(stderr, "[cgfx] Failed to obtain WebGPU device\n");
         wgpuAdapterRelease(adapter);
         wgpuSurfaceRelease(ctx->surface);
-        glfwDestroyWindow(ctx->window);
-        glfwTerminate();
         return false;
     }
 
-    /* ── Step 6: Register error callback ──────────────────────────
-     * This catches validation errors, OOM, etc. during rendering.
-     */
+    /* ── Error callback ──────────────────────────────────────────── */
     wgpuDeviceSetUncapturedErrorCallback(ctx->device,
                                           &cgfx__device_error_callback,
                                           nullptr);
 
-    /* ── Step 7: Get default queue ────────────────────────────────
-     * The queue is used to submit command buffers and write buffer data.
-     */
+    /* ── Get default queue ───────────────────────────────────────── */
     ctx->queue = wgpuDeviceGetQueue(ctx->device);
 
-    /* ── Step 8: Configure surface ────────────────────────────────
-     * Query the preferred texture format for this adapter+surface combo,
-     * then configure the surface swap chain with that format.
-     */
+    /* ── Configure surface ───────────────────────────────────────── */
     WGPUSurfaceConfiguration config = {};
     config.nextInChain = nullptr;
     config.width = width;
@@ -189,13 +136,13 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
 
     wgpuSurfaceConfigure(ctx->surface, &config);
 
-    /* Adapter is no longer needed after surface configuration */
     wgpuAdapterRelease(adapter);
 
     ctx->width = width;
     ctx->height = height;
 
-    if (desc->depth_buffer) {
+    /* ── Optional depth buffer ───────────────────────────────────── */
+    if (depth_buffer) {
         ctx->depth_format = WGPUTextureFormat_Depth24Plus;
 
         WGPUTextureDescriptor depth_desc = {};
@@ -223,7 +170,94 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
     return true;
 }
 
+
+/* ── Public API ───────────────────────────────────────────────────── */
+
+bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
+    *ctx = (CgfxCtx){};
+
+    const int32_t width  = desc->width  ? (int32_t)desc->width  : 1280;
+    const int32_t height = desc->height ? (int32_t)desc->height : 720;
+    const char *title = desc->title ? desc->title : "cgfx";
+    const WGPUPresentMode present_mode = desc->present_mode ? desc->present_mode
+                                                      : WGPUPresentMode_Fifo;
+
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, desc->resizable ? GLFW_TRUE : GLFW_FALSE);
+    ctx->window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    if (!ctx->window) {
+        fprintf(stderr, "[cgfx] Failed to create GLFW window\n");
+        glfwTerminate();
+        return false;
+    }
+
+    WGPUInstanceDescriptor instance_desc = {};
+    WGPUInstance instance = wgpuCreateInstance(&instance_desc);
+    if (!instance) {
+        fprintf(stderr, "[cgfx] Failed to create WebGPU instance\n");
+        glfwDestroyWindow(ctx->window);
+        glfwTerminate();
+        return false;
+    }
+
+    ctx->surface = glfwGetWGPUSurface(instance, ctx->window);
+
+    if (!cgfx__init_from_surface(ctx, width, height, present_mode,
+                                 &desc->limits, desc->depth_buffer, instance)) {
+        glfwDestroyWindow(ctx->window);
+        glfwTerminate();
+        return false;
+    }
+
+    return true;
+}
+
+
+bool cgfx_ctx_init_external(CgfxCtx *ctx, const CgfxCtxExternalDesc *desc) {
+    *ctx = (CgfxCtx){};
+
+    if (!desc->native_handle) {
+        fprintf(stderr, "[cgfx] native_handle is NULL\n");
+        return false;
+    }
+
+    if (!desc->width || !desc->height) {
+        fprintf(stderr, "[cgfx] width and height must be non-zero for external context\n");
+        return false;
+    }
+
+    const WGPUPresentMode present_mode = desc->present_mode ? desc->present_mode
+                                                      : WGPUPresentMode_Fifo;
+
+#ifdef _WIN32
+    WGPUInstanceDescriptor instance_desc = {};
+    WGPUInstance instance = wgpuCreateInstance(&instance_desc);
+    if (!instance) {
+        fprintf(stderr, "[cgfx] Failed to create WebGPU instance\n");
+        return false;
+    }
+
+    ctx->surface = hwndGetWGPUSurface(instance, desc->native_handle);
+    if (!ctx->surface) {
+        fprintf(stderr, "[cgfx] Failed to create surface from HWND\n");
+        wgpuInstanceRelease(instance);
+        return false;
+    }
+
+    return cgfx__init_from_surface(ctx, desc->width, desc->height,
+                                   present_mode, &desc->limits,
+                                   desc->depth_buffer, instance);
+#else
+    (void)present_mode;
+    fprintf(stderr, "[cgfx] cgfx_ctx_init_external() is only supported on Windows\n");
+    return false;
+#endif
+}
+
+
 bool cgfx_ctx_is_running(const CgfxCtx *ctx) {
+    if (!ctx->window) return true;
     return !glfwWindowShouldClose(ctx->window);
 }
 
@@ -236,6 +270,8 @@ void cgfx_ctx_destroy(CgfxCtx *ctx) {
     wgpuQueueRelease(ctx->queue);
     wgpuSurfaceRelease(ctx->surface);
     wgpuDeviceRelease(ctx->device);
-    glfwDestroyWindow(ctx->window);
-    glfwTerminate();
+    if (ctx->window) {
+        glfwDestroyWindow(ctx->window);
+        glfwTerminate();
+    }
 }

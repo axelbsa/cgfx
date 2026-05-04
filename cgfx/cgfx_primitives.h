@@ -19,6 +19,7 @@
 
 #include "cgfx_ctx.h"
 #include "cgfx_mesh.h"
+#include "cgfx_export.h"
 
 /**
  * Generate a flat plane in the XZ plane.
@@ -55,7 +56,7 @@
  * @param subdivisions Number of subdivisions per axis (minimum 1).
  * @return             A CgfxMesh with GPU buffers. Destroy with cgfx_mesh_destroy().
  */
-CgfxMesh cgfx_primitives_plane(const CgfxCtx *ctx,
+CGFX_API CgfxMesh cgfx_primitives_plane(const CgfxCtx *ctx,
                                 float width, float depth,
                                 uint32_t subdivisions);
 
@@ -87,7 +88,7 @@ CgfxMesh cgfx_primitives_plane(const CgfxCtx *ctx,
  * @param size  Distance from center to each vertex (approximate radius).
  * @return      A CgfxMesh with GPU buffers. Destroy with cgfx_mesh_destroy().
  */
-CgfxMesh cgfx_primitives_triangle(const CgfxCtx *ctx, float size);
+CGFX_API CgfxMesh cgfx_primitives_triangle(const CgfxCtx *ctx, float size);
 
 /**
  * Generate a UV sphere.
@@ -126,7 +127,7 @@ CgfxMesh cgfx_primitives_triangle(const CgfxCtx *ctx, float size);
  * @param stacks  Number of latitudinal divisions (minimum 2).
  * @return        A CgfxMesh with GPU buffers. Destroy with cgfx_mesh_destroy().
  */
-CgfxMesh cgfx_primitives_sphere(const CgfxCtx *ctx,
+CGFX_API CgfxMesh cgfx_primitives_sphere(const CgfxCtx *ctx,
                                  float radius,
                                  uint32_t slices, uint32_t stacks);
 
@@ -162,6 +163,6 @@ CgfxMesh cgfx_primitives_sphere(const CgfxCtx *ctx,
  * @param size  Side length of the cube.
  * @return      A CgfxMesh with GPU buffers. Destroy with cgfx_mesh_destroy().
  */
-CgfxMesh cgfx_primitives_cube(const CgfxCtx *ctx, float size);
+CGFX_API CgfxMesh cgfx_primitives_cube(const CgfxCtx *ctx, float size);
 
 #endif /* CGFX_PRIMITIVES_H */

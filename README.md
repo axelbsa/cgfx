@@ -14,6 +14,13 @@ cmake --build build
 ./build/examples/depth_texture
 ```
 
+For a shared library (`.dll`/`.so`/`.dylib`), e.g. for C# P/Invoke:
+
+```
+cmake . -B build -DCGFX_SHARED=ON
+cmake --build build
+```
+
 Requires CMake 3.0+ and a C23-capable compiler.
 
 Example
@@ -54,6 +61,11 @@ int main(void) {
     while (cgfx_ctx_is_running(&ctx)) {
         cgfx_uniform_write(&ctx, &uniform);
 
+    CgfxShader shader = cgfx_shader_create(&ctx, "my shader", wgsl_source, nullptr);
+    WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){ .shader = &shader });
+
+    while (cgfx_ctx_is_running(&ctx)) {
+        glfwPollEvents();
         CgfxFrame frame;
         if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){ 0.1, 0.1, 0.2, 1.0 })) {
             wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
@@ -118,9 +130,10 @@ Library flow
 
     while (cgfx_ctx_is_running(&ctx))
     |
+    +-> glfwPollEvents()  (caller-owned — or platform equivalent)
+    |
     +-> cgfx_frame_begin(&ctx, &frame, clear_color)
     |   |
-    |   |   Poll events
     |   |   Acquire surface texture view
     |   |   Create command encoder
     |   |   Begin render pass (color + optional depth attachment)
@@ -159,10 +172,10 @@ Modules
 
 | Module | Header | Description |
 |--------|--------|-------------|
-| Context | `cgfx_ctx.h` | Window, device, queue, surface init/teardown. Optional depth buffer creation. |
+| Context | `cgfx_ctx.h` | Window/device/queue/surface init/teardown. `cgfx_ctx_init()` for GLFW, `cgfx_ctx_init_external()` for embedded windows (HWND). Optional depth buffer. |
 | Shader | `cgfx_shader.h` | WGSL compilation + bind group layouts + pipeline layout. Shader owns layouts; bind groups are caller-owned. |
 | Pipeline | `cgfx_pipeline.h` | Render pipeline with zero-init defaults. Reads layout from CgfxShader. Supports depth testing. |
-| Frame | `cgfx_frame.h` | Per-frame begin/end cycle. Handles texture acquisition, command encoding, submission, presentation, and optional depth attachment. |
+| Frame | `cgfx_frame.h` | Per-frame begin/end cycle. Handles texture acquisition, command encoding, submission, presentation, and optional depth attachment. Caller polls events. |
 | Buffer | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, mapping, generic). |
 | Uniform | `cgfx_uniform.h` | Bundles a uniform buffer + bind group + data pointer for per-object uniform data. |
 | Mesh | `cgfx_mesh.h` | `CgfxVertex` (position + normal + color + UV, 44 bytes), `CgfxMesh` (vertex + index GPU buffers), vertex layout descriptor, indexed draw. |
@@ -170,6 +183,15 @@ Modules
 | Primitives | `cgfx_primitives.h` | Geometry generators (plane, triangle, sphere, cube). **Stubbed.** |
 
 ### Not yet implemented
+
+| Module | Header | Description |
+|--------|--------|-------------|
+| Mesh | `cgfx_mesh.h` | `CgfxVertex` (position + normal + UV, 32 bytes), `CgfxMesh` (owns GPU buffers), and `cgfx_mesh_vertex_layout()` for pipeline creation. Vertex layout is implemented; create/destroy are stubbed. |
+| Primitives | `cgfx_primitives.h` | Geometry generators: `cgfx_primitives_plane()`, `_triangle()`, `_sphere()`, `_cube()`. Each generates vertices/indices and returns a `CgfxMesh`. |
+
+All stubbed functions have detailed TODO comments describing the exact implementation steps.
+
+### Not yet planned
 
 - Texture loading and samplers
 - Camera / transform matrices
@@ -182,6 +204,7 @@ Design
 - **Transparent structs** -- access raw WebGPU handles (e.g. `ctx.device`, `shader.group_layouts[0]`) for anything cgfx doesn't wrap
 - **Zero-init defaults** -- `CgfxPipelineDesc desc = { .shader = &s };` gives you working defaults
 - **No global state** -- context is passed by pointer
+- **Caller-owned event loop** -- cgfx never calls windowing event functions; the caller polls events before `cgfx_frame_begin`
 - **Thin wrapper** -- cgfx manages boilerplate, you record draw commands with raw WebGPU calls
 - **Shader owns layouts, caller owns bind groups** -- enables same shader with different per-object uniform data
 
@@ -198,13 +221,14 @@ Examples
 | `compute` | Buffer operations with a render pipeline |
 | `multiple_uniforms` | Two objects sharing one shader with different uniform data via CgfxUniform |
 | `depth_texture` | Rotating 3D pyramid with depth testing |
+| `external_window` | Render into an externally-owned Win32 HWND (Windows-only, stub on other platforms) |
 | `slang_triangle` | Slang shader compiled to WGSL at build time |
 
 Project structure
 -----------------
 
 ```
-cgfx/                    Static library (libcgfx.a)
+cgfx/                    Library (static or shared via -DCGFX_SHARED=ON)
 examples/                Example applications (one directory each)
-vendor/                  Vendored dependencies (glfw, webgpu, glfw3webgpu)
+vendor/                  Vendored dependencies (glfw, webgpu, glfw3webgpu, hwnd3webgpu)
 ```

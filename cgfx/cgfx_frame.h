@@ -28,6 +28,7 @@
 #include <webgpu/webgpu.h>
 #include <stdbool.h>
 #include "cgfx_ctx.h"
+#include "cgfx_export.h"
 
 /**
  * Per-frame rendering state.
@@ -45,11 +46,14 @@ typedef struct CgfxFrame {
 /**
  * Begin a new frame.
  *
+ * The caller is responsible for polling events before calling this
+ * function (e.g., glfwPollEvents() for GLFW, or the platform message
+ * loop for native windows).
+ *
  * Performs the per-frame setup:
- *   1. glfwPollEvents() — process window/input events
- *   2. Acquire the next surface texture view from the swap chain
- *   3. Create a command encoder
- *   4. Begin a render pass with:
+ *   1. Acquire the next surface texture view from the swap chain
+ *   2. Create a command encoder
+ *   3. Begin a render pass with:
  *      - The surface texture as the single color attachment
  *      - Load operation: Clear with the provided clear_color
  *      - Store operation: Store (keep the rendered result)
@@ -70,7 +74,7 @@ typedef struct CgfxFrame {
  * @return            true if the frame was started successfully.
  *                    false if the surface texture is unavailable (skip this frame).
  */
-bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_color);
+CGFX_API bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_color);
 
 /**
  * End and submit the current frame.
@@ -91,6 +95,6 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
  * @param ctx   Initialized context.
  * @param frame Frame previously started with cgfx_frame_begin().
  */
-void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame);
+CGFX_API void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame);
 
 #endif /* CGFX_FRAME_H */

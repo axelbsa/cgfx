@@ -55,6 +55,8 @@ cgfx_add_example(multiple_uniforms      multiple_uniforms/main.c)
 cgfx_add_example(depth_texture          depth_texture/main.c)
 cgfx_add_example(projection_matrices   projection_matrices/main.c)
 
+cgfx_add_example(external_window        external_window/main.c)
+
 # --- Slang Examples ---
 cgfx_add_example(slang_triangle         slang_triangle/main.c)
 target_sources(slang_triangle PRIVATE "${WGSL_DIR}/triangle.wgsl")

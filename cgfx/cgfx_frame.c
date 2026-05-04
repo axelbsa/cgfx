@@ -11,8 +11,6 @@
 #  include <webgpu/wgpu.h>
 #endif
 
-#include <GLFW/glfw3.h>
-
 
 /**
  * Acquire the next surface texture and create a view for rendering.
@@ -61,9 +59,6 @@ static WGPUTextureView cgfx__get_surface_texture_view(WGPUSurface surface) {
 
 
 bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_color) {
-    /* Process window events (input, resize, close, etc.) */
-    glfwPollEvents();
-
     /* Acquire the next surface texture to render into */
     frame->target_view = cgfx__get_surface_texture_view(ctx->surface);
     if (!frame->target_view)

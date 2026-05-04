@@ -18,6 +18,7 @@
 #include "cgfx_ctx.h"
 #include "cgfx_buffer.h"
 #include "cgfx_shader.h"
+#include "cgfx_export.h"
 
 /**
  * A uniform buffer bundled with its bind group and a pointer to user data.
@@ -48,7 +49,7 @@ typedef struct CgfxUniform {
  * @param size         Size of the uniform data in bytes.
  * @return             A CgfxUniform. Call cgfx_uniform_destroy() to release.
  */
-CgfxUniform cgfx_uniform_create(const CgfxCtx *ctx,
+CGFX_API CgfxUniform cgfx_uniform_create(const CgfxCtx *ctx,
                                 const CgfxShader *shader,
                                 uint32_t group_index,
                                 const void *data,
@@ -63,7 +64,7 @@ CgfxUniform cgfx_uniform_create(const CgfxCtx *ctx,
  * @param ctx      Initialized context.
  * @param uniform  Uniform to upload.
  */
-void cgfx_uniform_write(const CgfxCtx *ctx, const CgfxUniform *uniform);
+CGFX_API void cgfx_uniform_write(const CgfxCtx *ctx, const CgfxUniform *uniform);
 
 /**
  * Destroy a uniform and release its GPU resources.
@@ -73,6 +74,6 @@ void cgfx_uniform_write(const CgfxCtx *ctx, const CgfxUniform *uniform);
  *
  * @param uniform  Uniform to destroy.
  */
-void cgfx_uniform_destroy(CgfxUniform *uniform);
+CGFX_API void cgfx_uniform_destroy(CgfxUniform *uniform);
 
 #endif /* CGFX_UNIFORM_H */
