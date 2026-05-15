@@ -25,6 +25,8 @@ int main(void) {
         return 1;
     }
 
+    printf("Platform: %s\n", glfwGetPlatform() == GLFW_PLATFORM_WAYLAND ? "Wayland" : "X11");
+
 
     CgfxShader shader = cgfx_shader_create_from_file(&ctx,
                                                            "my shader",

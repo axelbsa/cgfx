@@ -7,6 +7,7 @@
  * a shader, a pipeline, and render in a loop.
  */
 #include "cgfx.h"
+#include <GLFW/glfw3.h>
 
 static const char *shader_source =
     "@vertex                                                                \n"
@@ -28,6 +29,19 @@ static const char *shader_source =
     "    return vec4f(0.8, 0.4, 1.0, 1.0);                                  \n"
     "}                                                                      \n";
 
+static const char* shader_source2 =
+    "@vertex fn vs_main(@builtin(vertex_index) idx : u32) -> @builtin(position) vec4f { \n"
+    "    var pos = array<vec2f, 3>(                                                     \n"
+    "        vec2f( 0.0,  0.5),                                                         \n"
+    "        vec2f(-0.5, -0.5),                                                         \n"
+    "        vec2f( 0.5, -0.5),                                                         \n"
+    "    );                                                                             \n"
+    "return vec4f(pos[idx], 0.0, 1.0);                                                  \n"
+    "}                                                                                  \n"
+    "                                                                                   \n"
+    "@fragment fn fs_main() -> @location(0) vec4f {                                     \n"
+    "    return vec4f(1.0, 0.0, 0.0, 1.0);                                              \n"
+    "}                                                                                  \n";
 
 int main(void) {
     /* Initialize the rendering context: window, device, queue, surface */
@@ -42,7 +56,7 @@ int main(void) {
     }
 
     /* Create shader module from WGSL source */
-    CgfxShader shader = cgfx_shader_create(&ctx, "triangle shader", shader_source,
+    CgfxShader shader = cgfx_shader_create(&ctx, "triangle shader", shader_source2,
         &(CgfxShaderDesc){});
 
     /* Create render pipeline with default settings (no vertex buffers,
@@ -55,11 +69,24 @@ int main(void) {
         cgfx_ctx_destroy(&ctx);
         return 1;
     }
+    double lastFpsTime = glfwGetTime();
+    int frameCount = 0;
+    glfwSwapInterval(0);
 
     /* Main render loop */
     while (cgfx_ctx_is_running(&ctx)) {
         glfwPollEvents();
         CgfxFrame frame;
+        frameCount++;
+        double now = glfwGetTime();
+        if (now - lastFpsTime >= 1.0) {
+            double fps = frameCount / (now - lastFpsTime);
+            char title[64];
+            snprintf(title, sizeof(title), "Dawn Hello Triangle — %.1f FPS", fps);
+            glfwSetWindowTitle(ctx.window, title);
+            frameCount = 0;
+            lastFpsTime = now;
+        }
         if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){ 0.1, 0.1, 0.2, 1.0 })) {
             /* Record draw commands directly on the render pass */
             wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
