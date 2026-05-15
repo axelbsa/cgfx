@@ -24,10 +24,11 @@
 /**
  * Standard vertex format used by all cgfx meshes.
  *
- * Layout (32 bytes total, tightly packed):
+ * Layout (44 bytes total, tightly packed):
  *   Offset  0: position  float[3]  (12 bytes)  — world-space position
  *   Offset 12: normal    float[3]  (12 bytes)  — surface normal (unit length)
- *   Offset 24: uv        float[2]  (8 bytes)   — texture coordinates
+ *   Offset 24: color     float[3]  (12 bytes)  — vertex color RGB
+ *   Offset 36: uv        float[2]  (8 bytes)   — texture coordinates
  *
  * This matches the vertex buffer layout returned by cgfx_mesh_vertex_layout().
  * When creating a pipeline for mesh rendering, pass that layout to
@@ -138,17 +139,13 @@ CGFX_API void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
  *       .vertex_layouts = &layout,
  *   };
  *
- * The layout describes 3 attributes at shader locations 0, 1, 2:
+ * The layout describes 4 attributes at shader locations 0–3:
  *   - Location 0: position (Float32x3, offset 0)
  *   - Location 1: normal   (Float32x3, offset 12)
- *   - Location 2: uv       (Float32x2, offset 24)
+ *   - Location 2: color    (Float32x3, offset 24)
+ *   - Location 3: uv       (Float32x2, offset 36)
  *
- * Stride is sizeof(CgfxVertex) = 32 bytes, step mode is Vertex.
- *
- * Implementation should:
- *   1. Define a static array of 3 WGPUVertexAttribute entries
- *   2. Return a WGPUVertexBufferLayout pointing to that array
- *   3. The static array persists because it's file-scope static
+ * Stride is sizeof(CgfxVertex) = 44 bytes, step mode is Vertex.
  *
  * Note: The returned layout references static internal storage.
  * It is valid for the lifetime of the program but should not be modified.

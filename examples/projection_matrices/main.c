@@ -23,7 +23,7 @@ int main(void) {
         return 1;
     }
 
-    CgfxShader shader = cgfx_shader_create_from_file(&ctx, "depth shader", "shaders/shader.wgsl",
+    CgfxShader shader = cgfx_shader_create_from_file(&ctx, "depth shader", "shaders/projection_matrices.wgsl",
         &(CgfxShaderDesc){
             .group_count = 1,
             .groups = (CgfxGroupDesc[]){{

@@ -1,0 +1,80 @@
+site_name: cgfx
+site_url: https://axelbsa.github.io/cgfx/
+site_description: "A minimal C23 rendering engine library wrapping WebGPU"
+repo_url: https://github.com/axelbsa/cgfx
+repo_name: axelbsa/cgfx
+
+docs_dir: documentation
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Building: building.md
+  - Architecture: architecture.md
+  - Guides:
+    - Buffers, Layouts & Pipeline: guides/buffers-layouts-pipeline.md
+    - Shader & Bind Group Architecture: guides/shader-bind-groups.md
+  - API Reference:
+    - Overview: api/index.md
+    - Context: api/context.md
+    - Shader: api/shader.md
+    - Pipeline: api/pipeline.md
+    - Frame: api/frame.md
+    - Buffer: api/buffer.md
+    - Uniform: api/uniform.md
+    - Mesh: api/mesh.md
+    - Camera: api/camera.md
+    - Primitives: api/primitives.md
+    - Loader: api/loader.md
+    - Export: api/export.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search

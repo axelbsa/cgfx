@@ -60,11 +60,6 @@ int main(void) {
 
     while (cgfx_ctx_is_running(&ctx)) {
         cgfx_uniform_write(&ctx, &uniform);
-
-    CgfxShader shader = cgfx_shader_create(&ctx, "my shader", wgsl_source, nullptr);
-    WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){ .shader = &shader });
-
-    while (cgfx_ctx_is_running(&ctx)) {
         glfwPollEvents();
         CgfxFrame frame;
         if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){ 0.1, 0.1, 0.2, 1.0 })) {
@@ -178,7 +173,8 @@ Modules
 | Frame | `cgfx_frame.h` | Per-frame begin/end cycle. Handles texture acquisition, command encoding, submission, presentation, and optional depth attachment. Caller polls events. |
 | Buffer | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, mapping, generic). |
 | Uniform | `cgfx_uniform.h` | Bundles a uniform buffer + bind group + data pointer for per-object uniform data. |
-| Mesh | `cgfx_mesh.h` | `CgfxVertex` (position + normal + color + UV, 44 bytes), `CgfxMesh` (vertex + index GPU buffers), vertex layout descriptor, indexed draw. |
+| Mesh | `cgfx_mesh.h` | `CgfxVertex` (position + normal + color + UV, 44 bytes), `CgfxMesh` (vertex + index GPU buffers), vertex layout, indexed draw. |
+| Camera | `cgfx_camera.h` | Projection/view matrices with GPU uniform buffer and bind group. Uses cglm. |
 | Loader | `cgfx_loader.h` | Load geometry from LearnWebGPU tutorial text format. Temporary — will be replaced by glTF. |
 | Primitives | `cgfx_primitives.h` | Geometry generators (plane, triangle, sphere, cube). **Stubbed.** |
 
@@ -186,15 +182,11 @@ Modules
 
 | Module | Header | Description |
 |--------|--------|-------------|
-| Mesh | `cgfx_mesh.h` | `CgfxVertex` (position + normal + UV, 32 bytes), `CgfxMesh` (owns GPU buffers), and `cgfx_mesh_vertex_layout()` for pipeline creation. Vertex layout is implemented; create/destroy are stubbed. |
-| Primitives | `cgfx_primitives.h` | Geometry generators: `cgfx_primitives_plane()`, `_triangle()`, `_sphere()`, `_cube()`. Each generates vertices/indices and returns a `CgfxMesh`. |
-
-All stubbed functions have detailed TODO comments describing the exact implementation steps.
+| Primitives | `cgfx_primitives.h` | Geometry generators: `cgfx_primitives_plane()`, `_triangle()`, `_sphere()`, `_cube()`. Declared but stubbed. |
 
 ### Not yet planned
 
 - Texture loading and samplers
-- Camera / transform matrices
 - glTF model loading
 
 Design

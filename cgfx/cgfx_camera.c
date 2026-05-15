@@ -4,7 +4,14 @@
  */
 #include "cgfx_camera.h"
 
+#include <stddef.h>
+
 #define CGFX_CAMERA_GPU_SIZE (2 * sizeof(mat4))
+
+_Static_assert(
+    offsetof(CgfxCamera, view) == offsetof(CgfxCamera, projection) + sizeof(mat4),
+    "CgfxCamera: view must immediately follow projection for GPU upload"
+);
 
 
 CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,

@@ -25,7 +25,7 @@ int main(void) {
     }
 
     /* Create shader with one bind group: @group(0) @binding(0) */
-    CgfxShader shader = cgfx_shader_create_from_file(&ctx, "uniform shader", "shaders/shader.wgsl",
+    CgfxShader shader = cgfx_shader_create_from_file(&ctx, "uniform shader", "shaders/multiple_uniforms.wgsl",
         &(CgfxShaderDesc){
             .group_count = 1,
             .groups = (CgfxGroupDesc[]){{
