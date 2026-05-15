@@ -14,13 +14,13 @@ cgfx is a minimal C23 rendering engine wrapping WebGPU. It exposes 11 modules th
 | [Context](context.md) | `cgfx_ctx.h` | Window, WebGPU device, queue, and surface management |
 | [Shader](shader.md) | `cgfx_shader.h` | WGSL compilation, bind group layouts, pipeline layout |
 | [Pipeline](pipeline.md) | `cgfx_pipeline.h` | Render pipeline creation with zero-init defaults |
-| Frame | `cgfx_frame.h` | Per-frame begin/end rendering cycle |
+| [Frame](frame.md) | `cgfx_frame.h` | Per-frame begin/end rendering cycle |
 | [Buffer](buffer.md) | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, mapping, generic) |
-| Uniform | `cgfx_uniform.h` | Uniform buffer + bind group + data pointer bundle |
-| Mesh | `cgfx_mesh.h` | Vertex format, mesh creation, vertex layout, draw helpers |
-| Primitives | `cgfx_primitives.h` | Plane, triangle, sphere, cube generators (stubbed) |
-| Loader | `cgfx_loader.h` | Load geometry from LearnWebGPU text format (temporary) |
-| Camera | `cgfx_camera.h` | Projection/view matrices with GPU uniform management |
+| [Uniform](uniform.md) | `cgfx_uniform.h` | Uniform buffer + bind group + data pointer bundle |
+| [Mesh](mesh.md) | `cgfx_mesh.h` | Vertex format, mesh creation, vertex layout, draw helpers |
+| [Primitives](primitives.md) | `cgfx_primitives.h` | Plane, triangle, sphere, cube generators (stubbed) |
+| [Loader](loader.md) | `cgfx_loader.h` | Load geometry from LearnWebGPU text format (temporary) |
+| [Camera](camera.md) | `cgfx_camera.h` | Projection/view matrices with GPU uniform management |
 
 ## Naming conventions
 

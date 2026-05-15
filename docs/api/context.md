@@ -41,6 +41,7 @@ The central rendering context. Owns the GLFW window and all core WebGPU objects.
 | `depth_texture` | `WGPUTexture` | Depth buffer texture. `NULL` if depth buffer is disabled. |
 | `depth_texture_view` | `WGPUTextureView` | View into `depth_texture`. `NULL` if disabled. |
 | `depth_format` | `WGPUTextureFormat` | Depth texture format (only meaningful when depth buffer is enabled). |
+| `present_mode` | `WGPUPresentMode` | Active present mode (stored for use during resize). |
 | `width` | `uint32_t` | Current window width in pixels. |
 | `height` | `uint32_t` | Current window height in pixels. |
 
@@ -192,6 +193,63 @@ CGFX_API bool cgfx_ctx_is_running(const CgfxCtx *ctx);
 while (cgfx_ctx_is_running(&ctx)) {
     glfwPollEvents();
     // render frame...
+}
+```
+
+---
+
+### cgfx_ctx_resize
+
+Reconfigures the WebGPU surface and recreates the depth buffer (if one exists) at new dimensions.
+
+```c
+CGFX_API bool cgfx_ctx_resize(CgfxCtx *ctx, uint32_t width, uint32_t height);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ctx` | `CgfxCtx*` | Initialized context. |
+| `width` | `uint32_t` | New framebuffer width in pixels. |
+| `height` | `uint32_t` | New framebuffer height in pixels. |
+
+**Returns:** `true` on success. `false` if width or height is zero (minimized window), in which case no changes are made.
+
+Call this from your resize handler — cgfx does not register any resize callbacks internally. For GLFW windows, use `glfwSetFramebufferSizeCallback`. For external windows, call from your platform resize handler (e.g., `WM_SIZE` on Windows).
+
+!!! note "Camera projection"
+    `cgfx_ctx_resize` does **not** update camera projection matrices. If you have a `CgfxCamera`, call `cgfx_camera_perspective()` with the new aspect ratio after resizing.
+
+**Example (GLFW):**
+
+```c
+static void on_resize(GLFWwindow *window, int width, int height) {
+    CgfxCtx *ctx = glfwGetWindowUserPointer(window);
+    cgfx_ctx_resize(ctx, (uint32_t)width, (uint32_t)height);
+}
+
+int main(void) {
+    CgfxCtx ctx;
+    cgfx_ctx_init(&ctx, &(CgfxCtxDesc){
+        .width = 1280, .height = 720,
+        .resizable = true,
+        .limits = cgfx_default_limits(),
+    });
+
+    glfwSetWindowUserPointer(ctx.window, &ctx);
+    glfwSetFramebufferSizeCallback(ctx.window, on_resize);
+
+    // ... render loop ...
+}
+```
+
+**Example (Win32 external window):**
+
+```c
+case WM_SIZE: {
+    UINT w = LOWORD(lParam);
+    UINT h = HIWORD(lParam);
+    cgfx_ctx_resize(&ctx, w, h);
+    break;
 }
 ```
 

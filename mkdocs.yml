@@ -4,7 +4,7 @@ site_description: "A minimal C23 rendering engine library wrapping WebGPU"
 repo_url: https://github.com/axelbsa/cgfx
 repo_name: axelbsa/cgfx
 
-docs_dir: documentation
+docs_dir: docs
 site_dir: site
 
 theme:
@@ -45,6 +45,7 @@ nav:
   - Guides:
     - Buffers, Layouts & Pipeline: guides/buffers-layouts-pipeline.md
     - Shader & Bind Group Architecture: guides/shader-bind-groups.md
+    - Using Slang Shaders: guides/using-slang.md
   - API Reference:
     - Overview: api/index.md
     - Context: api/context.md
@@ -75,6 +76,9 @@ markdown_extensions:
   - md_in_html
   - toc:
       permalink: true
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search

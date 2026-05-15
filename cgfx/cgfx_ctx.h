@@ -40,7 +40,7 @@ typedef struct CgfxCtxDesc {
     uint32_t            width;         /**< Window width in pixels.  0 = 1280.           */
     uint32_t            height;        /**< Window height in pixels. 0 = 720.            */
     const char          *title;         /**< Window title string.     NULL = "cgfx".       */
-    bool                resizable;     /**< Allow window resize.     Default: true.       */
+    bool                resizable;     /**< Allow window resize.     Default: false.      */
     bool                depth_buffer;  /**< Create a depth buffer at surface dimensions.  */
     WGPUPresentMode     present_mode;  /**< Surface present mode.    0 = Fifo (VSync).    */
     WGPURequiredLimits  limits;        /**< User defined limits.                          */
@@ -61,6 +61,7 @@ typedef struct CgfxCtx {
     WGPUTexture        depth_texture;      /**< Depth buffer texture (NULL if disabled).   */
     WGPUTextureView    depth_texture_view; /**< View into depth_texture (NULL if disabled).*/
     WGPUTextureFormat  depth_format;       /**< Depth texture format (if enabled).         */
+    WGPUPresentMode    present_mode;       /**< Active present mode (stored for resize).   */
     uint32_t           width;              /**< Current window width in pixels.            */
     uint32_t           height;             /**< Current window height in pixels.           */
 } CgfxCtx;
@@ -141,6 +142,27 @@ CGFX_API bool cgfx_ctx_init_external(CgfxCtx *ctx, const CgfxCtxExternalDesc *de
  * @return     true if the window is open and rendering should continue.
  */
 CGFX_API bool cgfx_ctx_is_running(const CgfxCtx *ctx);
+
+/**
+ * Resize the rendering surface.
+ *
+ * Reconfigures the WebGPU surface and recreates the depth buffer (if one
+ * exists) at the new dimensions. Updates ctx->width and ctx->height.
+ *
+ * Call this when the window is resized. For GLFW windows, call from a
+ * glfwSetFramebufferSizeCallback handler. For external windows, call
+ * from the platform resize handler (e.g., WM_SIZE on Windows).
+ *
+ * Returns false and does nothing if width or height is zero (minimized
+ * window). The camera projection is NOT updated automatically — call
+ * cgfx_camera_perspective() after resizing if you have a camera.
+ *
+ * @param ctx     Initialized context.
+ * @param width   New framebuffer width in pixels.
+ * @param height  New framebuffer height in pixels.
+ * @return        true on success, false if dimensions are zero.
+ */
+CGFX_API bool cgfx_ctx_resize(CgfxCtx *ctx, uint32_t width, uint32_t height);
 
 /**
  * Destroy the context and release all resources.

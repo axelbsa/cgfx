@@ -25,10 +25,10 @@ stays the same.
 │   CgfxVertex vertex[4] = { ... };                                │
 │                                                                  │
 │   memory layout (44 B per vertex):                               │
-│   ┌──────┬──────┬──────┬────┐ ┌──────┬──────┬──────┬────┐ ...   │
-│   │ pos  │ nrm  │ col  │ uv │ │ pos  │ nrm  │ col  │ uv │      │
-│   │ 12B  │ 12B  │ 12B  │ 8B │ │      │      │      │    │      │
-│   └──────┴──────┴──────┴────┘ └──────┴──────┴──────┴────┘      │
+│   ┌──────┬──────┬──────┬────┐ ┌──────┬──────┬──────┬────┐ ...    │
+│   │ pos  │ nrm  │ col  │ uv │ │ pos  │ nrm  │ col  │ uv │        │
+│   │ 12B  │ 12B  │ 12B  │ 8B │ │      │      │      │    │        │
+│   └──────┴──────┴──────┴────┘ └──────┴──────┴──────┴────┘        │
 │      vertex 0                    vertex 1                        │
 └────────────────────────────────┬─────────────────────────────────┘
                                  │ cgfx_mesh_create()
@@ -51,10 +51,10 @@ stays the same.
 │                CPU — DESCRIPTION (no data, just shape)           │
 │                                                                  │
 │   WGPUVertexAttribute attrs[4] = {                               │
-│     { Float32x3, offset =  0, shaderLocation = 0 }, ◄ position  │
-│     { Float32x3, offset = 12, shaderLocation = 1 }, ◄ normal    │
-│     { Float32x3, offset = 24, shaderLocation = 2 }, ◄ color     │
-│     { Float32x2, offset = 36, shaderLocation = 3 }, ◄ uv        │
+│     { Float32x3, offset =  0, shaderLocation = 0 }, ◄ position   │
+│     { Float32x3, offset = 12, shaderLocation = 1 }, ◄ normal     │
+│     { Float32x3, offset = 24, shaderLocation = 2 }, ◄ color      │
+│     { Float32x2, offset = 36, shaderLocation = 3 }, ◄ uv         │
 │   };                                                             │
 │           │                                                      │
 │           ▼ "these attributes belong to ONE buffer"              │
@@ -66,7 +66,7 @@ stays the same.
 │   };                                                             │
 │           │                                                      │
 │           ▼ "the pipeline will receive THIS shape at slot 0"     │
-│   cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){               │
+│   cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){                │
 │       .vertex_layouts      = &layout,                            │
 │       .vertex_buffer_count = 1,                                  │
 │   });                                                            │
@@ -85,11 +85,11 @@ stays the same.
 │      └─► GPU: "use THIS description for vertex slots"            │
 │                                                                  │
 │   SetVertexBuffer(pass, slot=0, mesh.vertex_buffer.buffer);      │
-│      └─► GPU: "DATA at slot 0 is THIS WGPUBuffer"               │
+│      └─► GPU: "DATA at slot 0 is THIS WGPUBuffer"                │
 │                                                                  │
 │   SetIndexBuffer(pass, mesh.index_buffer.buffer, Uint32);        │
-│   DrawIndexed(pass, index_count, 1, 0, 0, 0);                   │
-│      └─► For each index i:                                      │
+│   DrawIndexed(pass, index_count, 1, 0, 0, 0);                    │
+│      └─► For each index i:                                       │
 │           offset    = i * arrayStride          (44 B)            │
 │           position  = buffer[offset +  0 .. +12]                 │
 │           normal    = buffer[offset + 12 .. +24]                 │

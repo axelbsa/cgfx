@@ -43,6 +43,11 @@ static const char* shader_source2 =
     "    return vec4f(1.0, 0.0, 0.0, 1.0);                                              \n"
     "}                                                                                  \n";
 
+static void on_resize(GLFWwindow *window, int width, int height) {
+    CgfxCtx *ctx = glfwGetWindowUserPointer(window);
+    cgfx_ctx_resize(ctx, (uint32_t)width, (uint32_t)height);
+}
+
 int main(void) {
     /* Initialize the rendering context: window, device, queue, surface */
     CgfxCtx ctx;
@@ -50,10 +55,14 @@ int main(void) {
         .width = 1920,
         .height = 1080,
         .title = "cgfx — triangle",
+        .resizable = true,
         .limits = cgfx_default_limits()
     })) {
         return 1;
     }
+
+    glfwSetWindowUserPointer(ctx.window, &ctx);
+    glfwSetFramebufferSizeCallback(ctx.window, on_resize);
 
     /* Create shader module from WGSL source */
     CgfxShader shader = cgfx_shader_create(&ctx, "triangle shader", shader_source2,

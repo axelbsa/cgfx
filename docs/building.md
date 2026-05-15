@@ -2,6 +2,9 @@
 
 This page covers all the ways to build and integrate cgfx into your project.
 
+!!! warning "GCC Version"
+    GCC 13 added initial C23 support (`-std=c2x`). GCC 14+ provides more complete C23 support under `-std=c23`. If you encounter issues with GCC 13, consider upgrading to GCC 14 or using Clang 16+.
+
 ## Static Library (Default)
 
 The default build produces a static library (`libcgfx.a` on Linux/macOS, `cgfx.lib` on Windows):
@@ -201,6 +204,3 @@ The build system configures compiler flags as follows:
 |----------|-------|
 | **GCC / Clang** | `-std=c23 -Werror -Wall -Wextra -pedantic` |
 | **MSVC** | `/std:c23 /W4` |
-
-!!! warning "GCC Version"
-    GCC 13 added initial C23 support (`-std=c2x`). GCC 14+ provides more complete C23 support under `-std=c23`. If you encounter issues with GCC 13, consider upgrading to GCC 14 or using Clang 16+.
