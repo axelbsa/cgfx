@@ -48,7 +48,7 @@ CgfxMesh cgfx_primitives_plane(const CgfxCtx *ctx,
      *           vertices[i * (cols + 1) + j] = (CgfxVertex){
      *               .position = { -width/2 + u * width, 0.0f, -depth/2 + v * depth },
      *               .normal   = { 0.0f, 1.0f, 0.0f },
-     *               .uv       = { u, v },
+     *               .texcoord0       = { u, v },
      *           };
      *       }
      *   }
@@ -94,15 +94,15 @@ CgfxMesh cgfx_primitives_triangle(const CgfxCtx *ctx, float size) {
      *       // Top vertex
      *       { .position = { 0.0f, h * 2.0f/3.0f, 0.0f },
      *         .normal = { 0.0f, 0.0f, 1.0f },
-     *         .uv = { 0.5f, 1.0f } },
+     *         .texcoord0 = { 0.5f, 1.0f } },
      *       // Bottom-left vertex
      *       { .position = { -size/2.0f, -h * 1.0f/3.0f, 0.0f },
      *         .normal = { 0.0f, 0.0f, 1.0f },
-     *         .uv = { 0.0f, 0.0f } },
+     *         .texcoord0 = { 0.0f, 0.0f } },
      *       // Bottom-right vertex
      *       { .position = { size/2.0f, -h * 1.0f/3.0f, 0.0f },
      *         .normal = { 0.0f, 0.0f, 1.0f },
-     *         .uv = { 1.0f, 0.0f } },
+     *         .texcoord0 = { 1.0f, 0.0f } },
      *   };
      *
      *   uint32_t indices[3] = { 0, 1, 2 };
@@ -150,7 +150,7 @@ CgfxMesh cgfx_primitives_sphere(const CgfxCtx *ctx,
      *           vertices[idx] = (CgfxVertex){
      *               .position = { radius * x, radius * y, radius * z },
      *               .normal   = { x, y, z },  // normalized position = normal
-     *               .uv       = { (float)slice / slices, (float)stack / stacks },
+     *               .texcoord0       = { (float)slice / slices, (float)stack / stacks },
      *           };
      *       }
      *   }
@@ -195,40 +195,40 @@ CgfxMesh cgfx_primitives_cube(const CgfxCtx *ctx, float size) {
      *
      *   CgfxVertex vertices[24] = {
      *       // Front face (+Z), normal (0, 0, +1)
-     *       { .position = {-s, -s, +s}, .normal = {0,0,1}, .uv = {0,0} },
-     *       { .position = {+s, -s, +s}, .normal = {0,0,1}, .uv = {1,0} },
-     *       { .position = {+s, +s, +s}, .normal = {0,0,1}, .uv = {1,1} },
-     *       { .position = {-s, +s, +s}, .normal = {0,0,1}, .uv = {0,1} },
+     *       { .position = {-s, -s, +s}, .normal = {0,0,1}, .texcoord0 = {0,0} },
+     *       { .position = {+s, -s, +s}, .normal = {0,0,1}, .texcoord0 = {1,0} },
+     *       { .position = {+s, +s, +s}, .normal = {0,0,1}, .texcoord0 = {1,1} },
+     *       { .position = {-s, +s, +s}, .normal = {0,0,1}, .texcoord0 = {0,1} },
      *
      *       // Back face (-Z), normal (0, 0, -1)
-     *       { .position = {+s, -s, -s}, .normal = {0,0,-1}, .uv = {0,0} },
-     *       { .position = {-s, -s, -s}, .normal = {0,0,-1}, .uv = {1,0} },
-     *       { .position = {-s, +s, -s}, .normal = {0,0,-1}, .uv = {1,1} },
-     *       { .position = {+s, +s, -s}, .normal = {0,0,-1}, .uv = {0,1} },
+     *       { .position = {+s, -s, -s}, .normal = {0,0,-1}, .texcoord0 = {0,0} },
+     *       { .position = {-s, -s, -s}, .normal = {0,0,-1}, .texcoord0 = {1,0} },
+     *       { .position = {-s, +s, -s}, .normal = {0,0,-1}, .texcoord0 = {1,1} },
+     *       { .position = {+s, +s, -s}, .normal = {0,0,-1}, .texcoord0 = {0,1} },
      *
      *       // Top face (+Y), normal (0, +1, 0)
-     *       { .position = {-s, +s, +s}, .normal = {0,1,0}, .uv = {0,0} },
-     *       { .position = {+s, +s, +s}, .normal = {0,1,0}, .uv = {1,0} },
-     *       { .position = {+s, +s, -s}, .normal = {0,1,0}, .uv = {1,1} },
-     *       { .position = {-s, +s, -s}, .normal = {0,1,0}, .uv = {0,1} },
+     *       { .position = {-s, +s, +s}, .normal = {0,1,0}, .texcoord0 = {0,0} },
+     *       { .position = {+s, +s, +s}, .normal = {0,1,0}, .texcoord0 = {1,0} },
+     *       { .position = {+s, +s, -s}, .normal = {0,1,0}, .texcoord0 = {1,1} },
+     *       { .position = {-s, +s, -s}, .normal = {0,1,0}, .texcoord0 = {0,1} },
      *
      *       // Bottom face (-Y), normal (0, -1, 0)
-     *       { .position = {-s, -s, -s}, .normal = {0,-1,0}, .uv = {0,0} },
-     *       { .position = {+s, -s, -s}, .normal = {0,-1,0}, .uv = {1,0} },
-     *       { .position = {+s, -s, +s}, .normal = {0,-1,0}, .uv = {1,1} },
-     *       { .position = {-s, -s, +s}, .normal = {0,-1,0}, .uv = {0,1} },
+     *       { .position = {-s, -s, -s}, .normal = {0,-1,0}, .texcoord0 = {0,0} },
+     *       { .position = {+s, -s, -s}, .normal = {0,-1,0}, .texcoord0 = {1,0} },
+     *       { .position = {+s, -s, +s}, .normal = {0,-1,0}, .texcoord0 = {1,1} },
+     *       { .position = {-s, -s, +s}, .normal = {0,-1,0}, .texcoord0 = {0,1} },
      *
      *       // Right face (+X), normal (+1, 0, 0)
-     *       { .position = {+s, -s, +s}, .normal = {1,0,0}, .uv = {0,0} },
-     *       { .position = {+s, -s, -s}, .normal = {1,0,0}, .uv = {1,0} },
-     *       { .position = {+s, +s, -s}, .normal = {1,0,0}, .uv = {1,1} },
-     *       { .position = {+s, +s, +s}, .normal = {1,0,0}, .uv = {0,1} },
+     *       { .position = {+s, -s, +s}, .normal = {1,0,0}, .texcoord0 = {0,0} },
+     *       { .position = {+s, -s, -s}, .normal = {1,0,0}, .texcoord0 = {1,0} },
+     *       { .position = {+s, +s, -s}, .normal = {1,0,0}, .texcoord0 = {1,1} },
+     *       { .position = {+s, +s, +s}, .normal = {1,0,0}, .texcoord0 = {0,1} },
      *
      *       // Left face (-X), normal (-1, 0, 0)
-     *       { .position = {-s, -s, -s}, .normal = {-1,0,0}, .uv = {0,0} },
-     *       { .position = {-s, -s, +s}, .normal = {-1,0,0}, .uv = {1,0} },
-     *       { .position = {-s, +s, +s}, .normal = {-1,0,0}, .uv = {1,1} },
-     *       { .position = {-s, +s, -s}, .normal = {-1,0,0}, .uv = {0,1} },
+     *       { .position = {-s, -s, -s}, .normal = {-1,0,0}, .texcoord0 = {0,0} },
+     *       { .position = {-s, -s, +s}, .normal = {-1,0,0}, .texcoord0 = {1,0} },
+     *       { .position = {-s, +s, +s}, .normal = {-1,0,0}, .texcoord0 = {1,1} },
+     *       { .position = {-s, +s, -s}, .normal = {-1,0,0}, .texcoord0 = {0,1} },
      *   };
      *
      *   // Each face: 2 triangles = 6 indices, pattern: (0,1,2), (0,2,3) offset by face*4

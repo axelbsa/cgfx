@@ -2,7 +2,7 @@
  * @file cgfx_mesh.h
  * @brief Mesh abstraction — vertex data + index data + GPU buffers.
  *
- * A mesh combines vertex data (position, normal, UV) with index data
+ * A mesh combines vertex data (position, normal, tangent, texcoords, color, joints, weights) with index data
  * into GPU-resident buffers ready for rendering. The CgfxVertex layout
  * is standardized so all meshes share the same vertex buffer format,
  * which simplifies pipeline creation.
@@ -24,21 +24,29 @@
 /**
  * Standard vertex format used by all cgfx meshes.
  *
- * Layout (44 bytes total, tightly packed):
- *   Offset  0: position  float[3]  (12 bytes)  — world-space position
- *   Offset 12: normal    float[3]  (12 bytes)  — surface normal (unit length)
- *   Offset 24: color     float[3]  (12 bytes)  — vertex color RGB
- *   Offset 36: uv        float[2]  (8 bytes)   — texture coordinates
+ * Layout (96 bytes total, tightly packed):
+ *   Offset  0: position   float[3]     (12 bytes)  — world-space position
+ *   Offset 12: normal     float[3]     (12 bytes)  — surface normal (unit length)
+ *   Offset 24: tangent    float[4]     (16 bytes)  — tangent (xyz) + handedness (w)
+ *   Offset 40: texcoord0  float[2]     ( 8 bytes)  — primary texture coordinates
+ *   Offset 48: texcoord1  float[2]     ( 8 bytes)  — secondary texture coordinates
+ *   Offset 56: color      float[4]     (16 bytes)  — vertex color (RGBA)
+ *   Offset 72: joints     uint16_t[4]  ( 8 bytes)  — skeletal joint indices
+ *   Offset 80: weights    float[4]     (16 bytes)  — skeletal blend weights
  *
  * This matches the vertex buffer layout returned by cgfx_mesh_vertex_layout().
  * When creating a pipeline for mesh rendering, pass that layout to
  * CgfxPipelineDesc.vertex_layouts.
  */
 typedef struct CgfxVertex {
-    float       position[3];  /**< XYZ position.                                    */
-    float       normal[3];    /**< Surface normal (should be normalized).           */
-    float       color[3];    /**< Vertex color.                                     */
-    float       uv[2];        /**< Texture coordinates (0.0-1.0 range typically).   */
+    float       position[3];   /**< XYZ position.                                   */
+    float       normal[3];     /**< Surface normal (should be normalized).           */
+    float       tangent[4];    /**< Tangent vector (xyz) + handedness sign (w).      */
+    float       texcoord0[2];  /**< Primary texture coordinates (0.0-1.0).          */
+    float       texcoord1[2];  /**< Secondary texture coordinates (lightmaps, etc). */
+    float       color[4];      /**< Vertex color (RGBA, 0.0-1.0).                   */
+    uint16_t    joints[4];     /**< Skeletal joint/bone indices.                     */
+    float       weights[4];    /**< Skeletal blend weights (should sum to 1.0).      */
 } CgfxVertex;
 
 /**
@@ -58,14 +66,6 @@ typedef struct CgfxMesh {
  *
  * Uploads the provided vertex and index arrays to GPU buffers using
  * cgfx_buffer_create_vertex() and cgfx_buffer_create_index().
- *
- * Implementation should:
- *   1. Create a vertex buffer:
- *      mesh.vertex_buffer = cgfx_buffer_create_vertex(ctx, vertices,
- *          vertex_count * sizeof(CgfxVertex), vertex_count);
- *   2. Create an index buffer:
- *      mesh.index_buffer = cgfx_buffer_create_index(ctx, indices, index_count);
- *   3. Store index_count for draw calls.
  *
  * The caller is responsible for freeing the CPU-side vertex/index arrays
  * if they were dynamically allocated — the mesh only holds GPU copies.
@@ -94,32 +94,14 @@ CGFX_API void cgfx_mesh_destroy(CgfxMesh *mesh);
 /**
  * Record draw commands for a mesh on an active render pass.
  *
- * Issues the three draw-call boilerplate commands required to render
- * an indexed mesh:
- *   1. Bind the vertex buffer at slot 0.
- *   2. Bind the index buffer with WGPUIndexFormat_Uint32.
- *   3. Draw mesh->index_count indices as a single instance.
+ * Binds the vertex buffer at slot 0, sets the index buffer, and issues
+ * an indexed draw call for mesh->index_count indices.
  *
  * The pipeline must already be set on the render pass before calling
- * this function — pipelines and meshes are intentionally decoupled so
- * the same mesh can be drawn with different pipelines (e.g., shadow
- * pass and color pass).
+ * this function.
  *
- * For instanced rendering or non-indexed draws, drop down to the raw
- * WebGPU API (wgpuRenderPassEncoderDrawIndexed, etc.) using the buffer
- * handles in mesh->vertex_buffer.buffer and mesh->index_buffer.buffer.
- *
- * Implementation should:
- *   1. wgpuRenderPassEncoderSetVertexBuffer(pass, 0,
- *          mesh->vertex_buffer.buffer, 0, mesh->vertex_buffer.size);
- *   2. wgpuRenderPassEncoderSetIndexBuffer(pass,
- *          mesh->index_buffer.buffer, WGPUIndexFormat_Uint32, 0,
- *          mesh->index_buffer.size);
- *   3. wgpuRenderPassEncoderDrawIndexed(pass, mesh->index_count, 1, 0, 0, 0);
- *
- * Usage:
- *   wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
- *   cgfx_mesh_draw(frame.render_pass, &mesh);
+ * For instanced rendering or non-indexed draws, use the raw WebGPU API
+ * with mesh->vertex_buffer.buffer and mesh->index_buffer.buffer.
  *
  * @param pass  Active render pass encoder (from cgfx_frame_begin()).
  * @param mesh  Mesh to draw. Must have valid vertex and index buffers.
@@ -139,13 +121,17 @@ CGFX_API void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
  *       .vertex_layouts = &layout,
  *   };
  *
- * The layout describes 4 attributes at shader locations 0–3:
- *   - Location 0: position (Float32x3, offset 0)
- *   - Location 1: normal   (Float32x3, offset 12)
- *   - Location 2: color    (Float32x3, offset 24)
- *   - Location 3: uv       (Float32x2, offset 36)
+ * The layout describes 8 attributes at shader locations 0-7:
+ *   - Location 0: position  (Float32x3, offset  0)
+ *   - Location 1: normal    (Float32x3, offset 12)
+ *   - Location 2: tangent   (Float32x4, offset 24)
+ *   - Location 3: texcoord0 (Float32x2, offset 40)
+ *   - Location 4: texcoord1 (Float32x2, offset 48)
+ *   - Location 5: color     (Float32x4, offset 56)
+ *   - Location 6: joints    (Uint16x4,  offset 72)
+ *   - Location 7: weights   (Float32x4, offset 80)
  *
- * Stride is sizeof(CgfxVertex) = 44 bytes, step mode is Vertex.
+ * Stride is sizeof(CgfxVertex) = 96 bytes, step mode is Vertex.
  *
  * Note: The returned layout references static internal storage.
  * It is valid for the lifetime of the program but should not be modified.

@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "cgfx_export.h"
+#include "cgfx_texture.h"
 
 #ifdef _WIN32
 #ifndef nullptr
@@ -58,9 +59,7 @@ typedef struct CgfxCtx {
     WGPUQueue          queue;              /**< The default command queue.                 */
     WGPUSurface        surface;            /**< The window surface for presenting frames.  */
     WGPUTextureFormat  surface_format;     /**< The preferred surface texture format.      */
-    WGPUTexture        depth_texture;      /**< Depth buffer texture (NULL if disabled).   */
-    WGPUTextureView    depth_texture_view; /**< View into depth_texture (NULL if disabled).*/
-    WGPUTextureFormat  depth_format;       /**< Depth texture format (if enabled).         */
+    CgfxTexture        depth_texture;      /**< Depth buffer (zero if disabled).            */
     WGPUPresentMode    present_mode;       /**< Active present mode (stored for resize).   */
     uint32_t           width;              /**< Current window width in pixels.            */
     uint32_t           height;             /**< Current window height in pixels.           */
@@ -168,11 +167,12 @@ CGFX_API bool cgfx_ctx_resize(CgfxCtx *ctx, uint32_t width, uint32_t height);
  * Destroy the context and release all resources.
  *
  * Releases resources in reverse creation order:
- *   1. Release the command queue
- *   2. Unconfigure and release the surface
- *   3. Release the device
- *   4. Destroy the GLFW window
- *   5. Terminate GLFW
+ *   1. Destroy the depth texture (if enabled)
+ *   2. Release the command queue
+ *   3. Unconfigure and release the surface
+ *   4. Release the device
+ *   5. Destroy the GLFW window
+ *   6. Terminate GLFW
  *
  * After this call, the context must not be used.
  *

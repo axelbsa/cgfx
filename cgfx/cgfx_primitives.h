@@ -4,7 +4,7 @@
  *
  * Each function generates CPU-side vertex and index data for a geometric
  * primitive, uploads it to GPU buffers, and returns a ready-to-render
- * CgfxMesh. All primitives use the CgfxVertex format (position + normal + UV).
+ * CgfxMesh. All primitives use the CgfxVertex format (96 bytes, 8 attributes).
  *
  * The returned mesh owns its GPU buffers. Destroy with cgfx_mesh_destroy().
  *

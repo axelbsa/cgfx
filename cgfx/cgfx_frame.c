@@ -94,8 +94,8 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
 
 
     WGPURenderPassDepthStencilAttachment depth_stencil = {};
-    if (ctx->depth_texture_view) {
-        depth_stencil.view = ctx->depth_texture_view;
+    if (ctx->depth_texture.view) {
+        depth_stencil.view = ctx->depth_texture.view;
         depth_stencil.depthClearValue = 1.0f;
         depth_stencil.depthLoadOp = WGPULoadOp_Clear;
         depth_stencil.depthStoreOp = WGPUStoreOp_Store;
@@ -110,7 +110,7 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
     pass_desc.nextInChain = nullptr;
     pass_desc.colorAttachmentCount = 1;
     pass_desc.colorAttachments = &color_attachment;
-    pass_desc.depthStencilAttachment = ctx->depth_texture_view ? &depth_stencil : nullptr;
+    pass_desc.depthStencilAttachment = ctx->depth_texture.view ? &depth_stencil : nullptr;
     pass_desc.timestampWrites = nullptr;
 
     frame->render_pass = wgpuCommandEncoderBeginRenderPass(frame->encoder, &pass_desc);

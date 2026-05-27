@@ -4,6 +4,7 @@
  *        and bind group helpers.
  */
 #include "cgfx_shader.h"
+#include "cgfx_texture.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,16 +94,54 @@ CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
 
         for (uint32_t j = 0; j < group->binding_count; j++) {
             const CgfxBindingDesc *b = &group->bindings[j];
+
+            WGPUShaderStageFlags vis = b->visibility;
+            if (!vis) {
+                switch (b->kind) {
+                case CGFX_BINDING_TEXTURE:
+                case CGFX_BINDING_SAMPLER:
+                    vis = WGPUShaderStage_Fragment;
+                    break;
+                case CGFX_BINDING_STORAGE_TEXTURE:
+                    vis = WGPUShaderStage_Compute;
+                    break;
+                default:
+                    vis = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment;
+                    break;
+                }
+            }
+
             entries[j] = (WGPUBindGroupLayoutEntry){
-                .binding = b->binding,
-                .visibility = b->visibility
-                    ? b->visibility
-                    : (WGPUShaderStage_Vertex | WGPUShaderStage_Fragment),
-                .buffer = {
+                .binding    = b->binding,
+                .visibility = vis,
+            };
+
+            switch (b->kind) {
+            case CGFX_BINDING_BUFFER:
+                entries[j].buffer = (WGPUBufferBindingLayout){
                     .type = b->type ? b->type : WGPUBufferBindingType_Uniform,
                     .minBindingSize = b->min_binding_size,
-                },
-            };
+                };
+                break;
+            case CGFX_BINDING_TEXTURE:
+                entries[j].texture = (WGPUTextureBindingLayout){
+                    .sampleType    = b->sample_type    ? b->sample_type    : WGPUTextureSampleType_Float,
+                    .viewDimension = b->view_dimension ? b->view_dimension : WGPUTextureViewDimension_2D,
+                };
+                break;
+            case CGFX_BINDING_SAMPLER:
+                entries[j].sampler = (WGPUSamplerBindingLayout){
+                    .type = WGPUSamplerBindingType_Filtering,
+                };
+                break;
+            case CGFX_BINDING_STORAGE_TEXTURE:
+                entries[j].storageTexture = (WGPUStorageTextureBindingLayout){
+                    .access        = b->storage_access ? b->storage_access : WGPUStorageTextureAccess_WriteOnly,
+                    .format        = b->storage_format,
+                    .viewDimension = b->view_dimension ? b->view_dimension : WGPUTextureViewDimension_2D,
+                };
+                break;
+            }
         }
 
         WGPUBindGroupLayoutDescriptor layout_desc = {
@@ -167,6 +206,44 @@ WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
 
     WGPUBindGroup group = wgpuDeviceCreateBindGroup(ctx->device, &bg_desc);
     free(entries);
+    return group;
+}
+
+
+WGPUBindGroup cgfx_bind_group_create(const CgfxCtx *ctx,
+                                     const CgfxShader *shader,
+                                     uint32_t group_index,
+                                     const CgfxBindGroupEntry *entries,
+                                     uint32_t entry_count) {
+    if (group_index >= shader->group_count) {
+        fprintf(stderr, "[cgfx_shader] bind group index %u out of range "
+                "(shader has %u groups)\n", group_index, shader->group_count);
+        return nullptr;
+    }
+
+    WGPUBindGroupEntry *bg_entries = calloc(entry_count, sizeof(WGPUBindGroupEntry));
+    for (uint32_t i = 0; i < entry_count; i++) {
+        bg_entries[i].binding = entries[i].binding;
+
+        if (entries[i].buffer) {
+            bg_entries[i].buffer = entries[i].buffer->buffer;
+            bg_entries[i].offset = 0;
+            bg_entries[i].size   = entries[i].buffer->size;
+        } else if (entries[i].texture) {
+            bg_entries[i].textureView = entries[i].texture->view;
+        } else if (entries[i].sampler) {
+            bg_entries[i].sampler = entries[i].sampler;
+        }
+    }
+
+    WGPUBindGroupDescriptor bg_desc = {
+        .layout     = shader->group_layouts[group_index],
+        .entryCount = entry_count,
+        .entries    = bg_entries,
+    };
+
+    WGPUBindGroup group = wgpuDeviceCreateBindGroup(ctx->device, &bg_desc);
+    free(bg_entries);
     return group;
 }
 

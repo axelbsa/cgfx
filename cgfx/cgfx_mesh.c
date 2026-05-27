@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+static_assert(sizeof(CgfxVertex) == 96, "CgfxVertex must be 96 bytes (tightly packed)");
+
 
 CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
                             const CgfxVertex *vertices, uint32_t vertex_count,
@@ -47,32 +49,20 @@ void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh) {
 
 WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void) {
     static WGPUVertexAttribute attributes[] = {
-        {
-            .format = WGPUVertexFormat_Float32x3,
-            .offset = offsetof(CgfxVertex, position),
-            .shaderLocation = 0,
-        },
-        {
-            .format = WGPUVertexFormat_Float32x3,
-            .offset = offsetof(CgfxVertex, normal),
-            .shaderLocation = 1,
-        },
-        {
-            .format = WGPUVertexFormat_Float32x3,
-            .offset = offsetof(CgfxVertex, color),
-            .shaderLocation = 2,
-        },
-        {
-            .format = WGPUVertexFormat_Float32x2,
-            .offset = offsetof(CgfxVertex, uv),
-            .shaderLocation = 3,
-        },
+        { .format = WGPUVertexFormat_Float32x3, .offset = offsetof(CgfxVertex, position),  .shaderLocation = 0 },
+        { .format = WGPUVertexFormat_Float32x3, .offset = offsetof(CgfxVertex, normal),    .shaderLocation = 1 },
+        { .format = WGPUVertexFormat_Float32x4, .offset = offsetof(CgfxVertex, tangent),   .shaderLocation = 2 },
+        { .format = WGPUVertexFormat_Float32x2, .offset = offsetof(CgfxVertex, texcoord0), .shaderLocation = 3 },
+        { .format = WGPUVertexFormat_Float32x2, .offset = offsetof(CgfxVertex, texcoord1), .shaderLocation = 4 },
+        { .format = WGPUVertexFormat_Float32x4, .offset = offsetof(CgfxVertex, color),     .shaderLocation = 5 },
+        { .format = WGPUVertexFormat_Uint16x4,  .offset = offsetof(CgfxVertex, joints),    .shaderLocation = 6 },
+        { .format = WGPUVertexFormat_Float32x4, .offset = offsetof(CgfxVertex, weights),   .shaderLocation = 7 },
     };
 
     const WGPUVertexBufferLayout layout = {
         .arrayStride = sizeof(CgfxVertex),
         .stepMode = WGPUVertexStepMode_Vertex,
-        .attributeCount = 4,
+        .attributeCount = 8,
         .attributes = attributes,
     };
 

@@ -33,26 +33,22 @@ int main(void) {
         {
             .position = {-0.5f, -0.5f, -1.0f},
             .normal = {0.0f, 0.0f, 1.0f},
-            .color = {1.0f, 0.0f, 0.0f},
-            .uv = {0}
+            .color = {1.0f, 0.0f, 0.0f, 1.0f},
         },
         {
             .position = {0.5f, -0.5f, -1.0f},
             .normal = {0.0f, 0.0f, 1.0f},
-            .color = {0.0f, 1.0f, 0.0f},
-            .uv = {0}
+            .color = {0.0f, 1.0f, 0.0f, 1.0f},
         },
         {
             .position = {0.5f, 0.5f, -1.0f},
             .normal = {0.0f, 0.0f, 1.0f},
-            .color = {0.0f, 0.0f, 1.0f},
-            .uv = {0}
+            .color = {0.0f, 0.0f, 1.0f, 1.0f},
         },
         {
             .position = {-0.5f, 0.5f, -1.0f},
             .normal = {0.0f, 0.0f, 1.0f},
-            .color = {1.0f, 1.0f, 0.0f},
-            .uv = {0}
+            .color = {1.0f, 1.0f, 0.0f, 1.0f},
         }
     };
 
@@ -77,7 +73,7 @@ int main(void) {
         "struct VertexInput { \n"
         "   @location(0) position: vec2f, \n"
         "   @location(1) normal: vec3f, \n"
-        "   @location(2) color: vec3f, \n"
+        "   @location(5) color: vec3f, \n"
         "}; \n"
         "struct VertexOutput { \n"
         "   @builtin(position) position: vec4f, \n"

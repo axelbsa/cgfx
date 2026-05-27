@@ -51,7 +51,7 @@ WGPURequiredLimits cgfx_default_limits(void) {
 }
 
 
-/* ── Surface and depth helpers ────────────────────────────────────── */
+/* ── Surface helper ──────────────────────────────────────────────── */
 
 static void cgfx__configure_surface(CgfxCtx *ctx, uint32_t width, uint32_t height) {
     WGPUSurfaceConfiguration config = {};
@@ -66,40 +66,6 @@ static void cgfx__configure_surface(CgfxCtx *ctx, uint32_t width, uint32_t heigh
     config.presentMode = ctx->present_mode;
     config.alphaMode = WGPUCompositeAlphaMode_Auto;
     wgpuSurfaceConfigure(ctx->surface, &config);
-}
-
-static void cgfx__create_depth_texture(CgfxCtx *ctx, uint32_t width, uint32_t height) {
-    WGPUTextureDescriptor depth_desc = {};
-    depth_desc.dimension = WGPUTextureDimension_2D;
-    depth_desc.format = ctx->depth_format;
-    depth_desc.mipLevelCount = 1;
-    depth_desc.sampleCount = 1;
-    depth_desc.size = (WGPUExtent3D){width, height, 1};
-    depth_desc.usage = WGPUTextureUsage_RenderAttachment;
-    depth_desc.viewFormatCount = 1;
-    depth_desc.viewFormats = &ctx->depth_format;
-    ctx->depth_texture = wgpuDeviceCreateTexture(ctx->device, &depth_desc);
-
-    WGPUTextureViewDescriptor depth_view_desc = {};
-    depth_view_desc.aspect = WGPUTextureAspect_DepthOnly;
-    depth_view_desc.baseArrayLayer = 0;
-    depth_view_desc.arrayLayerCount = 1;
-    depth_view_desc.baseMipLevel = 0;
-    depth_view_desc.mipLevelCount = 1;
-    depth_view_desc.dimension = WGPUTextureViewDimension_2D;
-    depth_view_desc.format = ctx->depth_format;
-    ctx->depth_texture_view = wgpuTextureCreateView(ctx->depth_texture, &depth_view_desc);
-}
-
-static void cgfx__destroy_depth_texture(CgfxCtx *ctx) {
-    if (ctx->depth_texture_view) {
-        wgpuTextureViewRelease(ctx->depth_texture_view);
-        ctx->depth_texture_view = nullptr;
-    }
-    if (ctx->depth_texture) {
-        wgpuTextureRelease(ctx->depth_texture);
-        ctx->depth_texture = nullptr;
-    }
 }
 
 
@@ -184,8 +150,12 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
 
     /* ── Optional depth buffer ───────────────────────────────────── */
     if (depth_buffer) {
-        ctx->depth_format = WGPUTextureFormat_Depth24Plus;
-        cgfx__create_depth_texture(ctx, width, height);
+        ctx->depth_texture = cgfx_texture_create(ctx, &(CgfxTextureDesc){
+            .width  = ctx->width,
+            .height = ctx->height,
+            .format = WGPUTextureFormat_Depth24Plus,
+            .usage  = WGPUTextureUsage_RenderAttachment,
+        });
     }
 
     return true;
@@ -286,11 +256,21 @@ bool cgfx_ctx_resize(CgfxCtx *ctx, uint32_t width, uint32_t height) {
     if (width == 0 || height == 0)
         return false;
 
-    cgfx__destroy_depth_texture(ctx);
+    WGPUTextureFormat depth_fmt = ctx->depth_texture.format;
+
+    if (ctx->depth_texture.texture)
+        cgfx_texture_destroy(&ctx->depth_texture);
+
     cgfx__configure_surface(ctx, width, height);
 
-    if (ctx->depth_format != WGPUTextureFormat_Undefined)
-        cgfx__create_depth_texture(ctx, width, height);
+    if (depth_fmt != WGPUTextureFormat_Undefined) {
+        ctx->depth_texture = cgfx_texture_create(ctx, &(CgfxTextureDesc){
+            .width  = width,
+            .height = height,
+            .format = depth_fmt,
+            .usage  = WGPUTextureUsage_RenderAttachment,
+        });
+    }
 
     ctx->width = width;
     ctx->height = height;
@@ -299,7 +279,8 @@ bool cgfx_ctx_resize(CgfxCtx *ctx, uint32_t width, uint32_t height) {
 
 
 void cgfx_ctx_destroy(CgfxCtx *ctx) {
-    cgfx__destroy_depth_texture(ctx);
+    if (ctx->depth_texture.texture)
+        cgfx_texture_destroy(&ctx->depth_texture);
     wgpuSurfaceUnconfigure(ctx->surface);
     wgpuQueueRelease(ctx->queue);
     wgpuSurfaceRelease(ctx->surface);

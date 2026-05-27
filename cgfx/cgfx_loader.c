@@ -90,12 +90,12 @@ CgfxMesh cgfx_load_tutorial_mesh(const CgfxCtx *ctx, const char *path) {
         if (has_z) {
             vertices[i] = (CgfxVertex){
                 .position = {p[0], p[1], p[2]},
-                .color    = {p[3], p[4], p[5]},
+                .color    = {p[3], p[4], p[5], 1.0f},
             };
         } else {
             vertices[i] = (CgfxVertex){
                 .position = {p[0], p[1], 0.0f},
-                .color    = {p[2], p[3], p[4]},
+                .color    = {p[2], p[3], p[4], 1.0f},
             };
         }
     }

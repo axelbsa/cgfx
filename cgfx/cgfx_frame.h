@@ -57,7 +57,7 @@ typedef struct CgfxFrame {
  *      - The surface texture as the single color attachment
  *      - Load operation: Clear with the provided clear_color
  *      - Store operation: Store (keep the rendered result)
- *      - No depth/stencil attachment
+ *      - Depth/stencil attachment (if ctx has a depth texture)
  *
  * If the surface texture is not available (e.g., window minimized,
  * surface lost), returns false and the frame should be skipped.
