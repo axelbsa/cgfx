@@ -20,7 +20,7 @@ cgfx is a minimal C23 rendering engine wrapping WebGPU. It exposes 13 modules th
 | [Mesh](mesh.md) | `cgfx_mesh.h` | Vertex format, mesh creation, vertex layout, draw helpers |
 | [Texture](texture.md) | `cgfx_texture.h` | GPU texture + view, sampler, depth, cube maps, per-layer writes |
 | [Compute](compute.md) | `cgfx_compute.h` | Compute pipeline, compute pass, buffer copy |
-| [Primitives](primitives.md) | `cgfx_primitives.h` | Plane, triangle, sphere, cube generators (stubbed) |
+
 | [Loader](loader.md) | `cgfx_loader.h` | Load geometry from LearnWebGPU text format (temporary) |
 | [Camera](camera.md) | `cgfx_camera.h` | Projection/view matrices with GPU uniform management |
 
@@ -75,7 +75,7 @@ cgfx follows a simple ownership model: the module that creates a resource provid
 | `CgfxShader` | `cgfx_shader_create` / `cgfx_shader_create_from_file` | `cgfx_shader_destroy` |
 | `CgfxCamera` | `cgfx_camera_create` | `cgfx_camera_destroy` |
 | `CgfxUniform` | `cgfx_uniform_create` | `cgfx_uniform_destroy` |
-| `CgfxMesh` | `cgfx_mesh_create` / primitives | `cgfx_mesh_destroy` |
+| `CgfxMesh` | `cgfx_mesh_create` | `cgfx_mesh_destroy` |
 | `CgfxTexture` | `cgfx_texture_create` | `cgfx_texture_destroy` |
 | `CgfxBuffer` | `cgfx_buffer_create_*` | `cgfx_buffer_destroy` |
 | `WGPUSampler` | `cgfx_sampler_create` | `wgpuSamplerRelease` (caller-owned) |

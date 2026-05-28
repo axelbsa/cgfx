@@ -74,7 +74,7 @@ int main(void) {
 | [Uniform](api/uniform.md) | `cgfx_uniform.h` | Uniform buffer + bind group bundle |
 | [Mesh](api/mesh.md) | `cgfx_mesh.h` | Standard vertex format, mesh creation, indexed draw |
 | [Camera](api/camera.md) | `cgfx_camera.h` | Projection/view matrices with GPU uniform management |
-| [Primitives](api/primitives.md) | `cgfx_primitives.h` | Geometry generators (plane, sphere, cube) |
+
 | [Loader](api/loader.md) | `cgfx_loader.h` | Load geometry from tutorial text format |
 | [Export](api/export.md) | `cgfx_export.h` | `CGFX_API` macro for shared library builds |
 
