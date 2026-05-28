@@ -31,7 +31,7 @@ This is a C23 rendering engine library (`cgfx`) wrapping WebGPU, with GLFW for w
 | `cgfx_mesh` | CgfxVertex (96 bytes: pos + normal + tangent + texcoord0 + texcoord1 + color + joints + weights) + CgfxMesh + vertex layout + draw |
 | `cgfx_texture` | CgfxTexture (GPU texture + view) + sampler helper. Supports sampled, storage, render-target, and depth textures. Cube maps via `view_dimension` + `depth=6`. Per-layer writes with `cgfx_texture_write_layer()`. |
 | `cgfx_compute` | Compute pipeline creation, standalone and mixed compute passes, buffer copy helper |
-| `cgfx_primitives` | Plane, triangle, sphere, cube generators (**stubbed**) |
+
 | `cgfx_camera` | CgfxCamera: projection + view matrices, perspective and look-at helpers (uses cglm, left-handed, depth [0,1]) |
 | `cgfx_loader` | Load geometry from LearnWebGPU text format (temporary) |
 | `cgfx_internal.h` | Internal sync wrappers for async WebGPU requests |

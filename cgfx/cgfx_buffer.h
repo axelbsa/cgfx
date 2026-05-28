@@ -145,4 +145,22 @@ CGFX_API CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
                               WGPUBufferUsageFlags usage,
                               const void *data,    // NULL = don't upload
                               uint64_t data_size);
+
+/**
+ * Copy one buffer to another via an immediate command submission.
+ *
+ * Creates a temporary command encoder, records the copy, submits, and
+ * releases. Useful for copying compute results to a mapping buffer,
+ * duplicating vertex data, or any buffer-to-buffer transfer.
+ *
+ * @param ctx   Initialized context.
+ * @param src   Source buffer. Must have CopySrc usage.
+ * @param dst   Destination buffer. Must have CopyDst usage.
+ * @param size  Number of bytes to copy. 0 = min(src.size, dst.size).
+ */
+CGFX_API void cgfx_buffer_copy(const CgfxCtx *ctx,
+                                const CgfxBuffer *src,
+                                const CgfxBuffer *dst,
+                                uint64_t size);
+
 #endif /* CGFX_BUFFER_H */

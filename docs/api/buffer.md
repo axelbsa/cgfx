@@ -244,6 +244,42 @@ cgfx_buffer_destroy(&storage);
 
 ---
 
+### cgfx_buffer_copy
+
+Copies data from one GPU buffer to another via an immediate command submission.
+
+```c
+CGFX_API void cgfx_buffer_copy(const CgfxCtx *ctx,
+                                const CgfxBuffer *src,
+                                const CgfxBuffer *dst,
+                                uint64_t size);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ctx` | `const CgfxCtx*` | Initialized context. |
+| `src` | `const CgfxBuffer*` | Source buffer. Must have `CopySrc` usage. |
+| `dst` | `const CgfxBuffer*` | Destination buffer. Must have `CopyDst` usage. |
+| `size` | `uint64_t` | Number of bytes to copy. `0` = `min(src.size, dst.size)`. |
+
+Creates a temporary command encoder, records the copy, submits, and releases. Useful for copying compute results to a mapping buffer for read-back, duplicating vertex data, or any buffer-to-buffer transfer.
+
+**Example (compute read-back):**
+
+```c
+CgfxBuffer output = cgfx_buffer_create_storage(&ctx, NULL, data_size);
+// ... dispatch compute shader that writes to output ...
+
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+cgfx_buffer_copy(&ctx, &output, &readback, 0);
+
+// Map and read results
+wgpuBufferMapAsync(readback.buffer, WGPUMapMode_Read, 0, readback.size,
+                    &on_mapped, &readback);
+```
+
+---
+
 ### cgfx_buffer_destroy
 
 Releases the GPU buffer and zeros the struct.

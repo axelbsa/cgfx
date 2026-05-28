@@ -16,7 +16,7 @@
  *   cgfx_mesh       — Mesh: vertex + index buffers + layout
  *   cgfx_texture    — GPU texture + sampler abstraction
  *   cgfx_compute    — Compute pipeline and compute pass
- *   cgfx_primitives — Primitive geometry generators
+
  */
 #ifndef CGFX_H
 #define CGFX_H
@@ -30,7 +30,7 @@
 #include "cgfx_mesh.h"
 #include "cgfx_texture.h"
 #include "cgfx_compute.h"
-#include "cgfx_primitives.h"
+
 #include "cgfx_loader.h"
 #include "cgfx_camera.h"
 

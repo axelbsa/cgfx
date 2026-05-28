@@ -95,33 +95,3 @@ void cgfx_compute_pass_end(CgfxComputePass *cp) {
 }
 
 
-void cgfx_buffer_copy(const CgfxCtx *ctx,
-                       const CgfxBuffer *src,
-                       const CgfxBuffer *dst,
-                       uint64_t size) {
-    if (size == 0) {
-        size = src->size < dst->size ? src->size : dst->size;
-    }
-
-    WGPUCommandEncoderDescriptor enc_desc = {};
-    enc_desc.nextInChain = nullptr;
-    enc_desc.label = "cgfx buffer copy encoder";
-    WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(ctx->device, &enc_desc);
-
-    wgpuCommandEncoderCopyBufferToBuffer(encoder, src->buffer, 0, dst->buffer, 0, size);
-
-    WGPUCommandBufferDescriptor cmd_desc = {};
-    cmd_desc.nextInChain = nullptr;
-    cmd_desc.label = "cgfx buffer copy commands";
-    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(encoder, &cmd_desc);
-    wgpuCommandEncoderRelease(encoder);
-
-    wgpuQueueSubmit(ctx->queue, 1, &commands);
-    wgpuCommandBufferRelease(commands);
-
-#if defined(WEBGPU_BACKEND_DAWN)
-    wgpuDeviceTick(ctx->device);
-#elif defined(WEBGPU_BACKEND_WGPU)
-    wgpuDevicePoll(ctx->device, false, nullptr);
-#endif
-}

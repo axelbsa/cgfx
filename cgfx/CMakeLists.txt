@@ -9,7 +9,7 @@ set(CGFX_SOURCES
     cgfx_uniform.c
     cgfx_mesh.c
     cgfx_texture.c
-    cgfx_primitives.c
+
     cgfx_loader.c
     cgfx_camera.c
     cgfx_compute.c

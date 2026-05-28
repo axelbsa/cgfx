@@ -48,6 +48,8 @@ cgfx_compile_slang(
 cgfx_add_example(triangle               triangle/main.c)
 cgfx_add_example(buffers                playing_with_buffers/main.c)
 cgfx_add_example(compute                compute/main.c)
+cgfx_add_example(compute_texture        compute_texture/main.c)
+cgfx_add_example(primitives             primitives/main.c)
 cgfx_add_example(vertex_attribute       vertex_attribute/main.c)
 cgfx_add_example(multiple_attributes    multiple_attributes/main.c)
 cgfx_add_example(loading_from_file      loading_from_file/main.c)

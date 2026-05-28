@@ -32,7 +32,6 @@
 #include <stdbool.h>
 #include "cgfx_ctx.h"
 #include "cgfx_shader.h"
-#include "cgfx_buffer.h"
 #include "cgfx_export.h"
 
 /**
@@ -118,21 +117,5 @@ CGFX_API bool cgfx_compute_pass_begin(WGPUCommandEncoder encoder,
  * @param cp  Compute pass started with cgfx_compute_pass_begin().
  */
 CGFX_API void cgfx_compute_pass_end(CgfxComputePass *cp);
-
-/**
- * Copy one buffer to another via an immediate command submission.
- *
- * Creates a temporary command encoder, records the copy, submits, and
- * releases. Useful for copying compute results to a mapping buffer.
- *
- * @param ctx   Initialized context.
- * @param src   Source buffer. Must have CopySrc usage.
- * @param dst   Destination buffer. Must have CopyDst usage.
- * @param size  Number of bytes to copy. 0 = min(src.size, dst.size).
- */
-CGFX_API void cgfx_buffer_copy(const CgfxCtx *ctx,
-                                const CgfxBuffer *src,
-                                const CgfxBuffer *dst,
-                                uint64_t size);
 
 #endif /* CGFX_COMPUTE_H */

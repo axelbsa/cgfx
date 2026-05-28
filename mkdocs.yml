@@ -43,8 +43,10 @@ nav:
   - Building: building.md
   - Architecture: architecture.md
   - Guides:
+    - Procedural Geometry: guides/procedural-geometry.md
     - Buffers, Layouts & Pipeline: guides/buffers-layouts-pipeline.md
     - Shader & Bind Group Architecture: guides/shader-bind-groups.md
+    - Compute Pipeline & Render-to-Texture: guides/compute-pipeline.md
     - Using Slang Shaders: guides/using-slang.md
   - API Reference:
     - Overview: api/index.md
@@ -58,7 +60,7 @@ nav:
     - Texture: api/texture.md
     - Compute: api/compute.md
     - Camera: api/camera.md
-    - Primitives: api/primitives.md
+
     - Loader: api/loader.md
     - Export: api/export.md
 

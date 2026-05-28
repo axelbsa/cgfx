@@ -133,29 +133,10 @@ Only ends and releases the compute pass encoder. The command encoder lifetime is
 
 ---
 
-### cgfx_buffer_copy
-
-Copy one buffer to another via an immediate command submission.
-
-```c
-CGFX_API void cgfx_buffer_copy(const CgfxCtx *ctx,
-                                const CgfxBuffer *src,
-                                const CgfxBuffer *dst,
-                                uint64_t size);
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `ctx` | `const CgfxCtx*` | Initialized context. |
-| `src` | `const CgfxBuffer*` | Source buffer. Must have `CopySrc` usage. |
-| `dst` | `const CgfxBuffer*` | Destination buffer. Must have `CopyDst` usage. |
-| `size` | `uint64_t` | Bytes to copy. `0` = `min(src.size, dst.size)`. |
-
-Creates a temporary command encoder, records the copy, submits, and releases. Useful for copying compute results to a mapping buffer for read-back.
-
----
-
 ## Usage
+
+!!! tip "Buffer copies"
+    Use [`cgfx_buffer_copy`](buffer.md#cgfx_buffer_copy) from the [Buffer module](buffer.md) to copy compute results to a mapping buffer for read-back. Storage buffers created with `cgfx_buffer_create_storage` include `CopySrc` usage by default.
 
 ### Standalone compute
 
