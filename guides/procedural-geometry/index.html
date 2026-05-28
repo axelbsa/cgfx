@@ -1440,11 +1440,11 @@ cube generator. But it should make it trivial to build one yourself.</p>
 explaining the geometry math along the way.</p>
 <h2 id="the-cgfxvertex-format">The CgfxVertex format<a class="headerlink" href="#the-cgfxvertex-format" title="Permanent link">&para;</a></h2>
 <p>Every mesh in cgfx uses the same 96-byte vertex format:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────┬─────────┬─────────┬──────────┬──────────┬───────┬────────┬─────────┐
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│ position│ normal  │ tangent │ texcoord0│ texcoord1│ color │ joints │ weights │
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│ float[3]│ float[3]│ float[4]│ float[2] │ float[2] │float[4]│u16[4] │ float[4]│
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  12 B   │  12 B   │  16 B   │   8 B    │   8 B    │ 16 B  │  8 B   │  16 B   │
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>└─────────┴─────────┴─────────┴──────────┴──────────┴───────┴────────┴─────────┘
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────┬─────────┬─────────┬──────────┬──────────┬────────┬────────┬─────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│ position│ normal  │ tangent │ texcoord0│ texcoord1│ color  │ joints │ weights │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│ float[3]│ float[3]│ float[4]│ float[2] │ float[2] │float[4]│ u16[4] │ float[4]│
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  12 B   │  12 B   │  16 B   │   8 B    │   8 B    │ 16 B   │  8 B   │  16 B   │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>└─────────┴─────────┴─────────┴──────────┴──────────┴────────┴────────┴─────────┘
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  offset 0    12        24         40          48       56      72        80
 </span></code></pre></div>
 <p>For procedural geometry, you typically fill in three fields:</p>
