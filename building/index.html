@@ -53,6 +53,8 @@
       
     
     
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -847,6 +849,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1119,6 +1149,62 @@
     
   
     Mesh
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
   
 
     
@@ -1499,6 +1585,10 @@
 
 <h1 id="building">Building<a class="headerlink" href="#building" title="Permanent link">&para;</a></h1>
 <p>This page covers all the ways to build and integrate cgfx into your project.</p>
+<div class="admonition warning">
+<p class="admonition-title">GCC Version</p>
+<p>GCC 13 added initial C23 support (<code>-std=c2x</code>). GCC 14+ provides more complete C23 support under <code>-std=c23</code>. If you encounter issues with GCC 13, consider upgrading to GCC 14 or using Clang 16+.</p>
+</div>
 <h2 id="static-library-default">Static Library (Default)<a class="headerlink" href="#static-library-default" title="Permanent link">&para;</a></h2>
 <p>The default build produces a static library (<code>libcgfx.a</code> on Linux/macOS, <code>cgfx.lib</code> on Windows):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build
@@ -1662,10 +1752,6 @@
 </tr>
 </tbody>
 </table>
-<div class="admonition warning">
-<p class="admonition-title">GCC Version</p>
-<p>GCC 13 added initial C23 support (<code>-std=c2x</code>). GCC 14+ provides more complete C23 support under <code>-std=c23</code>. If you encounter issues with GCC 13, consider upgrading to GCC 14 or using Clang 16+.</p>
-</div>
 
 
 

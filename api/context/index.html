@@ -53,6 +53,8 @@
       
     
     
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -600,6 +602,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -865,6 +895,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_ctx_resize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_ctx_resize
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_ctx_destroy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1044,6 +1085,62 @@
     
   
     Mesh
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
   
 
     
@@ -1309,6 +1406,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_ctx_resize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_ctx_resize
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_ctx_destroy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1448,18 +1556,13 @@
 </tr>
 <tr>
 <td><code>depth_texture</code></td>
-<td><code>WGPUTexture</code></td>
-<td>Depth buffer texture. <code>NULL</code> if depth buffer is disabled.</td>
+<td><code>CgfxTexture</code></td>
+<td>Depth buffer. Zero-initialized if depth buffer is disabled. Access <code>depth_texture.view</code> for the view, <code>depth_texture.format</code> for the format.</td>
 </tr>
 <tr>
-<td><code>depth_texture_view</code></td>
-<td><code>WGPUTextureView</code></td>
-<td>View into <code>depth_texture</code>. <code>NULL</code> if disabled.</td>
-</tr>
-<tr>
-<td><code>depth_format</code></td>
-<td><code>WGPUTextureFormat</code></td>
-<td>Depth texture format (only meaningful when depth buffer is enabled).</td>
+<td><code>present_mode</code></td>
+<td><code>WGPUPresentMode</code></td>
+<td>Active present mode (stored for use during resize).</td>
 </tr>
 <tr>
 <td><code>width</code></td>
@@ -1669,9 +1772,74 @@
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">}</span>
 </span></code></pre></div>
 <hr />
+<h3 id="cgfx_ctx_resize">cgfx_ctx_resize<a class="headerlink" href="#cgfx_ctx_resize" title="Permanent link">&para;</a></h3>
+<p>Reconfigures the WebGPU surface and recreates the depth buffer (if one exists) at new dimensions.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">cgfx_ctx_resize</span><span class="p">(</span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">height</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctx</code></td>
+<td><code>CgfxCtx*</code></td>
+<td>Initialized context.</td>
+</tr>
+<tr>
+<td><code>width</code></td>
+<td><code>uint32_t</code></td>
+<td>New framebuffer width in pixels.</td>
+</tr>
+<tr>
+<td><code>height</code></td>
+<td><code>uint32_t</code></td>
+<td>New framebuffer height in pixels.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <code>true</code> on success. <code>false</code> if width or height is zero (minimized window), in which case no changes are made.</p>
+<p>Call this from your resize handler — cgfx does not register any resize callbacks internally. For GLFW windows, use <code>glfwSetFramebufferSizeCallback</code>. For external windows, call from your platform resize handler (e.g., <code>WM_SIZE</code> on Windows).</p>
+<div class="admonition note">
+<p class="admonition-title">Camera projection</p>
+<p><code>cgfx_ctx_resize</code> does <strong>not</strong> update camera projection matrices. If you have a <code>CgfxCamera</code>, call <code>cgfx_camera_perspective()</code> with the new aspect ratio after resizing.</p>
+</div>
+<p><strong>Example (GLFW):</strong></p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">on_resize</span><span class="p">(</span><span class="n">GLFWwindow</span><span class="w"> </span><span class="o">*</span><span class="n">window</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">glfwGetWindowUserPointer</span><span class="p">(</span><span class="n">window</span><span class="p">);</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="n">cgfx_ctx_resize</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">height</span><span class="p">);</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">}</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="n">ctx</span><span class="p">;</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="n">cgfx_ctx_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxCtxDesc</span><span class="p">){</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">        </span><span class="p">.</span><span class="n">width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1280</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">720</span><span class="p">,</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">        </span><span class="p">.</span><span class="n">resizable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">        </span><span class="p">.</span><span class="n">limits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_default_limits</span><span class="p">(),</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="p">});</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="n">glfwSetWindowUserPointer</span><span class="p">(</span><span class="n">ctx</span><span class="p">.</span><span class="n">window</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">);</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">    </span><span class="n">glfwSetFramebufferSizeCallback</span><span class="p">(</span><span class="n">ctx</span><span class="p">.</span><span class="n">window</span><span class="p">,</span><span class="w"> </span><span class="n">on_resize</span><span class="p">);</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">    </span><span class="c1">// ... render loop ...</span>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Example (Win32 external window):</strong></p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">case</span><span class="w"> </span><span class="no">WM_SIZE</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">UINT</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">LOWORD</span><span class="p">(</span><span class="n">lParam</span><span class="p">);</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="n">UINT</span><span class="w"> </span><span class="n">h</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HIWORD</span><span class="p">(</span><span class="n">lParam</span><span class="p">);</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="n">cgfx_ctx_resize</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="p">);</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">}</span>
+</span></code></pre></div>
+<hr />
 <h3 id="cgfx_ctx_destroy">cgfx_ctx_destroy<a class="headerlink" href="#cgfx_ctx_destroy" title="Permanent link">&para;</a></h3>
 <p>Releases all context resources in reverse creation order.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_ctx_destroy</span><span class="p">(</span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_ctx_destroy</span><span class="p">(</span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1691,6 +1859,7 @@
 </table>
 <p><strong>Teardown sequence:</strong></p>
 <ol>
+<li>Destroy the depth texture (if enabled)</li>
 <li>Release the command queue</li>
 <li>Unconfigure and release the surface</li>
 <li>Release the device</li>

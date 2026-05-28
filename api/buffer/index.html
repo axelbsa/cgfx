@@ -53,6 +53,8 @@
       
     
     
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -600,6 +602,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -944,6 +974,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_buffer_create_storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_buffer_create_storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_buffer_create_mapping" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1033,6 +1074,62 @@
     
   
     Mesh
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
   
 
     
@@ -1265,6 +1362,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_buffer_create_storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_buffer_create_storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_buffer_create_mapping" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1323,7 +1431,7 @@
 
 
 <h1 id="buffer">Buffer<a class="headerlink" href="#buffer" title="Permanent link">&para;</a></h1>
-<p>GPU buffer creation and management for vertex, index, uniform, and generic data.</p>
+<p>GPU buffer creation and management for vertex, index, uniform, storage, and generic data.</p>
 <p><strong>Header:</strong> <code>cgfx_buffer.h</code></p>
 <hr />
 <h2 id="structs">Structs<a class="headerlink" href="#structs" title="Permanent link">&para;</a></h2>
@@ -1525,12 +1633,60 @@
 <p>If you have a single uniform buffer bound to one group, <code>cgfx_uniform_create</code> bundles the buffer, bind group, and data pointer into one object. Use <code>cgfx_buffer_create_uniform</code> when you need more control (e.g., multiple buffers in one bind group).</p>
 </div>
 <hr />
+<h3 id="cgfx_buffer_create_storage">cgfx_buffer_create_storage<a class="headerlink" href="#cgfx_buffer_create_storage" title="Permanent link">&para;</a></h3>
+<p>Creates a GPU storage buffer with optional initial data upload. Includes <code>CopySrc</code> usage so results can be copied to a mapping buffer for read-back.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">cgfx_buffer_create_storage</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">                                                </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">                                                </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctx</code></td>
+<td><code>const CgfxCtx*</code></td>
+<td>Initialized context.</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td><code>const void*</code></td>
+<td>Initial data to upload, or <code>NULL</code> for uninitialized.</td>
+</tr>
+<tr>
+<td><code>data_size</code></td>
+<td><code>uint64_t</code></td>
+<td>Size of the storage buffer in bytes.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> A <code>CgfxBuffer</code> with usage <code>Storage | CopyDst | CopySrc</code>.</p>
+<p><strong>Example:</strong></p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kt">float</span><span class="w"> </span><span class="n">input_data</span><span class="p">[</span><span class="mi">256</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">input</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_storage</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">input_data</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">input_data</span><span class="p">));</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_storage</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">input_data</span><span class="p">));</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1">// ... dispatch compute shader ...</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">// Read back results</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">readback</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_mapping</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="n">cgfx_buffer_copy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">output</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">readback</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">output</span><span class="p">);</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">input</span><span class="p">);</span>
+</span></code></pre></div>
+<hr />
 <h3 id="cgfx_buffer_create_mapping">cgfx_buffer_create_mapping<a class="headerlink" href="#cgfx_buffer_create_mapping" title="Permanent link">&para;</a></h3>
 <p>Creates a mappable buffer for GPU-to-CPU readback.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">cgfx_buffer_create_mapping</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">                                                </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">                                                </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">,</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">                                                </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">count</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">cgfx_buffer_create_mapping</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">                                                </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">                                                </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">,</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">                                                </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">count</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1567,10 +1723,10 @@
 <hr />
 <h3 id="cgfx_buffer_create">cgfx_buffer_create<a class="headerlink" href="#cgfx_buffer_create" title="Permanent link">&para;</a></h3>
 <p>Generic buffer creation. The caller specifies the usage flags directly.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">cgfx_buffer_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">                                        </span><span class="n">WGPUBufferUsageFlags</span><span class="w"> </span><span class="n">usage</span><span class="p">,</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">                                        </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">                                        </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">cgfx_buffer_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">                                        </span><span class="n">WGPUBufferUsageFlags</span><span class="w"> </span><span class="n">usage</span><span class="p">,</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">                                        </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">                                        </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1605,22 +1761,22 @@
 </table>
 <p><strong>Returns:</strong> A <code>CgfxBuffer</code> with the specified usage.</p>
 <p><strong>Example:</strong></p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// Create a storage buffer for compute</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kt">float</span><span class="w"> </span><span class="n">compute_data</span><span class="p">[</span><span class="mi">256</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">storage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create</span><span class="p">(</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="n">WGPUBufferUsage_Storage</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">WGPUBufferUsage_CopyDst</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">WGPUBufferUsage_CopySrc</span><span class="p">,</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="n">compute_data</span><span class="p">,</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="k">sizeof</span><span class="p">(</span><span class="n">compute_data</span><span class="p">)</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="p">);</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">storage</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1">// Create a storage buffer for compute</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kt">float</span><span class="w"> </span><span class="n">compute_data</span><span class="p">[</span><span class="mi">256</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">storage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create</span><span class="p">(</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="n">WGPUBufferUsage_Storage</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">WGPUBufferUsage_CopyDst</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">WGPUBufferUsage_CopySrc</span><span class="p">,</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="n">compute_data</span><span class="p">,</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="k">sizeof</span><span class="p">(</span><span class="n">compute_data</span><span class="p">)</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">);</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">storage</span><span class="p">);</span>
 </span></code></pre></div>
 <hr />
 <h3 id="cgfx_buffer_destroy">cgfx_buffer_destroy<a class="headerlink" href="#cgfx_buffer_destroy" title="Permanent link">&para;</a></h3>
 <p>Releases the GPU buffer and zeros the struct.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>

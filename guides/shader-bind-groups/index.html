@@ -16,7 +16,7 @@
         <link rel="prev" href="../buffers-layouts-pipeline/">
       
       
-        <link rel="next" href="../../api/">
+        <link rel="next" href="../using-slang/">
       
       
         
@@ -52,6 +52,8 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -883,6 +885,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1155,6 +1185,62 @@
     
   
     Mesh
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
   
 
     
@@ -1608,15 +1694,18 @@
 <p>Describes a single binding slot within a group:</p>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">CgfxBindingDesc</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="kt">uint32_t</span><span class="w">               </span><span class="n">binding</span><span class="p">;</span><span class="w">           </span><span class="c1">// @binding(N) index</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">WGPUShaderStageFlags</span><span class="w">   </span><span class="n">visibility</span><span class="p">;</span><span class="w">        </span><span class="c1">// Which shader stages can see it</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">WGPUBufferBindingType</span><span class="w">  </span><span class="n">type</span><span class="p">;</span><span class="w">              </span><span class="c1">// Uniform, Storage, ReadOnlyStorage</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="kt">uint64_t</span><span class="w">               </span><span class="n">min_binding_size</span><span class="p">;</span><span class="w">  </span><span class="c1">// Minimum buffer size (0 = none)</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span><span class="w"> </span><span class="n">CgfxBindingDesc</span><span class="p">;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">WGPUShaderStageFlags</span><span class="w">   </span><span class="n">visibility</span><span class="p">;</span><span class="w">        </span><span class="c1">// 0 = auto-detect from kind</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">CgfxBindingKind</span><span class="w">        </span><span class="n">kind</span><span class="p">;</span><span class="w">              </span><span class="c1">// BUFFER (default), TEXTURE, SAMPLER, STORAGE_TEXTURE</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">WGPUBufferBindingType</span><span class="w">  </span><span class="n">type</span><span class="p">;</span><span class="w">              </span><span class="c1">// Uniform, Storage, ReadOnlyStorage (buffer kind only)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="kt">uint64_t</span><span class="w">               </span><span class="n">min_binding_size</span><span class="p">;</span><span class="w">  </span><span class="c1">// Minimum buffer size (0 = none)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="c1">// ... additional fields for texture/sampler/storage texture kinds</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span><span class="w"> </span><span class="n">CgfxBindingDesc</span><span class="p">;</span>
 </span></code></pre></div>
 <p><strong>Zero-init defaults:</strong></p>
 <ul>
 <li><code>binding = 0</code> -- binds to <code>@binding(0)</code></li>
-<li><code>visibility = 0</code> -- defaults to <code>Vertex | Fragment</code> (visible in both stages)</li>
+<li><code>visibility = 0</code> -- auto: Vertex|Fragment for buffers, Fragment for textures/samplers, Compute for storage textures</li>
+<li><code>kind = 0</code> -- defaults to <code>CGFX_BINDING_BUFFER</code> (backward compatible)</li>
 <li><code>type = 0</code> -- defaults to <code>Uniform</code></li>
 <li><code>min_binding_size = 0</code> -- no minimum enforced</li>
 </ul>
@@ -1815,11 +1904,11 @@
 <li>A bind group has multiple bindings (e.g., a uniform buffer and a storage buffer)</li>
 <li>You need non-consecutive binding indices</li>
 <li>You want to mix buffer types (uniform + storage) in one group</li>
-<li>You need to use non-buffer resources (textures, samplers) -- these require raw WebGPU bind group creation using <code>shader.group_layouts[N]</code></li>
+<li>You need non-buffer resources (textures, samplers) -- use <code>cgfx_bind_group_create()</code> with <code>CgfxBindGroupEntry</code></li>
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Low-Level Bind Group Creation</p>
-<p><code>cgfx_shader_create_bind_group</code> assumes consecutive binding indices: <code>buffers[0]</code> maps to <code>@binding(0)</code>, <code>buffers[1]</code> to <code>@binding(1)</code>, etc. For non-consecutive bindings or non-buffer resources (textures, samplers), use <code>shader-&gt;group_layouts[group_index]</code> with the raw <code>wgpuDeviceCreateBindGroup</code> API.</p>
+<p><code>cgfx_shader_create_bind_group</code> assumes consecutive buffer bindings: <code>buffers[0]</code> maps to <code>@binding(0)</code>, <code>buffers[1]</code> to <code>@binding(1)</code>, etc. For non-consecutive bindings or mixed resource types (textures, samplers), use <code>cgfx_bind_group_create()</code> with explicit <code>CgfxBindGroupEntry</code> entries.</p>
 </div>
 <h3 id="comparison">Comparison<a class="headerlink" href="#comparison" title="Permanent link">&para;</a></h3>
 <table>

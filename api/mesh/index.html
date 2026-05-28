@@ -16,7 +16,7 @@
         <link rel="prev" href="../uniform/">
       
       
-        <link rel="next" href="../camera/">
+        <link rel="next" href="../texture/">
       
       
         
@@ -52,6 +52,8 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -600,6 +602,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1081,6 +1111,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../camera/" class="md-nav__link">
         
   
@@ -1384,13 +1470,14 @@
 <hr />
 <h2 id="structs">Structs<a class="headerlink" href="#structs" title="Permanent link">&para;</a></h2>
 <h3 id="cgfxvertex">CgfxVertex<a class="headerlink" href="#cgfxvertex" title="Permanent link">&para;</a></h3>
-<p>Standard vertex format used by all cgfx meshes. 44 bytes per vertex, tightly packed.</p>
+<p>Standard vertex format used by all cgfx meshes. 96 bytes per vertex, tightly packed. Covers glTF 2.0 attributes plus skeletal animation.</p>
 <table>
 <thead>
 <tr>
 <th>Field</th>
 <th>Type</th>
-<th>Default</th>
+<th>Offset</th>
+<th>Size</th>
 <th>Description</th>
 </tr>
 </thead>
@@ -1398,26 +1485,58 @@
 <tr>
 <td><code>position</code></td>
 <td><code>float[3]</code></td>
-<td>--</td>
-<td>XYZ position (offset 0, 12 bytes).</td>
+<td>0</td>
+<td>12</td>
+<td>XYZ position.</td>
 </tr>
 <tr>
 <td><code>normal</code></td>
 <td><code>float[3]</code></td>
-<td>--</td>
-<td>Surface normal (offset 12, 12 bytes).</td>
+<td>12</td>
+<td>12</td>
+<td>Surface normal (unit length).</td>
+</tr>
+<tr>
+<td><code>tangent</code></td>
+<td><code>float[4]</code></td>
+<td>24</td>
+<td>16</td>
+<td>Tangent vector (xyz) + handedness sign (w).</td>
+</tr>
+<tr>
+<td><code>texcoord0</code></td>
+<td><code>float[2]</code></td>
+<td>40</td>
+<td>8</td>
+<td>Primary texture coordinates.</td>
+</tr>
+<tr>
+<td><code>texcoord1</code></td>
+<td><code>float[2]</code></td>
+<td>48</td>
+<td>8</td>
+<td>Secondary texture coordinates (lightmaps, etc).</td>
 </tr>
 <tr>
 <td><code>color</code></td>
-<td><code>float[3]</code></td>
-<td>--</td>
-<td>Vertex color RGB (offset 24, 12 bytes).</td>
+<td><code>float[4]</code></td>
+<td>56</td>
+<td>16</td>
+<td>Vertex color RGBA.</td>
 </tr>
 <tr>
-<td><code>uv</code></td>
-<td><code>float[2]</code></td>
-<td>--</td>
-<td>Texture coordinates (offset 36, 8 bytes).</td>
+<td><code>joints</code></td>
+<td><code>uint16_t[4]</code></td>
+<td>72</td>
+<td>8</td>
+<td>Skeletal joint/bone indices.</td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td><code>float[4]</code></td>
+<td>80</td>
+<td>16</td>
+<td>Skeletal blend weights (should sum to 1.0).</td>
 </tr>
 </tbody>
 </table>
@@ -1567,7 +1686,7 @@
 <div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">WGPUVertexBufferLayout</span><span class="w"> </span><span class="nf">cgfx_mesh_vertex_layout</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 </span></code></pre></div>
 <p><strong>Returns:</strong> A <code>WGPUVertexBufferLayout</code> matching <code>CgfxVertex</code>. The returned layout references static internal storage -- valid for the lifetime of the program.</p>
-<p>The layout describes 4 attributes at shader locations 0--3:</p>
+<p>The layout describes 8 attributes at shader locations 0--7:</p>
 <table>
 <thead>
 <tr>
@@ -1592,19 +1711,43 @@
 </tr>
 <tr>
 <td>2</td>
-<td><code>color</code></td>
-<td><code>Float32x3</code></td>
+<td><code>tangent</code></td>
+<td><code>Float32x4</code></td>
 <td>24</td>
 </tr>
 <tr>
 <td>3</td>
-<td><code>uv</code></td>
+<td><code>texcoord0</code></td>
 <td><code>Float32x2</code></td>
-<td>36</td>
+<td>40</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>texcoord1</code></td>
+<td><code>Float32x2</code></td>
+<td>48</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>color</code></td>
+<td><code>Float32x4</code></td>
+<td>56</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>joints</code></td>
+<td><code>Uint16x4</code></td>
+<td>72</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>weights</code></td>
+<td><code>Float32x4</code></td>
+<td>80</td>
 </tr>
 </tbody>
 </table>
-<p>Stride is <code>sizeof(CgfxVertex)</code> = 44 bytes. Step mode is <code>Vertex</code>.</p>
+<p>Stride is <code>sizeof(CgfxVertex)</code> = 96 bytes. Step mode is <code>Vertex</code>.</p>
 <hr />
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="matching-wgsl-shader">Matching WGSL shader<a class="headerlink" href="#matching-wgsl-shader" title="Permanent link">&para;</a></h3>
@@ -1612,15 +1755,20 @@
 <div class="language-wgsl highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">struct</span><span class="w"> </span><span class="n">VertexInput</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="nb">position</span><span class="p">:</span><span class="w"> </span><span class="nb">vec3f</span><span class="p">,</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="n">normal</span><span class="p">:</span><span class="w"> </span><span class="nb">vec3f</span><span class="p">,</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="n">color</span><span class="p">:</span><span class="w"> </span><span class="nb">vec3f</span><span class="p">,</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="n">uv</span><span class="p">:</span><span class="w"> </span><span class="nb">vec2f</span><span class="p">,</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">};</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="n">tangent</span><span class="p">:</span><span class="w"> </span><span class="nb">vec4f</span><span class="p">,</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="n">texcoord0</span><span class="p">:</span><span class="w"> </span><span class="nb">vec2f</span><span class="p">,</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="n">texcoord1</span><span class="p">:</span><span class="w"> </span><span class="nb">vec2f</span><span class="p">,</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="n">color</span><span class="p">:</span><span class="w"> </span><span class="nb">vec4f</span><span class="p">,</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span><span class="w"> </span><span class="n">joints</span><span class="p">:</span><span class="w"> </span><span class="nb">vec4</span><span class="o">&lt;</span><span class="nb">u32</span><span class="o">&gt;</span><span class="p">,</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nd">@location</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span><span class="w"> </span><span class="n">weights</span><span class="p">:</span><span class="w"> </span><span class="nb">vec4f</span><span class="p">,</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">};</span>
 </span></code></pre></div>
+<p>Your shader only needs to declare the attributes it actually uses. Unused locations can be omitted.</p>
 <h3 id="full-mesh-example">Full mesh example<a class="headerlink" href="#full-mesh-example" title="Permanent link">&para;</a></h3>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">CgfxVertex</span><span class="w"> </span><span class="n">vertices</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">-0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">-0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">},</span><span class="w"> </span><span class="p">.</span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">-0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">},</span><span class="w"> </span><span class="p">.</span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w">  </span><span class="mf">0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">},</span><span class="w"> </span><span class="p">.</span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">-0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">-0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">},</span><span class="w"> </span><span class="p">.</span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">-0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">},</span><span class="w"> </span><span class="p">.</span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w">  </span><span class="mf">0.5f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">},</span><span class="w"> </span><span class="p">.</span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">};</span>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="kt">uint32_t</span><span class="w"> </span><span class="n">indices</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">};</span>
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
@@ -1647,7 +1795,7 @@
 </span></code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Zero-initialized fields</p>
-<p>When using designated initializers, unspecified fields in <code>CgfxVertex</code> are zero-initialized. In the example above, <code>normal</code> and <code>uv</code> default to <code>{0, 0, 0}</code> and <code>{0, 0}</code> respectively.</p>
+<p>When using designated initializers, unspecified fields in <code>CgfxVertex</code> are zero-initialized. In the example above, <code>normal</code>, <code>tangent</code>, <code>texcoord0</code>, <code>texcoord1</code>, <code>joints</code>, and <code>weights</code> all default to zero.</p>
 </div>
 
 

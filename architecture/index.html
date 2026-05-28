@@ -53,6 +53,8 @@
       
     
     
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -824,6 +826,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1096,6 +1126,62 @@
     
   
     Mesh
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
   
 
     
@@ -1505,6 +1591,16 @@
 <td>Vertex format, mesh creation, vertex layout, draw helper</td>
 </tr>
 <tr>
+<td><strong>Texture</strong></td>
+<td><code>cgfx_texture.h</code></td>
+<td>GPU texture + view, sampler. Sampled, storage, render-target, depth, cube maps</td>
+</tr>
+<tr>
+<td><strong>Compute</strong></td>
+<td><code>cgfx_compute.h</code></td>
+<td>Compute pipeline, compute pass, buffer copy</td>
+</tr>
+<tr>
 <td><strong>Camera</strong></td>
 <td><code>cgfx_camera.h</code></td>
 <td>Projection/view matrices with GPU uniform management</td>
@@ -1524,25 +1620,29 @@
 <h2 id="module-dependency-diagram">Module Dependency Diagram<a class="headerlink" href="#module-dependency-diagram" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cgfx.h  (umbrella — includes everything)
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  |
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  +-- cgfx_ctx.h            [WebGPU, GLFW]
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  +-- cgfx_texture.h        [WebGPU]
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  |     |
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  +-- cgfx_buffer.h         [ctx]
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  +-- cgfx_ctx.h            [WebGPU, GLFW, texture]
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  |     |
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  +-- cgfx_shader.h         [ctx, buffer]
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  +-- cgfx_buffer.h         [ctx]
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  |     |
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  +-- cgfx_pipeline.h       [ctx, shader]
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  +-- cgfx_shader.h         [ctx, buffer, texture]
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>  |     |
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  +-- cgfx_frame.h          [ctx]
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  +-- cgfx_pipeline.h       [ctx, shader]
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>  |     |
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>  +-- cgfx_uniform.h        [ctx, buffer, shader]
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>  +-- cgfx_frame.h          [ctx]
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>  |     |
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  +-- cgfx_mesh.h           [ctx, buffer]
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  +-- cgfx_compute.h        [ctx, shader, buffer]
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>  |     |
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>  +-- cgfx_camera.h         [cglm, ctx, buffer, shader]
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>  +-- cgfx_uniform.h        [ctx, buffer, shader]
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>  |     |
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  +-- cgfx_primitives.h     [ctx, mesh]
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  +-- cgfx_mesh.h           [ctx, buffer]
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>  |     |
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>  +-- cgfx_loader.h         [mesh]
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>  +-- cgfx_camera.h         [cglm, ctx, buffer, shader]
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>  |     |
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>  +-- cgfx_primitives.h     [ctx, mesh]
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>  |     |
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>  +-- cgfx_loader.h         [mesh]
 </span></code></pre></div>
 <p>All modules depend on <code>cgfx_export.h</code> for the <code>CGFX_API</code> macro, omitted above for clarity.</p>
 <p>The context (<code>cgfx_ctx.h</code>) is the foundation -- every other module takes a <code>const CgfxCtx *</code> as its first parameter. The buffer module sits above the context, and the shader module depends on both context and buffer (because <code>cgfx_shader_create_bind_group</code> takes <code>CgfxBuffer</code> pointers). The pipeline depends on the shader for layout information.</p>
@@ -1586,12 +1686,11 @@
 </span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>    .queue           = WGPUQueue
 </span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>    .surface         = WGPUSurface
 </span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>    .surface_format  = WGPUTextureFormat
-</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>    .depth_texture   = WGPUTexture (or NULL)
-</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>    .depth_texture_view = WGPUTextureView (or NULL)
-</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>    .depth_format    = WGPUTextureFormat
-</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>    .width           = uint32_t
-</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>    .height          = uint32_t
-</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>}
+</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>    .depth_texture   = CgfxTexture (zero if disabled)
+</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>    .present_mode    = WGPUPresentMode
+</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>    .width           = uint32_t
+</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>    .height          = uint32_t
+</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>}
 </span></code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">External Window Support</p>
@@ -1613,7 +1712,7 @@
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>|   |
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>|   |   3. wgpuCommandEncoderBeginRenderPass()
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>|   |      - Color attachment: surface texture, clear to clear_color
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>|   |      - Depth attachment: depth_texture_view (if enabled)
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>|   |      - Depth attachment: depth_texture.view (if enabled)
 </span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>|   |      - Load op: Clear, Store op: Store
 </span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>|   |
 </span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>|   v   frame.render_pass is now active
@@ -1645,24 +1744,30 @@
 <p class="admonition-title">Frame Skipping</p>
 <p><code>cgfx_frame_begin</code> returns <code>false</code> when the surface texture is unavailable (typically when the window is minimized). Always check the return value and skip the frame -- do not call <code>cgfx_frame_end</code> without a successful begin.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Two-Phase Frame Begin</p>
+<p><code>cgfx_frame_begin</code> is equivalent to <code>cgfx_frame_begin_encoder</code> + <code>cgfx_frame_begin_render_pass</code>. Use the split functions when you need to run compute passes before the render pass on the same command encoder. See the <a href="../api/frame/">Frame API reference</a> for details.</p>
+</div>
 <h2 id="cleanup-flow">Cleanup Flow<a class="headerlink" href="#cleanup-flow" title="Permanent link">&para;</a></h2>
 <p>Resources are destroyed in reverse creation order:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Application cleanup (reverse order of creation):
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    1. cgfx_uniform_destroy(&amp;uniform)     -- releases bind group + buffer
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    2. wgpuRenderPipelineRelease(pipeline) -- raw WebGPU handle
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    3. cgfx_shader_destroy(&amp;shader)        -- releases module + layouts
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    4. cgfx_ctx_destroy(&amp;ctx)              -- releases everything below
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>cgfx_ctx_destroy(&amp;ctx):
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    |
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    |   1. wgpuQueueRelease(queue)
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    |   2. wgpuSurfaceUnconfigure(surface)
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    |   3. wgpuSurfaceRelease(surface)
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    |   4. wgpuDeviceRelease(device)
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    |   5. glfwDestroyWindow(window)   (skipped for external contexts)
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    |   6. glfwTerminate()             (skipped for external contexts)
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    v
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    1. cgfx_uniform_destroy(&amp;uniform)          -- releases bind group + buffer
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    2. wgpuRenderPipelineRelease(pipeline)      -- raw WebGPU handle
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    2b. wgpuComputePipelineRelease(pipeline)    -- raw WebGPU handle (if used)
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    3. cgfx_shader_destroy(&amp;shader)             -- releases module + layouts
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    4. cgfx_ctx_destroy(&amp;ctx)                   -- releases everything below
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>cgfx_ctx_destroy(&amp;ctx):
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    |
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    |   1. cgfx_texture_destroy(depth_texture)  (if enabled)
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    |   2. wgpuQueueRelease(queue)
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    |   3. wgpuSurfaceUnconfigure(surface)
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    |   4. wgpuSurfaceRelease(surface)
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    |   5. wgpuDeviceRelease(device)
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    |   6. glfwDestroyWindow(window)   (skipped for external contexts)
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    |   7. glfwTerminate()             (skipped for external contexts)
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    v
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Destruction Order Matters</p>
@@ -1739,7 +1844,7 @@
 </tbody>
 </table>
 <h3 id="what-the-backend-affects">What the backend affects<a class="headerlink" href="#what-the-backend-affects" title="Permanent link">&para;</a></h3>
-<p><strong>Device synchronization</strong> -- After submitting a command buffer, the CPU must wait for or poll GPU completion. wgpu-native uses <code>wgpuDevicePoll(device, false, NULL)</code>, while Dawn uses <code>wgpuDeviceTick(device)</code>. This is called automatically in <code>cgfx_frame_end</code>.</p>
+<p><strong>Device synchronization</strong> -- After submitting a command buffer, the CPU must wait for or poll GPU completion. wgpu-native uses <code>wgpuDevicePoll(device, false, NULL)</code>, while Dawn uses <code>wgpuDeviceTick(device)</code>. This is called automatically in <code>cgfx_frame_end</code> and <code>cgfx_compute_end</code>.</p>
 <p><strong>Surface presentation</strong> -- On native backends, <code>wgpuSurfacePresent(surface)</code> is called after submit. On Emscripten, the browser's requestAnimationFrame loop handles presentation, so this call is skipped.</p>
 <p><strong>Async request wrappers</strong> -- WebGPU adapter and device requests are asynchronous. cgfx wraps them in synchronous helpers (<code>cgfx_internal.h</code>) that block until the callback fires. The callback mechanism differs slightly between wgpu-native and Dawn, handled via <code>#ifdef</code> blocks.</p>
 <p><strong>Surface texture handling</strong> -- The method for acquiring and releasing surface textures varies slightly between backends, particularly around error handling for lost or outdated surfaces.</p>

@@ -53,6 +53,8 @@
       
     
     
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -600,6 +602,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -894,6 +924,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_frame_begin_encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_frame_begin_encoder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_frame_begin_render_pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_frame_begin_render_pass
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_frame_end" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -937,6 +989,17 @@
     <span class="md-ellipsis">
       
         Frame loop with mesh and uniform
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixed-compute-render" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixed compute + render
       
     </span>
   </a>
@@ -1028,6 +1091,62 @@
     
   
     Mesh
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
   
 
     
@@ -1238,6 +1357,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_frame_begin_encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_frame_begin_encoder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_frame_begin_render_pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_frame_begin_render_pass
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_frame_end" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1281,6 +1422,17 @@
     <span class="md-ellipsis">
       
         Frame loop with mesh and uniform
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixed-compute-render" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixed compute + render
       
     </span>
   </a>
@@ -1392,7 +1544,7 @@
 <li>Store operation: store (keep the rendered result).</li>
 </ul>
 </li>
-<li>If the context has a <code>depth_texture_view</code> (created via <code>CgfxCtxDesc.depth_buffer = true</code>), attaches it as the depth/stencil attachment with a clear value of <code>1.0</code>.</li>
+<li>If the context has a depth texture (created via <code>CgfxCtxDesc.depth_buffer = true</code>), attaches <code>ctx-&gt;depth_texture.view</code> as the depth/stencil attachment with a clear value of <code>1.0</code>.</li>
 </ol>
 <div class="admonition warning">
 <p class="admonition-title">Caller-owned event loop</p>
@@ -1403,9 +1555,75 @@
 <p>When <code>cgfx_frame_begin</code> returns <code>false</code>, skip all rendering for that iteration. Do <strong>not</strong> call <code>cgfx_frame_end</code>.</p>
 </div>
 <hr />
+<h3 id="cgfx_frame_begin_encoder">cgfx_frame_begin_encoder<a class="headerlink" href="#cgfx_frame_begin_encoder" title="Permanent link">&para;</a></h3>
+<p>Begin a frame without starting a render pass. Acquires the surface texture and creates a command encoder, but does NOT begin a render pass. Use for mixed compute+render workflows.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">cgfx_frame_begin_encoder</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="o">*</span><span class="n">frame</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctx</code></td>
+<td><code>const CgfxCtx *</code></td>
+<td>Initialized context.</td>
+</tr>
+<tr>
+<td><code>frame</code></td>
+<td><code>CgfxFrame *</code></td>
+<td>Pointer to caller-allocated <code>CgfxFrame</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <code>true</code> if the frame was started (surface texture available). <code>frame-&gt;render_pass</code> is <code>NULL</code> until <code>cgfx_frame_begin_render_pass</code> is called.</p>
+<p>After calling this, you can run compute passes on <code>frame-&gt;encoder</code> before starting the render pass.</p>
+<hr />
+<h3 id="cgfx_frame_begin_render_pass">cgfx_frame_begin_render_pass<a class="headerlink" href="#cgfx_frame_begin_render_pass" title="Permanent link">&para;</a></h3>
+<p>Begin the render pass on a frame started with <code>cgfx_frame_begin_encoder()</code>.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_frame_begin_render_pass</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">                                            </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="o">*</span><span class="n">frame</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">                                            </span><span class="n">WGPUColor</span><span class="w"> </span><span class="n">clear_color</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctx</code></td>
+<td><code>const CgfxCtx *</code></td>
+<td>Initialized context.</td>
+</tr>
+<tr>
+<td><code>frame</code></td>
+<td><code>CgfxFrame *</code></td>
+<td>Frame started with <code>cgfx_frame_begin_encoder()</code>.</td>
+</tr>
+<tr>
+<td><code>clear_color</code></td>
+<td><code>WGPUColor</code></td>
+<td>Background color to clear the frame with.</td>
+</tr>
+</tbody>
+</table>
+<p>Sets up the render pass with the surface texture as color attachment and optional depth/stencil attachment.</p>
+<div class="admonition note">
+<p class="admonition-title">Relationship to cgfx_frame_begin</p>
+<p><code>cgfx_frame_begin</code> is equivalent to calling <code>cgfx_frame_begin_encoder</code> followed by <code>cgfx_frame_begin_render_pass</code>. Use the split functions only when you need to insert compute passes before rendering.</p>
+</div>
+<hr />
 <h3 id="cgfx_frame_end">cgfx_frame_end<a class="headerlink" href="#cgfx_frame_end" title="Permanent link">&para;</a></h3>
 <p>End the current frame, submit commands, and present the surface.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_frame_end</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="o">*</span><span class="n">frame</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_frame_end</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="o">*</span><span class="n">frame</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1445,38 +1663,63 @@
 <hr />
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="standard-frame-loop">Standard frame loop<a class="headerlink" href="#standard-frame-loop" title="Permanent link">&para;</a></h3>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">        </span><span class="c1">// bind buffers, uniforms, issue draw calls...</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderDraw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="p">}</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="c1">// bind buffers, uniforms, issue draw calls...</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderDraw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="frame-loop-with-mesh-and-uniform">Frame loop with mesh and uniform<a class="headerlink" href="#frame-loop-with-mesh-and-uniform" title="Permanent link">&para;</a></h3>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">                         </span><span class="p">(</span><span class="n">WGPUBindGroup</span><span class="p">[]){</span><span class="w"> </span><span class="n">uniform</span><span class="p">.</span><span class="n">bind_group</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="n">cgfx_mesh_draw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mesh</span><span class="p">);</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="p">}</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">                         </span><span class="p">(</span><span class="n">WGPUBindGroup</span><span class="p">[]){</span><span class="w"> </span><span class="n">uniform</span><span class="p">.</span><span class="n">bind_group</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="n">cgfx_mesh_draw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mesh</span><span class="p">);</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">}</span>
 </span></code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Recording draws</p>
 <p>Between <code>cgfx_frame_begin</code> and <code>cgfx_frame_end</code>, you record draw commands directly on <code>frame.render_pass</code> using raw WebGPU calls. cgfx does not wrap every possible draw/bind operation -- it only hides the encoder/submit/present ceremony.</p>
 </div>
+<h3 id="mixed-compute-render">Mixed compute + render<a class="headerlink" href="#mixed-compute-render" title="Permanent link">&para;</a></h3>
+<p>Use <code>cgfx_frame_begin_encoder</code> to run compute passes before the render pass:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin_encoder</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span><span class="c1">// Compute pass first</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="n">CgfxComputePass</span><span class="w"> </span><span class="n">cp</span><span class="p">;</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="n">cgfx_compute_pass_begin</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">encoder</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cp</span><span class="p">);</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="n">wgpuComputePassEncoderSetPipeline</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="n">compute_pipeline</span><span class="p">);</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="n">cgfx_shader_bind_compute</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">compute_bg</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">        </span><span class="n">wgpuComputePassEncoderDispatchWorkgroups</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">        </span><span class="n">cgfx_compute_pass_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cp</span><span class="p">);</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">        </span><span class="c1">// Then render pass</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">        </span><span class="n">cgfx_frame_begin_render_pass</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">            </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">});</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">render_pipeline</span><span class="p">);</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderDraw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>See the <a href="../compute/">Compute API reference</a> for details on compute passes.</p>
 
 
 

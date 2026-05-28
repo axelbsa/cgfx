@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://axelbsa.github.io/cgfx/api/">
       
       
-        <link rel="prev" href="../guides/shader-bind-groups/">
+        <link rel="prev" href="../guides/using-slang/">
       
       
         <link rel="next" href="context/">
@@ -52,6 +52,8 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -600,6 +602,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1008,6 +1038,62 @@
   
   
     <li class="md-nav__item">
+      <a href="texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="camera/" class="md-nav__link">
         
   
@@ -1233,7 +1319,7 @@
 
 
 <h1 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
-<p>cgfx is a minimal C23 rendering engine wrapping WebGPU. It exposes 11 modules through the umbrella header <code>cgfx.h</code>.</p>
+<p>cgfx is a minimal C23 rendering engine wrapping WebGPU. It exposes 13 modules through the umbrella header <code>cgfx.h</code>.</p>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;cgfx.h&quot;</span><span class="c1">  // includes every module below</span>
 </span></code></pre></div>
 <h2 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link">&para;</a></h2>
@@ -1267,37 +1353,47 @@
 <td>Render pipeline creation with zero-init defaults</td>
 </tr>
 <tr>
-<td>Frame</td>
+<td><a href="frame/">Frame</a></td>
 <td><code>cgfx_frame.h</code></td>
 <td>Per-frame begin/end rendering cycle</td>
 </tr>
 <tr>
 <td><a href="buffer/">Buffer</a></td>
 <td><code>cgfx_buffer.h</code></td>
-<td>GPU buffer creation (vertex, index, uniform, mapping, generic)</td>
+<td>GPU buffer creation (vertex, index, uniform, storage, mapping, generic)</td>
 </tr>
 <tr>
-<td>Uniform</td>
+<td><a href="uniform/">Uniform</a></td>
 <td><code>cgfx_uniform.h</code></td>
 <td>Uniform buffer + bind group + data pointer bundle</td>
 </tr>
 <tr>
-<td>Mesh</td>
+<td><a href="mesh/">Mesh</a></td>
 <td><code>cgfx_mesh.h</code></td>
 <td>Vertex format, mesh creation, vertex layout, draw helpers</td>
 </tr>
 <tr>
-<td>Primitives</td>
+<td><a href="texture/">Texture</a></td>
+<td><code>cgfx_texture.h</code></td>
+<td>GPU texture + view, sampler, depth, cube maps, per-layer writes</td>
+</tr>
+<tr>
+<td><a href="compute/">Compute</a></td>
+<td><code>cgfx_compute.h</code></td>
+<td>Compute pipeline, compute pass, buffer copy</td>
+</tr>
+<tr>
+<td><a href="primitives/">Primitives</a></td>
 <td><code>cgfx_primitives.h</code></td>
 <td>Plane, triangle, sphere, cube generators (stubbed)</td>
 </tr>
 <tr>
-<td>Loader</td>
+<td><a href="loader/">Loader</a></td>
 <td><code>cgfx_loader.h</code></td>
 <td>Load geometry from LearnWebGPU text format (temporary)</td>
 </tr>
 <tr>
-<td>Camera</td>
+<td><a href="camera/">Camera</a></td>
 <td><code>cgfx_camera.h</code></td>
 <td>Projection/view matrices with GPU uniform management</td>
 </tr>
@@ -1392,14 +1488,29 @@
 <td><code>cgfx_mesh_destroy</code></td>
 </tr>
 <tr>
+<td><code>CgfxTexture</code></td>
+<td><code>cgfx_texture_create</code></td>
+<td><code>cgfx_texture_destroy</code></td>
+</tr>
+<tr>
 <td><code>CgfxBuffer</code></td>
 <td><code>cgfx_buffer_create_*</code></td>
 <td><code>cgfx_buffer_destroy</code></td>
 </tr>
 <tr>
+<td><code>WGPUSampler</code></td>
+<td><code>cgfx_sampler_create</code></td>
+<td><code>wgpuSamplerRelease</code> (caller-owned)</td>
+</tr>
+<tr>
 <td><code>WGPURenderPipeline</code></td>
 <td><code>cgfx_pipeline_create</code></td>
 <td><code>wgpuRenderPipelineRelease</code> (caller-owned)</td>
+</tr>
+<tr>
+<td><code>WGPUComputePipeline</code></td>
+<td><code>cgfx_compute_pipeline_create</code></td>
+<td><code>wgpuComputePipelineRelease</code> (caller-owned)</td>
 </tr>
 <tr>
 <td><code>WGPUBindGroup</code></td>
