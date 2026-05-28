@@ -107,7 +107,8 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
     supported.nextInChain = nullptr;
     wgpuAdapterGetLimits(adapter, &supported);
     cgfx__inspect_limits("Adapter supported", &supported.limits);
-    cgfx__inspect_limits("Requested", &limits->limits);
+    // cgfx__inspect_limits("Requested", &limits->limits);  // This makes to
+    // much noise
 #endif
 
     /* ── Request device ──────────────────────────────────────────── */

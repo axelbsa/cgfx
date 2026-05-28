@@ -23,11 +23,11 @@ explaining the geometry math along the way.
 Every mesh in cgfx uses the same 96-byte vertex format:
 
 ```
-┌─────────┬─────────┬─────────┬──────────┬──────────┬───────┬────────┬─────────┐
-│ position│ normal  │ tangent │ texcoord0│ texcoord1│ color │ joints │ weights │
-│ float[3]│ float[3]│ float[4]│ float[2] │ float[2] │float[4]│u16[4] │ float[4]│
-│  12 B   │  12 B   │  16 B   │   8 B    │   8 B    │ 16 B  │  8 B  │  16 B   │
-└─────────┴─────────┴─────────┴──────────┴──────────┴───────┴────────┴─────────┘
+┌─────────┬─────────┬─────────┬──────────┬──────────┬────────┬────────┬─────────┐
+│ position│ normal  │ tangent │ texcoord0│ texcoord1│ color  │ joints │ weights │
+│ float[3]│ float[3]│ float[4]│ float[2] │ float[2] │float[4]│ u16[4] │ float[4]│
+│  12 B   │  12 B   │  16 B   │   8 B    │   8 B    │ 16 B   │  8 B   │  16 B   │
+└─────────┴─────────┴─────────┴──────────┴──────────┴────────┴────────┴─────────┘
   offset 0    12        24         40          48       56      72        80
 ```
 
@@ -63,12 +63,12 @@ Every procedural mesh follows the same four-step pattern:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│ 1. ALLOCATE — CPU arrays for vertices and indices               │
+│ 1. ALLOCATE — CPU arrays for vertices and indices                │
 │                                                                  │
 │    CgfxVertex *vertices = malloc(vertex_count * sizeof(...));    │
 │    uint32_t   *indices  = malloc(index_count * sizeof(...));     │
 ├──────────────────────────────────────────────────────────────────┤
-│ 2. FILL — generate positions, normals, UVs, index connectivity  │
+│ 2. FILL — generate positions, normals, UVs, index connectivity   │
 │                                                                  │
 │    for each vertex:                                              │
 │        compute position from parametric formula                  │
@@ -77,13 +77,13 @@ Every procedural mesh follows the same four-step pattern:
 │    for each face:                                                │
 │        emit triangle indices                                     │
 ├──────────────────────────────────────────────────────────────────┤
-│ 3. UPLOAD — hand to cgfx_mesh_create                            │
+│ 3. UPLOAD — hand to cgfx_mesh_create                             │
 │                                                                  │
-│    CgfxMesh mesh = cgfx_mesh_create(ctx,                        │
+│    CgfxMesh mesh = cgfx_mesh_create(ctx,                         │
 │        vertices, vertex_count, indices, index_count);            │
 │    // GPU now owns a copy — CPU arrays are no longer needed      │
 ├──────────────────────────────────────────────────────────────────┤
-│ 4. FREE — release the CPU arrays                                │
+│ 4. FREE — release the CPU arrays                                 │
 │                                                                  │
 │    free(vertices);                                               │
 │    free(indices);                                                │
