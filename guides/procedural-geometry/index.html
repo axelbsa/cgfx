@@ -1443,7 +1443,7 @@ explaining the geometry math along the way.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────┬─────────┬─────────┬──────────┬──────────┬───────┬────────┬─────────┐
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│ position│ normal  │ tangent │ texcoord0│ texcoord1│ color │ joints │ weights │
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│ float[3]│ float[3]│ float[4]│ float[2] │ float[2] │float[4]│u16[4] │ float[4]│
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  12 B   │  12 B   │  16 B   │   8 B    │   8 B    │ 16 B  │  8 B  │  16 B   │
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  12 B   │  12 B   │  16 B   │   8 B    │   8 B    │ 16 B  │  8 B   │  16 B   │
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>└─────────┴─────────┴─────────┴──────────┴──────────┴───────┴────────┴─────────┘
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  offset 0    12        24         40          48       56      72        80
 </span></code></pre></div>
@@ -1494,12 +1494,12 @@ are harmless padding that keeps the format uniform across all meshes.</p>
 <h2 id="the-mesh-creation-pattern">The mesh creation pattern<a class="headerlink" href="#the-mesh-creation-pattern" title="Permanent link">&para;</a></h2>
 <p>Every procedural mesh follows the same four-step pattern:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌──────────────────────────────────────────────────────────────────┐
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│ 1. ALLOCATE — CPU arrays for vertices and indices               │
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│ 1. ALLOCATE — CPU arrays for vertices and indices                │
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│                                                                  │
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>│    CgfxVertex *vertices = malloc(vertex_count * sizeof(...));    │
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>│    uint32_t   *indices  = malloc(index_count * sizeof(...));     │
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>├──────────────────────────────────────────────────────────────────┤
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│ 2. FILL — generate positions, normals, UVs, index connectivity  │
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│ 2. FILL — generate positions, normals, UVs, index connectivity   │
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│                                                                  │
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│    for each vertex:                                              │
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│        compute position from parametric formula                  │
@@ -1508,13 +1508,13 @@ are harmless padding that keeps the format uniform across all meshes.</p>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>│    for each face:                                                │
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>│        emit triangle indices                                     │
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>├──────────────────────────────────────────────────────────────────┤
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>│ 3. UPLOAD — hand to cgfx_mesh_create                            │
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>│ 3. UPLOAD — hand to cgfx_mesh_create                             │
 </span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>│                                                                  │
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>│    CgfxMesh mesh = cgfx_mesh_create(ctx,                        │
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>│    CgfxMesh mesh = cgfx_mesh_create(ctx,                         │
 </span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>│        vertices, vertex_count, indices, index_count);            │
 </span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>│    // GPU now owns a copy — CPU arrays are no longer needed      │
 </span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>├──────────────────────────────────────────────────────────────────┤
-</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>│ 4. FREE — release the CPU arrays                                │
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>│ 4. FREE — release the CPU arrays                                 │
 </span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>│                                                                  │
 </span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>│    free(vertices);                                               │
 </span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>│    free(indices);                                                │
