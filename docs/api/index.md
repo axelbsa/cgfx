@@ -1,6 +1,6 @@
 # API Reference
 
-cgfx is a minimal C23 rendering engine wrapping WebGPU. It exposes 11 modules through the umbrella header `cgfx.h`.
+cgfx is a minimal C23 rendering engine wrapping WebGPU. It exposes 13 modules through the umbrella header `cgfx.h`.
 
 ```c
 #include "cgfx.h"  // includes every module below
@@ -15,9 +15,11 @@ cgfx is a minimal C23 rendering engine wrapping WebGPU. It exposes 11 modules th
 | [Shader](shader.md) | `cgfx_shader.h` | WGSL compilation, bind group layouts, pipeline layout |
 | [Pipeline](pipeline.md) | `cgfx_pipeline.h` | Render pipeline creation with zero-init defaults |
 | [Frame](frame.md) | `cgfx_frame.h` | Per-frame begin/end rendering cycle |
-| [Buffer](buffer.md) | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, mapping, generic) |
+| [Buffer](buffer.md) | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, storage, mapping, generic) |
 | [Uniform](uniform.md) | `cgfx_uniform.h` | Uniform buffer + bind group + data pointer bundle |
 | [Mesh](mesh.md) | `cgfx_mesh.h` | Vertex format, mesh creation, vertex layout, draw helpers |
+| [Texture](texture.md) | `cgfx_texture.h` | GPU texture + view, sampler, depth, cube maps, per-layer writes |
+| [Compute](compute.md) | `cgfx_compute.h` | Compute pipeline, compute pass, buffer copy |
 | [Primitives](primitives.md) | `cgfx_primitives.h` | Plane, triangle, sphere, cube generators (stubbed) |
 | [Loader](loader.md) | `cgfx_loader.h` | Load geometry from LearnWebGPU text format (temporary) |
 | [Camera](camera.md) | `cgfx_camera.h` | Projection/view matrices with GPU uniform management |
@@ -74,8 +76,11 @@ cgfx follows a simple ownership model: the module that creates a resource provid
 | `CgfxCamera` | `cgfx_camera_create` | `cgfx_camera_destroy` |
 | `CgfxUniform` | `cgfx_uniform_create` | `cgfx_uniform_destroy` |
 | `CgfxMesh` | `cgfx_mesh_create` / primitives | `cgfx_mesh_destroy` |
+| `CgfxTexture` | `cgfx_texture_create` | `cgfx_texture_destroy` |
 | `CgfxBuffer` | `cgfx_buffer_create_*` | `cgfx_buffer_destroy` |
+| `WGPUSampler` | `cgfx_sampler_create` | `wgpuSamplerRelease` (caller-owned) |
 | `WGPURenderPipeline` | `cgfx_pipeline_create` | `wgpuRenderPipelineRelease` (caller-owned) |
+| `WGPUComputePipeline` | `cgfx_compute_pipeline_create` | `wgpuComputePipelineRelease` (caller-owned) |
 | `WGPUBindGroup` | `cgfx_shader_create_bind_group` | `wgpuBindGroupRelease` (caller-owned) |
 
 !!! warning "Bind groups are caller-owned"

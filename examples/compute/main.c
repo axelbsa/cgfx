@@ -1,75 +1,140 @@
 /**
  * @file main.c
- * @brief Triangle example — demonstrates basic cgfx usage.
+ * @brief Compute example — GPU vector addition with read-back.
  *
- * Renders a purple triangle on a dark background using the cgfx library.
- * This is the simplest possible cgfx application: create a context,
- * a shader, a pipeline, and render in a loop.
+ * Demonstrates standalone compute: create storage buffers, dispatch
+ * a compute shader, copy results to a mapping buffer, read back to CPU.
  */
+#include <stdio.h>
 #include "cgfx.h"
 
-static const char *shader_source =
-    "@vertex                                                                \n"
-    "fn vs_main(@builtin(vertex_index) in_vertex_index: u32)                \n"
-    "    -> @builtin(position) vec4f {                                       \n"
-    "    var p = vec2f(0.0, 0.0);                                           \n"
-    "    if (in_vertex_index == 0u) {                                       \n"
-    "        p = vec2f(-0.5, -0.5);                                         \n"
-    "    } else if (in_vertex_index == 1u) {                                \n"
-    "        p = vec2f(0.5, -0.5);                                          \n"
-    "    } else {                                                           \n"
-    "        p = vec2f(0.0, 0.5);                                           \n"
-    "    }                                                                  \n"
-    "    return vec4f(p, 0.0, 1.0);                                         \n"
-    "}                                                                      \n"
-    "                                                                       \n"
-    "@fragment                                                              \n"
-    "fn fs_main() -> @location(0) vec4f {                                   \n"
-    "    return vec4f(0.8, 0.4, 1.0, 1.0);                                  \n"
-    "}                                                                      \n";
+#ifdef WEBGPU_BACKEND_WGPU
+#  include <webgpu/wgpu.h>
+#endif
 
+static const char *compute_shader =
+    "@group(0) @binding(0) var<storage, read>       input_a : array<f32>;\n"
+    "@group(0) @binding(1) var<storage, read>       input_b : array<f32>;\n"
+    "@group(0) @binding(2) var<storage, read_write> output  : array<f32>;\n"
+    "\n"
+    "@compute @workgroup_size(64)\n"
+    "fn cs_main(@builtin(global_invocation_id) id : vec3u) {\n"
+    "    let i = id.x;\n"
+    "    if (i < arrayLength(&output)) {\n"
+    "        output[i] = input_a[i] + input_b[i];\n"
+    "    }\n"
+    "}\n";
+
+#define N 256
+
+static void on_buffer_mapped(WGPUBufferMapAsyncStatus status, void *user_data) {
+    CgfxBuffer *buf = (CgfxBuffer *)user_data;
+    if (status == WGPUBufferMapAsyncStatus_Success)
+        buf->ready = true;
+}
 
 int main(void) {
-    /* Initialize the rendering context: window, device, queue, surface */
     CgfxCtx ctx;
     if (!cgfx_ctx_init(&ctx, &(CgfxCtxDesc){
-        .width = 1920,
-        .height = 1080,
-        .title = "cgfx — triangle",
-        .limits = cgfx_default_limits()
-    })) {
-        return 1;
+        .width = 1, .height = 1,
+        .title = "cgfx compute",
+        .limits = cgfx_default_limits(),
+    })) return 1;
+
+    /* Prepare input data: a[i] = i, b[i] = i * 2 */
+    float a[N], b[N];
+    for (int i = 0; i < N; i++) {
+        a[i] = (float)i;
+        b[i] = (float)(i * 2);
     }
 
-    /* Create shader module from WGSL source */
-    CgfxShader shader = cgfx_shader_create(&ctx, "triangle shader", shader_source,
-        &(CgfxShaderDesc){});
+    /* Create shader with 3 storage buffer bindings */
+    CgfxShader shader = cgfx_shader_create(&ctx, "vector_add", compute_shader,
+        &(CgfxShaderDesc){
+            .group_count = 1,
+            .groups = (CgfxGroupDesc[]){{
+                .binding_count = 3,
+                .bindings = (CgfxBindingDesc[]){
+                    { .binding = 0, .type = WGPUBufferBindingType_ReadOnlyStorage,
+                      .visibility = WGPUShaderStage_Compute },
+                    { .binding = 1, .type = WGPUBufferBindingType_ReadOnlyStorage,
+                      .visibility = WGPUShaderStage_Compute },
+                    { .binding = 2, .type = WGPUBufferBindingType_Storage,
+                      .visibility = WGPUShaderStage_Compute },
+                },
+            }},
+        });
 
-    /* Create render pipeline with default settings (no vertex buffers,
-     * triangle list topology, no culling, alpha blending) */
-    WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
-        .shader = &shader,
-    });
-
+    /* Create compute pipeline */
+    WGPUComputePipeline pipeline = cgfx_compute_pipeline_create(&ctx,
+        &(CgfxComputeDesc){ .shader = &shader });
     if (!pipeline) {
+        fprintf(stderr, "Failed to create compute pipeline\n");
+        cgfx_shader_destroy(&shader);
         cgfx_ctx_destroy(&ctx);
         return 1;
     }
 
-    /* Main render loop */
-    while (cgfx_ctx_is_running(&ctx)) {
-        glfwPollEvents();
-        CgfxFrame frame;
-        if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){ 0.1, 0.1, 0.2, 1.0 })) {
-            /* Record draw commands directly on the render pass */
-            wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
-            wgpuRenderPassEncoderDraw(frame.render_pass, 3, 1, 0, 0);
-            cgfx_frame_end(&ctx, &frame);
-        }
+    /* Create storage buffers */
+    CgfxBuffer buf_a   = cgfx_buffer_create_storage(&ctx, a, sizeof(a));
+    CgfxBuffer buf_b   = cgfx_buffer_create_storage(&ctx, b, sizeof(b));
+    CgfxBuffer buf_out = cgfx_buffer_create_storage(&ctx, nullptr, sizeof(a));
+
+    /* Create bind group */
+    WGPUBindGroup bg = cgfx_shader_create_bind_group(&ctx, &shader, 0,
+        (CgfxBuffer[]){ buf_a, buf_b, buf_out }, 3);
+
+    /* Dispatch compute shader */
+    CgfxComputePass cp;
+    cgfx_compute_begin(&ctx, &cp);
+    wgpuComputePassEncoderSetPipeline(cp.pass, pipeline);
+    cgfx_shader_bind_compute(cp.pass, &bg, 1);
+    wgpuComputePassEncoderDispatchWorkgroups(cp.pass, N / 64, 1, 1);
+    cgfx_compute_end(&ctx, &cp);
+
+    /* Read back results */
+    CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, nullptr, sizeof(a), N);
+    cgfx_buffer_copy(&ctx, &buf_out, &readback, 0);
+
+    wgpuBufferMapAsync(readback.buffer, WGPUMapMode_Read, 0, readback.size,
+                        &on_buffer_mapped, &readback);
+    while (!readback.ready) {
+#if defined(WEBGPU_BACKEND_DAWN)
+        wgpuDeviceTick(ctx.device);
+#elif defined(WEBGPU_BACKEND_WGPU)
+        wgpuDevicePoll(ctx.device, true, nullptr);
+#endif
     }
 
+    const float *result = wgpuBufferGetConstMappedRange(readback.buffer, 0, readback.size);
+    printf("Vector addition: a[i] + b[i] where a[i]=i, b[i]=i*2\n");
+    printf("First 8 results: ");
+    for (int i = 0; i < 8; i++)
+        printf("%.0f ", result[i]);
+    printf("...\n");
+    printf("Expected:         0 3 6 9 12 15 18 21 ...\n");
+
+    bool correct = true;
+    for (int i = 0; i < N; i++) {
+        if (result[i] != (float)(i + i * 2)) {
+            printf("MISMATCH at index %d: got %.0f, expected %.0f\n",
+                   i, result[i], (float)(i + i * 2));
+            correct = false;
+            break;
+        }
+    }
+    if (correct)
+        printf("All %d results correct!\n", N);
+
+    wgpuBufferUnmap(readback.buffer);
+
     /* Cleanup */
-    wgpuRenderPipelineRelease(pipeline);
+    wgpuBindGroupRelease(bg);
+    cgfx_buffer_destroy(&readback);
+    cgfx_buffer_destroy(&buf_out);
+    cgfx_buffer_destroy(&buf_b);
+    cgfx_buffer_destroy(&buf_a);
+    wgpuComputePipelineRelease(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 

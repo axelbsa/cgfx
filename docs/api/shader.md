@@ -8,6 +8,17 @@ WGSL compilation, bind group layout management, and bind group helpers.
 
 ## Structs
 
+### CgfxBindingKind
+
+The kind of resource a binding slot describes.
+
+| Value | Description |
+|-------|-------------|
+| `CGFX_BINDING_BUFFER` (0) | Buffer (uniform, storage, read-only storage). Default — backward compatible. |
+| `CGFX_BINDING_TEXTURE` | Sampled texture. |
+| `CGFX_BINDING_SAMPLER` | Sampler. |
+| `CGFX_BINDING_STORAGE_TEXTURE` | Storage texture (compute read/write). |
+
 ### CgfxBindingDesc
 
 Describes a single binding slot within a bind group layout.
@@ -15,9 +26,14 @@ Describes a single binding slot within a bind group layout.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `binding` | `uint32_t` | `0` | The `@binding(N)` index in WGSL. |
-| `visibility` | `WGPUShaderStageFlags` | `Vertex \| Fragment` | Shader stages that can access this binding. |
-| `type` | `WGPUBufferBindingType` | `Uniform` | Buffer binding type. |
-| `min_binding_size` | `uint64_t` | `0` (none) | Minimum buffer size in bytes. `0` means no minimum enforced. |
+| `visibility` | `WGPUShaderStageFlags` | auto | `0` = auto: Vertex\|Fragment for buffers, Fragment for textures/samplers, Compute for storage textures. |
+| `kind` | `CgfxBindingKind` | `BUFFER` | The resource kind. |
+| `type` | `WGPUBufferBindingType` | `Uniform` | Buffer binding type (only for `BUFFER` kind). |
+| `min_binding_size` | `uint64_t` | `0` (none) | Minimum buffer size in bytes (only for `BUFFER` kind). |
+| `sample_type` | `WGPUTextureSampleType` | `Float` | Texture sample type (only for `TEXTURE` kind). |
+| `view_dimension` | `WGPUTextureViewDimension` | `2D` | Texture view dimension (for `TEXTURE` and `STORAGE_TEXTURE` kinds). |
+| `storage_access` | `WGPUStorageTextureAccess` | `WriteOnly` | Storage texture access (only for `STORAGE_TEXTURE` kind). |
+| `storage_format` | `WGPUTextureFormat` | *(required)* | Storage texture format (only for `STORAGE_TEXTURE` kind). |
 
 ---
 
@@ -181,8 +197,55 @@ cgfx_buffer_destroy(&ubuf);
 !!! warning "Bind groups are caller-owned"
     `cgfx_shader_destroy` does **not** release bind groups created with this function. You must call `wgpuBindGroupRelease()` yourself, or use `CgfxUniform` / `CgfxCamera` which handle this automatically.
 
-!!! note "Non-consecutive or non-buffer bindings"
-    For bindings that are not consecutive buffer bindings (e.g., textures, samplers, or gaps in binding indices), use `shader->group_layouts[group_index]` with the raw WebGPU `wgpuDeviceCreateBindGroup` API directly.
+!!! note "Non-consecutive bindings"
+    `cgfx_shader_create_bind_group` assumes consecutive buffer bindings. For non-consecutive bindings or mixed resource types (textures, samplers), use `cgfx_bind_group_create` below.
+
+---
+
+### CgfxBindGroupEntry
+
+An entry in a general-purpose bind group, supporting buffers, textures, and samplers. Set exactly one of `buffer`, `texture`, or `sampler` per entry.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `binding` | `uint32_t` | `@binding(N)` index. |
+| `buffer` | `const CgfxBuffer*` | Non-NULL for buffer bindings. |
+| `texture` | `const CgfxTexture*` | Non-NULL for texture bindings (uses `texture->view`). |
+| `sampler` | `WGPUSampler` | Non-NULL for sampler bindings. |
+
+---
+
+### cgfx_bind_group_create
+
+Creates a bind group with mixed buffer, texture, and sampler entries using explicit binding indices.
+
+```c
+CGFX_API WGPUBindGroup cgfx_bind_group_create(const CgfxCtx *ctx,
+                                               const CgfxShader *shader,
+                                               uint32_t group_index,
+                                               const CgfxBindGroupEntry *entries,
+                                               uint32_t entry_count);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ctx` | `const CgfxCtx*` | Initialized context. |
+| `shader` | `const CgfxShader*` | Shader with bind group layouts. |
+| `group_index` | `uint32_t` | The `@group(N)` index. |
+| `entries` | `const CgfxBindGroupEntry*` | Array of bind group entries. |
+| `entry_count` | `uint32_t` | Number of entries. |
+
+**Returns:** A `WGPUBindGroup` handle. The caller owns this handle and must release it with `wgpuBindGroupRelease()`.
+
+**Example (texture + sampler):**
+
+```c
+WGPUBindGroup bg = cgfx_bind_group_create(&ctx, &shader, 0,
+    (CgfxBindGroupEntry[]){
+        { .binding = 0, .texture = &my_texture },
+        { .binding = 1, .sampler = my_sampler },
+    }, 2);
+```
 
 ---
 
@@ -212,6 +275,33 @@ cgfx_shader_bind(frame.render_pass, &my_bind_group, 1);
 WGPUBindGroup groups[] = { camera_group, material_group };
 cgfx_shader_bind(frame.render_pass, groups, 2);
 ```
+
+---
+
+### cgfx_shader_bind_compute
+
+Sets bind groups on an active compute pass. `groups[0]` is set at `@group(0)`, `groups[1]` at `@group(1)`, and so on.
+
+```c
+CGFX_API void cgfx_shader_bind_compute(WGPUComputePassEncoder pass,
+                                        const WGPUBindGroup *groups,
+                                        uint32_t group_count);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pass` | `WGPUComputePassEncoder` | Active compute pass encoder. |
+| `groups` | `const WGPUBindGroup*` | Array of bind group handles. |
+| `group_count` | `uint32_t` | Number of bind groups to set. |
+
+**Example:**
+
+```c
+// Bind a single group at @group(0) on a compute pass
+cgfx_shader_bind_compute(cp.pass, &my_bind_group, 1);
+```
+
+Mirror of `cgfx_shader_bind` for compute passes instead of render passes.
 
 ---
 

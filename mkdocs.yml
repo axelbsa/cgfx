@@ -55,6 +55,8 @@ nav:
     - Buffer: api/buffer.md
     - Uniform: api/uniform.md
     - Mesh: api/mesh.md
+    - Texture: api/texture.md
+    - Compute: api/compute.md
     - Camera: api/camera.md
     - Primitives: api/primitives.md
     - Loader: api/loader.md

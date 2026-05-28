@@ -257,6 +257,15 @@ void cgfx_shader_bind(WGPURenderPassEncoder pass,
 }
 
 
+void cgfx_shader_bind_compute(WGPUComputePassEncoder pass,
+                               const WGPUBindGroup *groups,
+                               uint32_t group_count) {
+    for (uint32_t i = 0; i < group_count; i++) {
+        wgpuComputePassEncoderSetBindGroup(pass, i, groups[i], 0, nullptr);
+    }
+}
+
+
 void cgfx_shader_destroy(CgfxShader *shader) {
     if (shader->module)
         wgpuShaderModuleRelease(shader->module);

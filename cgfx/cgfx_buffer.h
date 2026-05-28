@@ -124,6 +124,22 @@ CGFX_API CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
                                       uint64_t data_size,
                                       uint32_t count);
 
+/**
+ * Create a GPU storage buffer and optionally upload initial data.
+ *
+ * Creates a buffer with WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst |
+ * WGPUBufferUsage_CopySrc. CopySrc is included so the buffer can be copied
+ * to a mapping buffer for read-back.
+ *
+ * @param ctx        Initialized context.
+ * @param data       Initial data to upload, or NULL for uninitialized.
+ * @param data_size  Size of the storage buffer in bytes.
+ * @return           A CgfxBuffer containing the GPU storage buffer.
+ */
+CGFX_API CgfxBuffer cgfx_buffer_create_storage(const CgfxCtx *ctx,
+                                                const void *data,
+                                                uint64_t data_size);
+
 /* Create a generic buffer function */
 CGFX_API CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
                               WGPUBufferUsageFlags usage,

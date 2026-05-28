@@ -12,6 +12,7 @@ set(CGFX_SOURCES
     cgfx_primitives.c
     cgfx_loader.c
     cgfx_camera.c
+    cgfx_compute.c
 )
 
 if (CGFX_SHARED)

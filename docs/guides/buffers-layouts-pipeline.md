@@ -24,12 +24,12 @@ stays the same.
 │                                                                  │
 │   CgfxVertex vertex[4] = { ... };                                │
 │                                                                  │
-│   memory layout (44 B per vertex):                               │
-│   ┌──────┬──────┬──────┬────┐ ┌──────┬──────┬──────┬────┐ ...    │
-│   │ pos  │ nrm  │ col  │ uv │ │ pos  │ nrm  │ col  │ uv │        │
-│   │ 12B  │ 12B  │ 12B  │ 8B │ │      │      │      │    │        │
-│   └──────┴──────┴──────┴────┘ └──────┴──────┴──────┴────┘        │
-│      vertex 0                    vertex 1                        │
+│   memory layout (96 B per vertex):                               │
+│   ┌─────┬─────┬─────┬─────┬─────┬─────┬──────┬──────┐           │
+│   │ pos │ nrm │ tan │ uv0 │ uv1 │ col │ jnts │ wgts │ ...      │
+│   │ 12B │ 12B │ 16B │  8B │  8B │ 16B │  8B  │ 16B  │           │
+│   └─────┴─────┴─────┴─────┴─────┴─────┴──────┴──────┘           │
+│      vertex 0                                                    │
 └────────────────────────────────┬─────────────────────────────────┘
                                  │ cgfx_mesh_create()
                                  │  └─ cgfx_buffer_create_vertex()
@@ -50,19 +50,23 @@ stays the same.
 ┌──────────────────────────────────────────────────────────────────┐
 │                CPU — DESCRIPTION (no data, just shape)           │
 │                                                                  │
-│   WGPUVertexAttribute attrs[4] = {                               │
+│   WGPUVertexAttribute attrs[8] = {                               │
 │     { Float32x3, offset =  0, shaderLocation = 0 }, ◄ position   │
 │     { Float32x3, offset = 12, shaderLocation = 1 }, ◄ normal     │
-│     { Float32x3, offset = 24, shaderLocation = 2 }, ◄ color      │
-│     { Float32x2, offset = 36, shaderLocation = 3 }, ◄ uv         │
+│     { Float32x4, offset = 24, shaderLocation = 2 }, ◄ tangent    │
+│     { Float32x2, offset = 40, shaderLocation = 3 }, ◄ texcoord0  │
+│     { Float32x2, offset = 48, shaderLocation = 4 }, ◄ texcoord1  │
+│     { Float32x4, offset = 56, shaderLocation = 5 }, ◄ color      │
+│     { Uint16x4,  offset = 72, shaderLocation = 6 }, ◄ joints     │
+│     { Float32x4, offset = 80, shaderLocation = 7 }, ◄ weights    │
 │   };                                                             │
 │           │                                                      │
 │           ▼ "these attributes belong to ONE buffer"              │
 │   WGPUVertexBufferLayout layout = {                              │
-│     arrayStride    = 44,        ── how far between vertices      │
+│     arrayStride    = 96,        ── how far between vertices      │
 │     stepMode       = Vertex,    ── advance per-vertex            │
 │     attributes     = attrs,                                      │
-│     attributeCount = 4,                                          │
+│     attributeCount = 8,                                          │
 │   };                                                             │
 │           │                                                      │
 │           ▼ "the pipeline will receive THIS shape at slot 0"     │
@@ -90,12 +94,12 @@ stays the same.
 │   SetIndexBuffer(pass, mesh.index_buffer.buffer, Uint32);        │
 │   DrawIndexed(pass, index_count, 1, 0, 0, 0);                    │
 │      └─► For each index i:                                       │
-│           offset    = i * arrayStride          (44 B)            │
+│           offset    = i * arrayStride          (96 B)            │
 │           position  = buffer[offset +  0 .. +12]                 │
 │           normal    = buffer[offset + 12 .. +24]                 │
-│           color     = buffer[offset + 24 .. +36]                 │
-│           uv        = buffer[offset + 36 .. +44]                 │
-│           → fed to shader @location(0/1/2/3)                     │
+│           tangent   = buffer[offset + 24 .. +40]                 │
+│           ...                                                    │
+│           → fed to shader @location(0..7)                        │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -123,8 +127,8 @@ WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
 });
 ```
 
-This returns a layout with stride `sizeof(CgfxVertex)` (44 bytes) and 4
-attributes at locations 0--3. The returned pointer references static
+This returns a layout with stride `sizeof(CgfxVertex)` (96 bytes) and 8
+attributes at locations 0--7. The returned pointer references static
 internal storage and is valid for the program's lifetime.
 
 ## A common bug
@@ -136,9 +140,9 @@ internal storage and is valid for the program's lifetime.
     disagree about the shape, and the GPU has no way to detect that.
 
 Example: a layout with `arrayStride = 8` (two floats) bound against a
-buffer of 44-byte `CgfxVertex` structs will produce a few correct
+buffer of 96-byte `CgfxVertex` structs will produce a few correct
 vertices and then garbage, because the pipeline reads 8 bytes at a
-time from records that are 44 bytes apart.
+time from records that are 96 bytes apart.
 
 The fix is to make the description match the data. For
 `CgfxVertex`-based meshes, use [`cgfx_mesh_vertex_layout()`](../api/mesh.md#cgfx_mesh_vertex_layout) -- it returns

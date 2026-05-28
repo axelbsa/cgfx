@@ -220,6 +220,20 @@ CGFX_API void cgfx_shader_bind(WGPURenderPassEncoder pass,
                        uint32_t group_count);
 
 /**
+ * Set bind groups on a compute pass.
+ *
+ * Sets groups[0] at @group(0), groups[1] at @group(1), etc.
+ * Convenience wrapper around wgpuComputePassEncoderSetBindGroup.
+ *
+ * @param pass         Active compute pass encoder.
+ * @param groups       Array of bind group handles.
+ * @param group_count  Number of bind groups to set.
+ */
+CGFX_API void cgfx_shader_bind_compute(WGPUComputePassEncoder pass,
+                                        const WGPUBindGroup *groups,
+                                        uint32_t group_count);
+
+/**
  * Destroy a shader and release all owned resources.
  *
  * Releases the shader module, pipeline layout, and all bind group layouts.

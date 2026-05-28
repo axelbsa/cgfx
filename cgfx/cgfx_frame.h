@@ -77,6 +77,36 @@ typedef struct CgfxFrame {
 CGFX_API bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_color);
 
 /**
+ * Begin a frame without starting a render pass.
+ *
+ * Acquires the next surface texture and creates a command encoder,
+ * but does NOT begin a render pass. Use this for mixed compute+render
+ * workflows where you need to run compute passes before the render pass.
+ *
+ * After compute passes, call cgfx_frame_begin_render_pass() to start
+ * the render pass, then cgfx_frame_end() as normal.
+ *
+ * @param ctx    Initialized context.
+ * @param frame  Pointer to caller-allocated CgfxFrame.
+ * @return       true if the frame was started (surface texture available).
+ */
+CGFX_API bool cgfx_frame_begin_encoder(const CgfxCtx *ctx, CgfxFrame *frame);
+
+/**
+ * Begin the render pass on a frame started with cgfx_frame_begin_encoder().
+ *
+ * Sets up the render pass with the surface texture as color attachment
+ * and optional depth/stencil attachment.
+ *
+ * @param ctx         Initialized context.
+ * @param frame       Frame started with cgfx_frame_begin_encoder().
+ * @param clear_color Background color to clear the frame with.
+ */
+CGFX_API void cgfx_frame_begin_render_pass(const CgfxCtx *ctx,
+                                            CgfxFrame *frame,
+                                            WGPUColor clear_color);
+
+/**
  * End and submit the current frame.
  *
  * Performs the per-frame teardown:

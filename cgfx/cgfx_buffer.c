@@ -96,6 +96,17 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
     return result;
 }
 
+CgfxBuffer cgfx_buffer_create_storage(const CgfxCtx *ctx,
+                                       const void *data,
+                                       const uint64_t data_size) {
+    return cgfx_buffer_create(ctx,
+                              WGPUBufferUsage_Storage |
+                              WGPUBufferUsage_CopyDst |
+                              WGPUBufferUsage_CopySrc,
+                              data, data_size);
+}
+
+
 CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
                               const WGPUBufferUsageFlags usage,
                               const void *data,

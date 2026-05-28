@@ -1,0 +1,127 @@
+/**
+ * @file cgfx_compute.c
+ * @brief Implementation of compute pipeline creation and compute pass lifecycle.
+ */
+#include "cgfx_compute.h"
+
+#include <stddef.h>
+#include <string.h>
+
+#include <webgpu/webgpu.h>
+#ifdef WEBGPU_BACKEND_WGPU
+#  include <webgpu/wgpu.h>
+#endif
+
+
+WGPUComputePipeline cgfx_compute_pipeline_create(const CgfxCtx *ctx,
+                                                  const CgfxComputeDesc *desc) {
+    const char *entry = desc->entry_point ? desc->entry_point : "cs_main";
+
+    WGPUComputePipelineDescriptor pipeline_desc = {};
+    pipeline_desc.nextInChain = nullptr;
+    pipeline_desc.label = "cgfx compute pipeline";
+    pipeline_desc.layout = desc->shader->pipeline_layout;
+    pipeline_desc.compute = (WGPUProgrammableStageDescriptor){
+        .module = desc->shader->module,
+        .entryPoint = entry,
+    };
+
+    return wgpuDeviceCreateComputePipeline(ctx->device, &pipeline_desc);
+}
+
+
+bool cgfx_compute_begin(const CgfxCtx *ctx, CgfxComputePass *cp) {
+    memset(cp, 0, sizeof(*cp));
+
+    WGPUCommandEncoderDescriptor enc_desc = {};
+    enc_desc.nextInChain = nullptr;
+    enc_desc.label = "cgfx compute encoder";
+    cp->encoder = wgpuDeviceCreateCommandEncoder(ctx->device, &enc_desc);
+    if (!cp->encoder)
+        return false;
+
+    WGPUComputePassDescriptor pass_desc = {};
+    pass_desc.nextInChain = nullptr;
+    pass_desc.label = "cgfx compute pass";
+    cp->pass = wgpuCommandEncoderBeginComputePass(cp->encoder, &pass_desc);
+    cp->owns_encoder = true;
+
+    return true;
+}
+
+
+void cgfx_compute_end(const CgfxCtx *ctx, CgfxComputePass *cp) {
+    wgpuComputePassEncoderEnd(cp->pass);
+    wgpuComputePassEncoderRelease(cp->pass);
+
+    WGPUCommandBufferDescriptor cmd_desc = {};
+    cmd_desc.nextInChain = nullptr;
+    cmd_desc.label = "cgfx compute commands";
+    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(cp->encoder, &cmd_desc);
+    wgpuCommandEncoderRelease(cp->encoder);
+
+    wgpuQueueSubmit(ctx->queue, 1, &commands);
+    wgpuCommandBufferRelease(commands);
+
+#if defined(WEBGPU_BACKEND_DAWN)
+    wgpuDeviceTick(ctx->device);
+#elif defined(WEBGPU_BACKEND_WGPU)
+    wgpuDevicePoll(ctx->device, false, nullptr);
+#endif
+
+    memset(cp, 0, sizeof(*cp));
+}
+
+
+bool cgfx_compute_pass_begin(WGPUCommandEncoder encoder, CgfxComputePass *cp) {
+    memset(cp, 0, sizeof(*cp));
+
+    cp->encoder = encoder;
+
+    WGPUComputePassDescriptor pass_desc = {};
+    pass_desc.nextInChain = nullptr;
+    pass_desc.label = "cgfx compute pass";
+    cp->pass = wgpuCommandEncoderBeginComputePass(encoder, &pass_desc);
+    cp->owns_encoder = false;
+
+    return true;
+}
+
+
+void cgfx_compute_pass_end(CgfxComputePass *cp) {
+    wgpuComputePassEncoderEnd(cp->pass);
+    wgpuComputePassEncoderRelease(cp->pass);
+    cp->pass = nullptr;
+}
+
+
+void cgfx_buffer_copy(const CgfxCtx *ctx,
+                       const CgfxBuffer *src,
+                       const CgfxBuffer *dst,
+                       uint64_t size) {
+    if (size == 0) {
+        size = src->size < dst->size ? src->size : dst->size;
+    }
+
+    WGPUCommandEncoderDescriptor enc_desc = {};
+    enc_desc.nextInChain = nullptr;
+    enc_desc.label = "cgfx buffer copy encoder";
+    WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(ctx->device, &enc_desc);
+
+    wgpuCommandEncoderCopyBufferToBuffer(encoder, src->buffer, 0, dst->buffer, 0, size);
+
+    WGPUCommandBufferDescriptor cmd_desc = {};
+    cmd_desc.nextInChain = nullptr;
+    cmd_desc.label = "cgfx buffer copy commands";
+    WGPUCommandBuffer commands = wgpuCommandEncoderFinish(encoder, &cmd_desc);
+    wgpuCommandEncoderRelease(encoder);
+
+    wgpuQueueSubmit(ctx->queue, 1, &commands);
+    wgpuCommandBufferRelease(commands);
+
+#if defined(WEBGPU_BACKEND_DAWN)
+    wgpuDeviceTick(ctx->device);
+#elif defined(WEBGPU_BACKEND_WGPU)
+    wgpuDevicePoll(ctx->device, false, nullptr);
+#endif
+}

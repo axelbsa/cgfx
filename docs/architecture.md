@@ -16,6 +16,8 @@ cgfx is organized into focused modules, each in its own header/source pair. The 
 | **Buffer** | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, mapping) |
 | **Uniform** | `cgfx_uniform.h` | Uniform buffer + bind group + data pointer bundle |
 | **Mesh** | `cgfx_mesh.h` | Vertex format, mesh creation, vertex layout, draw helper |
+| **Texture** | `cgfx_texture.h` | GPU texture + view, sampler. Sampled, storage, render-target, depth, cube maps |
+| **Compute** | `cgfx_compute.h` | Compute pipeline, compute pass, buffer copy |
 | **Camera** | `cgfx_camera.h` | Projection/view matrices with GPU uniform management |
 | **Primitives** | `cgfx_primitives.h` | Plane, triangle, sphere, cube generators |
 | **Loader** | `cgfx_loader.h` | Load geometry from LearnWebGPU text format (temporary) |
@@ -25,15 +27,19 @@ cgfx is organized into focused modules, each in its own header/source pair. The 
 ```
 cgfx.h  (umbrella — includes everything)
   |
-  +-- cgfx_ctx.h            [WebGPU, GLFW]
+  +-- cgfx_texture.h        [WebGPU]
+  |     |
+  +-- cgfx_ctx.h            [WebGPU, GLFW, texture]
   |     |
   +-- cgfx_buffer.h         [ctx]
   |     |
-  +-- cgfx_shader.h         [ctx, buffer]
+  +-- cgfx_shader.h         [ctx, buffer, texture]
   |     |
   +-- cgfx_pipeline.h       [ctx, shader]
   |     |
   +-- cgfx_frame.h          [ctx]
+  |     |
+  +-- cgfx_compute.h        [ctx, shader, buffer]
   |     |
   +-- cgfx_uniform.h        [ctx, buffer, shader]
   |     |
@@ -93,9 +99,8 @@ CgfxCtx {
     .queue           = WGPUQueue
     .surface         = WGPUSurface
     .surface_format  = WGPUTextureFormat
-    .depth_texture   = WGPUTexture (or NULL)
-    .depth_texture_view = WGPUTextureView (or NULL)
-    .depth_format    = WGPUTextureFormat
+    .depth_texture   = CgfxTexture (zero if disabled)
+    .present_mode    = WGPUPresentMode
     .width           = uint32_t
     .height          = uint32_t
 }
@@ -123,7 +128,7 @@ while (cgfx_ctx_is_running(&ctx))
 |   |
 |   |   3. wgpuCommandEncoderBeginRenderPass()
 |   |      - Color attachment: surface texture, clear to clear_color
-|   |      - Depth attachment: depth_texture_view (if enabled)
+|   |      - Depth attachment: depth_texture.view (if enabled)
 |   |      - Load op: Clear, Store op: Store
 |   |
 |   v   frame.render_pass is now active
@@ -155,6 +160,9 @@ v
 !!! tip "Frame Skipping"
     `cgfx_frame_begin` returns `false` when the surface texture is unavailable (typically when the window is minimized). Always check the return value and skip the frame -- do not call `cgfx_frame_end` without a successful begin.
 
+!!! note "Two-Phase Frame Begin"
+    `cgfx_frame_begin` is equivalent to `cgfx_frame_begin_encoder` + `cgfx_frame_begin_render_pass`. Use the split functions when you need to run compute passes before the render pass on the same command encoder. See the [Frame API reference](api/frame.md) for details.
+
 ## Cleanup Flow
 
 Resources are destroyed in reverse creation order:
@@ -162,19 +170,21 @@ Resources are destroyed in reverse creation order:
 ```
 Application cleanup (reverse order of creation):
 
-    1. cgfx_uniform_destroy(&uniform)     -- releases bind group + buffer
-    2. wgpuRenderPipelineRelease(pipeline) -- raw WebGPU handle
-    3. cgfx_shader_destroy(&shader)        -- releases module + layouts
-    4. cgfx_ctx_destroy(&ctx)              -- releases everything below
+    1. cgfx_uniform_destroy(&uniform)          -- releases bind group + buffer
+    2. wgpuRenderPipelineRelease(pipeline)      -- raw WebGPU handle
+    2b. wgpuComputePipelineRelease(pipeline)    -- raw WebGPU handle (if used)
+    3. cgfx_shader_destroy(&shader)             -- releases module + layouts
+    4. cgfx_ctx_destroy(&ctx)                   -- releases everything below
 
 cgfx_ctx_destroy(&ctx):
     |
-    |   1. wgpuQueueRelease(queue)
-    |   2. wgpuSurfaceUnconfigure(surface)
-    |   3. wgpuSurfaceRelease(surface)
-    |   4. wgpuDeviceRelease(device)
-    |   5. glfwDestroyWindow(window)   (skipped for external contexts)
-    |   6. glfwTerminate()             (skipped for external contexts)
+    |   1. cgfx_texture_destroy(depth_texture)  (if enabled)
+    |   2. wgpuQueueRelease(queue)
+    |   3. wgpuSurfaceUnconfigure(surface)
+    |   4. wgpuSurfaceRelease(surface)
+    |   5. wgpuDeviceRelease(device)
+    |   6. glfwDestroyWindow(window)   (skipped for external contexts)
+    |   7. glfwTerminate()             (skipped for external contexts)
     v
 ```
 
@@ -261,7 +271,7 @@ cgfx supports multiple WebGPU backends. The differences are handled internally v
 
 ### What the backend affects
 
-**Device synchronization** -- After submitting a command buffer, the CPU must wait for or poll GPU completion. wgpu-native uses `wgpuDevicePoll(device, false, NULL)`, while Dawn uses `wgpuDeviceTick(device)`. This is called automatically in `cgfx_frame_end`.
+**Device synchronization** -- After submitting a command buffer, the CPU must wait for or poll GPU completion. wgpu-native uses `wgpuDevicePoll(device, false, NULL)`, while Dawn uses `wgpuDeviceTick(device)`. This is called automatically in `cgfx_frame_end` and `cgfx_compute_end`.
 
 **Surface presentation** -- On native backends, `wgpuSurfacePresent(surface)` is called after submit. On Emscripten, the browser's requestAnimationFrame loop handles presentation, so this call is skipped.
 

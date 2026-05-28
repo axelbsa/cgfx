@@ -1,6 +1,6 @@
 # Buffer
 
-GPU buffer creation and management for vertex, index, uniform, and generic data.
+GPU buffer creation and management for vertex, index, uniform, storage, and generic data.
 
 **Header:** `cgfx_buffer.h`
 
@@ -144,6 +144,43 @@ cgfx_buffer_destroy(&ubuf);
 
 !!! tip "Prefer `CgfxUniform` for the common case"
     If you have a single uniform buffer bound to one group, `cgfx_uniform_create` bundles the buffer, bind group, and data pointer into one object. Use `cgfx_buffer_create_uniform` when you need more control (e.g., multiple buffers in one bind group).
+
+---
+
+### cgfx_buffer_create_storage
+
+Creates a GPU storage buffer with optional initial data upload. Includes `CopySrc` usage so results can be copied to a mapping buffer for read-back.
+
+```c
+CGFX_API CgfxBuffer cgfx_buffer_create_storage(const CgfxCtx *ctx,
+                                                const void *data,
+                                                uint64_t data_size);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ctx` | `const CgfxCtx*` | Initialized context. |
+| `data` | `const void*` | Initial data to upload, or `NULL` for uninitialized. |
+| `data_size` | `uint64_t` | Size of the storage buffer in bytes. |
+
+**Returns:** A `CgfxBuffer` with usage `Storage | CopyDst | CopySrc`.
+
+**Example:**
+
+```c
+float input_data[256] = { /* ... */ };
+CgfxBuffer input  = cgfx_buffer_create_storage(&ctx, input_data, sizeof(input_data));
+CgfxBuffer output = cgfx_buffer_create_storage(&ctx, NULL, sizeof(input_data));
+
+// ... dispatch compute shader ...
+
+// Read back results
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+cgfx_buffer_copy(&ctx, &output, &readback, 0);
+
+cgfx_buffer_destroy(&output);
+cgfx_buffer_destroy(&input);
+```
 
 ---
 

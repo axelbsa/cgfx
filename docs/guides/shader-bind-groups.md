@@ -52,16 +52,19 @@ Describes a single binding slot within a group:
 ```c
 typedef struct CgfxBindingDesc {
     uint32_t               binding;           // @binding(N) index
-    WGPUShaderStageFlags   visibility;        // Which shader stages can see it
-    WGPUBufferBindingType  type;              // Uniform, Storage, ReadOnlyStorage
+    WGPUShaderStageFlags   visibility;        // 0 = auto-detect from kind
+    CgfxBindingKind        kind;              // BUFFER (default), TEXTURE, SAMPLER, STORAGE_TEXTURE
+    WGPUBufferBindingType  type;              // Uniform, Storage, ReadOnlyStorage (buffer kind only)
     uint64_t               min_binding_size;  // Minimum buffer size (0 = none)
+    // ... additional fields for texture/sampler/storage texture kinds
 } CgfxBindingDesc;
 ```
 
 **Zero-init defaults:**
 
 - `binding = 0` -- binds to `@binding(0)`
-- `visibility = 0` -- defaults to `Vertex | Fragment` (visible in both stages)
+- `visibility = 0` -- auto: Vertex|Fragment for buffers, Fragment for textures/samplers, Compute for storage textures
+- `kind = 0` -- defaults to `CGFX_BINDING_BUFFER` (backward compatible)
 - `type = 0` -- defaults to `Uniform`
 - `min_binding_size = 0` -- no minimum enforced
 
@@ -294,10 +297,10 @@ cgfx_buffer_destroy(&buf);
 - A bind group has multiple bindings (e.g., a uniform buffer and a storage buffer)
 - You need non-consecutive binding indices
 - You want to mix buffer types (uniform + storage) in one group
-- You need to use non-buffer resources (textures, samplers) -- these require raw WebGPU bind group creation using `shader.group_layouts[N]`
+- You need non-buffer resources (textures, samplers) -- use `cgfx_bind_group_create()` with `CgfxBindGroupEntry`
 
 !!! warning "Low-Level Bind Group Creation"
-    `cgfx_shader_create_bind_group` assumes consecutive binding indices: `buffers[0]` maps to `@binding(0)`, `buffers[1]` to `@binding(1)`, etc. For non-consecutive bindings or non-buffer resources (textures, samplers), use `shader->group_layouts[group_index]` with the raw `wgpuDeviceCreateBindGroup` API.
+    `cgfx_shader_create_bind_group` assumes consecutive buffer bindings: `buffers[0]` maps to `@binding(0)`, `buffers[1]` to `@binding(1)`, etc. For non-consecutive bindings or mixed resource types (textures, samplers), use `cgfx_bind_group_create()` with explicit `CgfxBindGroupEntry` entries.
 
 ### Comparison
 

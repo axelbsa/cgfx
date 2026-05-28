@@ -10,14 +10,18 @@ Vertex data + index data + GPU buffers for renderable geometry.
 
 ### CgfxVertex
 
-Standard vertex format used by all cgfx meshes. 44 bytes per vertex, tightly packed.
+Standard vertex format used by all cgfx meshes. 96 bytes per vertex, tightly packed. Covers glTF 2.0 attributes plus skeletal animation.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `position` | `float[3]` | -- | XYZ position (offset 0, 12 bytes). |
-| `normal` | `float[3]` | -- | Surface normal (offset 12, 12 bytes). |
-| `color` | `float[3]` | -- | Vertex color RGB (offset 24, 12 bytes). |
-| `uv` | `float[2]` | -- | Texture coordinates (offset 36, 8 bytes). |
+| Field | Type | Offset | Size | Description |
+|-------|------|--------|------|-------------|
+| `position` | `float[3]` | 0 | 12 | XYZ position. |
+| `normal` | `float[3]` | 12 | 12 | Surface normal (unit length). |
+| `tangent` | `float[4]` | 24 | 16 | Tangent vector (xyz) + handedness sign (w). |
+| `texcoord0` | `float[2]` | 40 | 8 | Primary texture coordinates. |
+| `texcoord1` | `float[2]` | 48 | 8 | Secondary texture coordinates (lightmaps, etc). |
+| `color` | `float[4]` | 56 | 16 | Vertex color RGBA. |
+| `joints` | `uint16_t[4]` | 72 | 8 | Skeletal joint/bone indices. |
+| `weights` | `float[4]` | 80 | 16 | Skeletal blend weights (should sum to 1.0). |
 
 ### CgfxMesh
 
@@ -110,16 +114,20 @@ WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void);
 
 **Returns:** A `WGPUVertexBufferLayout` matching `CgfxVertex`. The returned layout references static internal storage -- valid for the lifetime of the program.
 
-The layout describes 4 attributes at shader locations 0--3:
+The layout describes 8 attributes at shader locations 0--7:
 
 | Location | Attribute | Format | Offset |
 |----------|-----------|--------|--------|
 | 0 | `position` | `Float32x3` | 0 |
 | 1 | `normal` | `Float32x3` | 12 |
-| 2 | `color` | `Float32x3` | 24 |
-| 3 | `uv` | `Float32x2` | 36 |
+| 2 | `tangent` | `Float32x4` | 24 |
+| 3 | `texcoord0` | `Float32x2` | 40 |
+| 4 | `texcoord1` | `Float32x2` | 48 |
+| 5 | `color` | `Float32x4` | 56 |
+| 6 | `joints` | `Uint16x4` | 72 |
+| 7 | `weights` | `Float32x4` | 80 |
 
-Stride is `sizeof(CgfxVertex)` = 44 bytes. Step mode is `Vertex`.
+Stride is `sizeof(CgfxVertex)` = 96 bytes. Step mode is `Vertex`.
 
 ---
 
@@ -133,18 +141,24 @@ Your WGSL vertex shader must declare inputs matching the `CgfxVertex` layout:
 struct VertexInput {
     @location(0) position: vec3f,
     @location(1) normal: vec3f,
-    @location(2) color: vec3f,
-    @location(3) uv: vec2f,
+    @location(2) tangent: vec4f,
+    @location(3) texcoord0: vec2f,
+    @location(4) texcoord1: vec2f,
+    @location(5) color: vec4f,
+    @location(6) joints: vec4<u32>,
+    @location(7) weights: vec4f,
 };
 ```
+
+Your shader only needs to declare the attributes it actually uses. Unused locations can be omitted.
 
 ### Full mesh example
 
 ```c
 CgfxVertex vertices[] = {
-    { .position = {-0.5f, -0.5f, 0.0f}, .color = {1, 0, 0} },
-    { .position = { 0.5f, -0.5f, 0.0f}, .color = {0, 1, 0} },
-    { .position = { 0.0f,  0.5f, 0.0f}, .color = {0, 0, 1} },
+    { .position = {-0.5f, -0.5f, 0.0f}, .color = {1, 0, 0, 1} },
+    { .position = { 0.5f, -0.5f, 0.0f}, .color = {0, 1, 0, 1} },
+    { .position = { 0.0f,  0.5f, 0.0f}, .color = {0, 0, 1, 1} },
 };
 uint32_t indices[] = { 0, 1, 2 };
 
@@ -171,4 +185,4 @@ cgfx_mesh_destroy(&mesh);
 ```
 
 !!! note "Zero-initialized fields"
-    When using designated initializers, unspecified fields in `CgfxVertex` are zero-initialized. In the example above, `normal` and `uv` default to `{0, 0, 0}` and `{0, 0}` respectively.
+    When using designated initializers, unspecified fields in `CgfxVertex` are zero-initialized. In the example above, `normal`, `tangent`, `texcoord0`, `texcoord1`, `joints`, and `weights` all default to zero.

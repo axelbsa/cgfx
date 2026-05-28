@@ -38,9 +38,7 @@ The central rendering context. Owns the GLFW window and all core WebGPU objects.
 | `queue` | `WGPUQueue` | The default command queue. |
 | `surface` | `WGPUSurface` | The window surface for presenting frames. |
 | `surface_format` | `WGPUTextureFormat` | The preferred surface texture format. |
-| `depth_texture` | `WGPUTexture` | Depth buffer texture. `NULL` if depth buffer is disabled. |
-| `depth_texture_view` | `WGPUTextureView` | View into `depth_texture`. `NULL` if disabled. |
-| `depth_format` | `WGPUTextureFormat` | Depth texture format (only meaningful when depth buffer is enabled). |
+| `depth_texture` | `CgfxTexture` | Depth buffer. Zero-initialized if depth buffer is disabled. Access `depth_texture.view` for the view, `depth_texture.format` for the format. |
 | `present_mode` | `WGPUPresentMode` | Active present mode (stored for use during resize). |
 | `width` | `uint32_t` | Current window width in pixels. |
 | `height` | `uint32_t` | Current window height in pixels. |
@@ -269,11 +267,12 @@ CGFX_API void cgfx_ctx_destroy(CgfxCtx *ctx);
 
 **Teardown sequence:**
 
-1. Release the command queue
-2. Unconfigure and release the surface
-3. Release the device
-4. Destroy the GLFW window (skipped for external contexts)
-5. Terminate GLFW (skipped for external contexts)
+1. Destroy the depth texture (if enabled)
+2. Release the command queue
+3. Unconfigure and release the surface
+4. Release the device
+5. Destroy the GLFW window (skipped for external contexts)
+6. Terminate GLFW (skipped for external contexts)
 
 !!! warning "Destroy order matters"
     Destroy all pipelines, shaders, buffers, uniforms, meshes, and cameras **before** calling `cgfx_ctx_destroy`. The device is released during context destruction, and any outstanding GPU resources become invalid.

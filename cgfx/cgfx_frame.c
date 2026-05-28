@@ -58,29 +58,24 @@ static WGPUTextureView cgfx__get_surface_texture_view(WGPUSurface surface) {
 }
 
 
-bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_color) {
-    /* Acquire the next surface texture to render into */
+bool cgfx_frame_begin_encoder(const CgfxCtx *ctx, CgfxFrame *frame) {
     frame->target_view = cgfx__get_surface_texture_view(ctx->surface);
     if (!frame->target_view)
         return false;
 
-    /*
-     * Create a command encoder. All GPU commands for this frame are
-     * recorded into this encoder, then finalized into a command buffer
-     * for submission.
-     */
     WGPUCommandEncoderDescriptor encoder_desc = {};
     encoder_desc.nextInChain = nullptr;
     encoder_desc.label = "cgfx frame encoder";
     frame->encoder = wgpuDeviceCreateCommandEncoder(ctx->device, &encoder_desc);
+    frame->render_pass = nullptr;
 
-    /*
-     * Set up the render pass color attachment:
-     * - view: the surface texture we're rendering to
-     * - loadOp: Clear — fill with clear_color before rendering
-     * - storeOp: Store — keep the rendered result for presentation
-     * - depthSlice: required on non-wgpu-native backends
-     */
+    return true;
+}
+
+
+void cgfx_frame_begin_render_pass(const CgfxCtx *ctx,
+                                   CgfxFrame *frame,
+                                   WGPUColor clear_color) {
     WGPURenderPassColorAttachment color_attachment = {};
     color_attachment.view = frame->target_view;
     color_attachment.resolveTarget = nullptr;
@@ -91,7 +86,6 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
 #ifndef WEBGPU_BACKEND_WGPU
     color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif
-
 
     WGPURenderPassDepthStencilAttachment depth_stencil = {};
     if (ctx->depth_texture.view) {
@@ -114,7 +108,13 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
     pass_desc.timestampWrites = nullptr;
 
     frame->render_pass = wgpuCommandEncoderBeginRenderPass(frame->encoder, &pass_desc);
+}
 
+
+bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_color) {
+    if (!cgfx_frame_begin_encoder(ctx, frame))
+        return false;
+    cgfx_frame_begin_render_pass(ctx, frame, clear_color);
     return true;
 }
 
@@ -151,12 +151,6 @@ void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame) {
     wgpuSurfacePresent(ctx->surface);
 #endif
 
-    /*
-     * Backend-specific synchronization:
-     * - Dawn uses wgpuDeviceTick() to process pending async operations
-     * - wgpu-native uses wgpuDevicePoll() for the same purpose
-     * Without this, callbacks and resource cleanup may not happen promptly.
-     */
 #if defined(WEBGPU_BACKEND_DAWN)
     wgpuDeviceTick(ctx->device);
 #elif defined(WEBGPU_BACKEND_WGPU)
