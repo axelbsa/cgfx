@@ -57,10 +57,6 @@
          <lastmod>2026-05-28</lastmod>
     </url>
     <url>
-         <loc>https://axelbsa.github.io/cgfx/api/primitives/</loc>
-         <lastmod>2026-05-28</lastmod>
-    </url>
-    <url>
          <loc>https://axelbsa.github.io/cgfx/api/shader/</loc>
          <lastmod>2026-05-28</lastmod>
     </url>
@@ -78,6 +74,10 @@
     </url>
     <url>
          <loc>https://axelbsa.github.io/cgfx/guides/compute-pipeline/</loc>
+         <lastmod>2026-05-28</lastmod>
+    </url>
+    <url>
+         <loc>https://axelbsa.github.io/cgfx/guides/procedural-geometry/</loc>
          <lastmod>2026-05-28</lastmod>
     </url>
     <url>
