@@ -1,0 +1,2310 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A minimal C23 rendering engine library wrapping WebGPU">
+      
+      
+      
+        <link rel="canonical" href="https://axelbsa.github.io/cgfx/guides/compute-pipeline/">
+      
+      
+        <link rel="prev" href="../shader-bind-groups/">
+      
+      
+        <link rel="next" href="../using-slang/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Compute Pipeline & Render-to-Texture - cgfx</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#compute-pipeline-render-to-texture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="cgfx" class="md-header__button md-logo" aria-label="cgfx" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            cgfx
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Compute Pipeline & Render-to-Texture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/axelbsa/cgfx" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    axelbsa/cgfx
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../building/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Building
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../buffers-layouts-pipeline/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="cgfx" class="md-nav__button md-logo" aria-label="cgfx" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    cgfx
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/axelbsa/cgfx" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    axelbsa/cgfx
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../buffers-layouts-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Buffers, Layouts & Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shader-bind-groups/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shader & Bind Group Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute Pipeline & Render-to-Texture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute Pipeline & Render-to-Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-core-insight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The core insight
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-usage-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two usage patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Two usage patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standalone-compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standalone compute
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixed-computerender" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixed compute+render
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-two-patterns-instead-of-one" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why two patterns instead of one?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-phase-frame-begin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two-phase frame begin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-textures-the-bridge-between-compute-and-render" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage textures: the bridge between compute and render
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage textures: the bridge between compute and render">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-not-use-a-buffer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why not use a buffer?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bind-groups-for-compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bind groups for compute
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bind groups for compute">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#visibility-must-be-explicit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visibility must be explicit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixed-bind-groups-with-cgfx_bind_group_create" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixed bind groups with cgfx_bind_group_create
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binding-to-a-compute-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binding to a compute pass
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compute-pipelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compute pipelines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Compute pipelines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-layout-comes-from-the-shader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline layout comes from the shader
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example-compute-to-texture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete example: compute-to-texture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complete example: compute-to-texture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-the-shared-texture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create the shared texture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-the-compute-shader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create the compute shader
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-the-render-shader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create the render shader
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-pipelines-and-bind-groups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create pipelines and bind groups
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-render-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The render loop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cleanup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#standalone-compute-with-read-back" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standalone compute with read-back
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design decisions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Design decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-a-separate-compute-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why a separate compute module?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-cgfx_buffer_copy-lives-in-the-buffer-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why cgfx_buffer_copy lives in the buffer module
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#entry-point-convention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry point convention
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../using-slang/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using Slang Shaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/shader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/frame/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frame
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/buffer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Buffer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/uniform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mesh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mesh
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/texture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/compute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/camera/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camera
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/primitives/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Primitives
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Loader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-core-insight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The core insight
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-usage-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two usage patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Two usage patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standalone-compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standalone compute
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixed-computerender" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixed compute+render
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-two-patterns-instead-of-one" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why two patterns instead of one?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-phase-frame-begin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two-phase frame begin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-textures-the-bridge-between-compute-and-render" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage textures: the bridge between compute and render
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage textures: the bridge between compute and render">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-not-use-a-buffer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why not use a buffer?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bind-groups-for-compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bind groups for compute
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bind groups for compute">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#visibility-must-be-explicit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visibility must be explicit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixed-bind-groups-with-cgfx_bind_group_create" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixed bind groups with cgfx_bind_group_create
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binding-to-a-compute-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binding to a compute pass
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compute-pipelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compute pipelines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Compute pipelines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-layout-comes-from-the-shader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline layout comes from the shader
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example-compute-to-texture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete example: compute-to-texture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complete example: compute-to-texture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-the-shared-texture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create the shared texture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-the-compute-shader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create the compute shader
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-the-render-shader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create the render shader
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-pipelines-and-bind-groups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create pipelines and bind groups
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-render-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The render loop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cleanup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#standalone-compute-with-read-back" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standalone compute with read-back
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design decisions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Design decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-a-separate-compute-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why a separate compute module?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-cgfx_buffer_copy-lives-in-the-buffer-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why cgfx_buffer_copy lives in the buffer module
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#entry-point-convention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry point convention
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="compute-pipeline-render-to-texture">Compute Pipeline &amp; Render-to-Texture<a class="headerlink" href="#compute-pipeline-render-to-texture" title="Permanent link">&para;</a></h1>
+<p>A guide to using compute shaders in cgfx — standalone data-parallel work, mixed compute+render workflows, and writing to textures from the GPU.</p>
+<h2 id="the-core-insight">The core insight<a class="headerlink" href="#the-core-insight" title="Permanent link">&para;</a></h2>
+<p><strong>Compute and render are two independent pass types that share one command encoder.</strong> A compute pass writes data (to buffers or textures), a render pass reads it and draws to the screen. Because they share the same encoder, WebGPU guarantees that all writes from the compute pass are visible to the render pass — no manual barriers, no synchronization primitives, no fences.</p>
+<p>This is the key architectural decision: instead of submitting compute and render as separate command buffers (which would require explicit synchronization), cgfx's two-phase frame begin lets you record both passes on the same encoder. The GPU executes them in order, and the data just flows.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────────────────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│                  One Command Encoder                        │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│                                                             │
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ┌─────────────┐         ┌──────────────┐                  │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   │ Compute Pass│────────►│ Render Pass  │                  │
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   │             │  data   │              │                  │
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   │ write to    │  flows  │ sample from  │                  │
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   │ storage tex │  ────►  │ same texture │                  │
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   └─────────────┘         └──────────────┘                  │
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│                                                             │
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   cgfx_frame_begin_encoder()        cgfx_frame_end()        │
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ◄─── encoder created ───  ──── encoder submitted ───►     │
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>└─────────────────────────────────────────────────────────────┘
+</span></code></pre></div>
+<h2 id="two-usage-patterns">Two usage patterns<a class="headerlink" href="#two-usage-patterns" title="Permanent link">&para;</a></h2>
+<p>cgfx supports two distinct compute patterns through the same <code>CgfxComputePass</code> struct. The <code>owns_encoder</code> flag tracks which pattern is active, and the begin/end functions handle the lifecycle accordingly.</p>
+<h3 id="standalone-compute">Standalone compute<a class="headerlink" href="#standalone-compute" title="Permanent link">&para;</a></h3>
+<p>For compute-only work — no rendering, no window needed (though cgfx still requires a context with <code>width=1, height=1</code>). The compute pass creates its own command encoder, submits on end.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CgfxComputePass</span><span class="w"> </span><span class="n">cp</span><span class="p">;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">cgfx_compute_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cp</span><span class="p">);</span><span class="w">       </span><span class="c1">// creates encoder, begins pass</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1">// ... set pipeline, bind groups, dispatch ...</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">cgfx_compute_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cp</span><span class="p">);</span><span class="w">         </span><span class="c1">// ends pass, submits, releases</span>
+</span></code></pre></div>
+<p><code>cgfx_compute_end</code> does everything: end the pass, finish the encoder, submit the command buffer, release handles, and run the backend tick/poll. One function, done.</p>
+<h3 id="mixed-computerender">Mixed compute+render<a class="headerlink" href="#mixed-computerender" title="Permanent link">&para;</a></h3>
+<p>For the render-to-texture pattern — compute writes data, then render displays it. The compute pass borrows the frame's encoder. This is where the two-phase frame begin comes in.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin_encoder</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">      </span><span class="c1">// phase 1: encoder only</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">CgfxComputePass</span><span class="w"> </span><span class="n">cp</span><span class="p">;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">cgfx_compute_pass_begin</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">encoder</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cp</span><span class="p">);</span><span class="w">    </span><span class="c1">// borrows encoder</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="c1">// ... dispatch ...</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="n">cgfx_compute_pass_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cp</span><span class="p">);</span><span class="w">                     </span><span class="c1">// ends pass only</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="n">cgfx_frame_begin_render_pass</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="n">bg</span><span class="p">);</span><span class="w"> </span><span class="c1">// phase 2: render pass</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="c1">// ... draw ...</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span><span class="w">                   </span><span class="c1">// submits everything</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><code>cgfx_compute_pass_end</code> only ends the compute pass — it does NOT submit or release the encoder. The encoder stays open for the render pass, and <code>cgfx_frame_end</code> submits both passes together as one command buffer.</p>
+<h3 id="why-two-patterns-instead-of-one">Why two patterns instead of one?<a class="headerlink" href="#why-two-patterns-instead-of-one" title="Permanent link">&para;</a></h3>
+<p>A unified API that always borrows an encoder would force standalone compute users to create and manage their own encoder — the exact boilerplate cgfx exists to eliminate. Conversely, a standalone-only API would prevent sharing an encoder with render, requiring explicit synchronization between separate submissions.</p>
+<p>The <code>owns_encoder</code> flag resolves this: same struct, same dispatch code in between, different lifecycle at the boundaries.</p>
+<h2 id="the-two-phase-frame-begin">The two-phase frame begin<a class="headerlink" href="#the-two-phase-frame-begin" title="Permanent link">&para;</a></h2>
+<p>The standard <code>cgfx_frame_begin</code> acquires the surface texture, creates an encoder, AND begins the render pass — all in one call. That is convenient for pure rendering, but it means you cannot insert a compute pass before the render pass because a command encoder can only have one active pass at a time.</p>
+<p>The two-phase split breaks this apart:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>What it does</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cgfx_frame_begin</code></td>
+<td>encoder + render pass</td>
+<td>Pure rendering (unchanged, backward compatible)</td>
+</tr>
+<tr>
+<td><code>cgfx_frame_begin_encoder</code></td>
+<td>encoder only</td>
+<td>Mixed compute+render (insert passes before rendering)</td>
+</tr>
+<tr>
+<td><code>cgfx_frame_begin_render_pass</code></td>
+<td>render pass on existing encoder</td>
+<td>Called after your compute passes are done</td>
+</tr>
+</tbody>
+</table>
+<p><code>cgfx_frame_begin</code> is now just a convenience wrapper that calls both phases internally. Existing code is unaffected.</p>
+<div class="admonition warning">
+<p class="admonition-title">One active pass at a time</p>
+<p>WebGPU requires that only one pass encoder is active on a command encoder at any moment. You must end the compute pass before beginning the render pass (or vice versa). The passes execute in the order you record them.</p>
+</div>
+<h2 id="storage-textures-the-bridge-between-compute-and-render">Storage textures: the bridge between compute and render<a class="headerlink" href="#storage-textures-the-bridge-between-compute-and-render" title="Permanent link">&para;</a></h2>
+<p>A storage texture is a GPU texture that compute shaders can write to directly via <code>textureStore()</code>. The same texture can also be sampled in a render pass via <code>textureSample()</code> — the trick is setting up the right usage flags at creation.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">CgfxTexture</span><span class="w"> </span><span class="n">tex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_texture_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxTextureDesc</span><span class="p">){</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="p">.</span><span class="n">width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">512</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">512</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="p">.</span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUTextureFormat_RGBA8Unorm</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="p">.</span><span class="n">usage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUTextureUsage_StorageBinding</span><span class="w">    </span><span class="c1">// compute can write</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">           </span><span class="o">|</span><span class="w"> </span><span class="n">WGPUTextureUsage_TextureBinding</span><span class="p">,</span><span class="w">   </span><span class="c1">// render can sample</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">});</span>
+</span></code></pre></div>
+<p>This single texture appears in TWO bind groups with different roles:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>┌─────────────────────────────────┐
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>│  CgfxTexture (one GPU texture)  │
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│  usage: StorageBinding          │
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│       | TextureBinding          │
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>└──────────┬──────────┬───────────┘
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>           │          │
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    ┌──────▼──────┐  ┌▼──────────────┐
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    │ Compute BG  │  │  Render BG    │
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    │ binding 0:  │  │  binding 0:   │
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    │  STORAGE_   │  │   TEXTURE     │
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    │  TEXTURE    │  │  (sampled)    │
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    │  (write)    │  │  binding 1:   │
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    │ binding 1:  │  │   SAMPLER     │
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    │  BUFFER     │  │               │
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    │  (uniform)  │  │               │
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    └─────────────┘  └───────────────┘
+</span></code></pre></div>
+<p>The compute shader sees it as <code>var output : texture_storage_2d&lt;rgba8unorm, write&gt;</code> and writes pixels with <code>textureStore</code>. The fragment shader sees it as <code>var tex : texture_2d&lt;f32&gt;</code> and reads pixels with <code>textureSample</code>. Same GPU memory, different access patterns, governed entirely by how the bind groups are set up.</p>
+<h3 id="why-not-use-a-buffer">Why not use a buffer?<a class="headerlink" href="#why-not-use-a-buffer" title="Permanent link">&para;</a></h3>
+<p>You could compute into a storage buffer and copy to a texture, but storage textures skip the copy entirely — the compute shader writes pixels in place, and the render shader samples them directly. For image-producing compute work (procedural textures, post-processing, simulation visualization), this is the natural choice.</p>
+<p>Storage buffers remain the right tool for structured data (arrays of structs, counters, indirect draw arguments) where texel addressing doesn't apply.</p>
+<h2 id="bind-groups-for-compute">Bind groups for compute<a class="headerlink" href="#bind-groups-for-compute" title="Permanent link">&para;</a></h2>
+<p>Compute shader bindings use the same <code>CgfxShaderDesc</code> / <code>CgfxBindingDesc</code> / <code>CgfxBindGroupEntry</code> system as render shaders, with two differences you need to be aware of.</p>
+<h3 id="visibility-must-be-explicit">Visibility must be explicit<a class="headerlink" href="#visibility-must-be-explicit" title="Permanent link">&para;</a></h3>
+<p>The default visibility for <code>CGFX_BINDING_BUFFER</code> is <code>Vertex|Fragment</code>. The default for <code>CGFX_BINDING_TEXTURE</code> and <code>CGFX_BINDING_SAMPLER</code> is <code>Fragment</code>. For compute shader bindings, you must explicitly set <code>.visibility = WGPUShaderStage_Compute</code>:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">CgfxShader</span><span class="w"> </span><span class="n">compute_shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;compute&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">wgsl</span><span class="p">,</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxShaderDesc</span><span class="p">){</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="p">.</span><span class="n">group_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="p">.</span><span class="n">groups</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CgfxGroupDesc</span><span class="p">[]){{</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">            </span><span class="p">.</span><span class="n">binding_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">            </span><span class="p">.</span><span class="n">bindings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CgfxBindingDesc</span><span class="p">[]){</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">                </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">kind</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CGFX_BINDING_STORAGE_TEXTURE</span><span class="p">,</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">                  </span><span class="p">.</span><span class="n">storage_format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUTextureFormat_RGBA8Unorm</span><span class="p">,</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">                  </span><span class="p">.</span><span class="n">visibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUShaderStage_Compute</span><span class="w"> </span><span class="p">},</span><span class="w">   </span><span class="c1">// &lt;-- required</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">                </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">                  </span><span class="p">.</span><span class="n">min_binding_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">Params</span><span class="p">),</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">                  </span><span class="p">.</span><span class="n">visibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUShaderStage_Compute</span><span class="w"> </span><span class="p">},</span><span class="w">   </span><span class="c1">// &lt;-- required</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">            </span><span class="p">},</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">        </span><span class="p">}},</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="p">});</span>
+</span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Why not auto-detect?</p>
+<p>We could infer compute visibility from the binding kind or shader type, but that introduces fragile heuristics. A buffer might be visible to both compute and vertex stages. Explicit visibility is one extra field per binding and avoids a class of subtle bugs.</p>
+</div>
+<p>The one exception is <code>CGFX_BINDING_STORAGE_TEXTURE</code> — its default visibility is already <code>Compute</code>, since storage textures are almost exclusively a compute-shader feature. But being explicit doesn't hurt, and makes intent clear.</p>
+<h3 id="mixed-bind-groups-with-cgfx_bind_group_create">Mixed bind groups with cgfx_bind_group_create<a class="headerlink" href="#mixed-bind-groups-with-cgfx_bind_group_create" title="Permanent link">&para;</a></h3>
+<p>When a bind group contains different resource types (textures, buffers, samplers), use <code>cgfx_bind_group_create</code> with <code>CgfxBindGroupEntry</code> instead of the buffer-only <code>cgfx_shader_create_bind_group</code>:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">compute_bg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_bind_group_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">compute_shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="p">(</span><span class="n">CgfxBindGroupEntry</span><span class="p">[]){</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">texture</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">tex</span><span class="w"> </span><span class="p">},</span><span class="w">       </span><span class="c1">// storage texture</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">params_buf</span><span class="w"> </span><span class="p">},</span><span class="w">  </span><span class="c1">// uniform buffer</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Set exactly one of <code>.buffer</code>, <code>.texture</code>, or <code>.sampler</code> per entry. The binding index must match what you declared in <code>CgfxBindingDesc</code>.</p>
+<h3 id="binding-to-a-compute-pass">Binding to a compute pass<a class="headerlink" href="#binding-to-a-compute-pass" title="Permanent link">&para;</a></h3>
+<p>Use <code>cgfx_shader_bind_compute</code> instead of <code>cgfx_shader_bind</code>:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Render pass uses:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">bg</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1">// Compute pass uses:</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">cgfx_shader_bind_compute</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">bg</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Both are thin wrappers around <code>wgpuXxxPassEncoderSetBindGroup</code> — the only difference is the encoder type.</p>
+<h2 id="compute-pipelines">Compute pipelines<a class="headerlink" href="#compute-pipelines" title="Permanent link">&para;</a></h2>
+<p>A compute pipeline is simpler than a render pipeline — no vertex layouts, no blend state, no depth testing. Just a shader and an entry point:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">WGPUComputePipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_compute_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxComputeDesc</span><span class="p">){</span><span class="w"> </span><span class="p">.</span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">compute_shader</span><span class="w"> </span><span class="p">});</span>
+</span></code></pre></div>
+<p>The entry point defaults to <code>"cs_main"</code> (matching cgfx's <code>"vs_main"</code> / <code>"fs_main"</code> convention). Override with <code>.entry_point = "my_kernel"</code> if needed.</p>
+<p>The returned <code>WGPUComputePipeline</code> is caller-owned — release with <code>wgpuComputePipelineRelease()</code>.</p>
+<h3 id="pipeline-layout-comes-from-the-shader">Pipeline layout comes from the shader<a class="headerlink" href="#pipeline-layout-comes-from-the-shader" title="Permanent link">&para;</a></h3>
+<p>Like render pipelines, the compute pipeline reads its layout from <code>shader-&gt;pipeline_layout</code>. This means the shader descriptor defines what bind groups the pipeline expects. If the descriptor is <code>NULL</code> (no bindings), WebGPU uses automatic layout inference.</p>
+<h2 id="complete-example-compute-to-texture">Complete example: compute-to-texture<a class="headerlink" href="#complete-example-compute-to-texture" title="Permanent link">&para;</a></h2>
+<p>This example computes an animated Julia set fractal on the GPU and displays it. It demonstrates every concept in this guide: storage textures, mixed compute+render, two-phase frame begin, and mixed bind groups.</p>
+<h3 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;cgfx.h&quot;</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">time</span><span class="p">;</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="n">_pad</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span><span class="w">  </span><span class="c1">// uniform buffers require 16-byte alignment</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">}</span><span class="w"> </span><span class="n">Params</span><span class="p">;</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="n">ctx</span><span class="p">;</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="n">cgfx_ctx_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxCtxDesc</span><span class="p">){</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">        </span><span class="p">.</span><span class="n">width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">800</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">600</span><span class="p">,</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">        </span><span class="p">.</span><span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;Compute Texture&quot;</span><span class="p">,</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">        </span><span class="p">.</span><span class="n">limits</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_default_limits</span><span class="p">(),</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="p">});</span>
+</span></code></pre></div>
+<h3 id="create-the-shared-texture">Create the shared texture<a class="headerlink" href="#create-the-shared-texture" title="Permanent link">&para;</a></h3>
+<p>One texture, dual purpose — writable by compute, sampleable by render:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="w">    </span><span class="n">CgfxTexture</span><span class="w"> </span><span class="n">tex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_texture_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxTextureDesc</span><span class="p">){</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">        </span><span class="p">.</span><span class="n">width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">512</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">512</span><span class="p">,</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">        </span><span class="p">.</span><span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUTextureFormat_RGBA8Unorm</span><span class="p">,</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">        </span><span class="p">.</span><span class="n">usage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUTextureUsage_StorageBinding</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">WGPUTextureUsage_TextureBinding</span><span class="p">,</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="p">});</span>
+</span></code></pre></div>
+<h3 id="create-the-compute-shader">Create the compute shader<a class="headerlink" href="#create-the-compute-shader" title="Permanent link">&para;</a></h3>
+<p>The compute shader writes a Julia set fractal to the storage texture. Each thread handles one pixel. The <code>c</code> parameter animates over time:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">compute_wgsl</span><span class="w"> </span><span class="o">=</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">        </span><span class="s">&quot;struct Params { time : f32 }</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">        </span><span class="s">&quot;@group(0) @binding(0) var output : texture_storage_2d&lt;rgba8unorm, write&gt;;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">        </span><span class="s">&quot;@group(0) @binding(1) var&lt;uniform&gt; params : Params;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">        </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">        </span><span class="s">&quot;@compute @workgroup_size(8, 8)</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">        </span><span class="s">&quot;fn cs_main(@builtin(global_invocation_id) id : vec3u) {</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">        </span><span class="s">&quot;    let dims = textureDimensions(output);</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">        </span><span class="s">&quot;    if (id.x &gt;= dims.x || id.y &gt;= dims.y) { return; }</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">        </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">        </span><span class="s">&quot;    let uv = (vec2f(id.xy) / vec2f(dims)) * 2.0 - 1.0;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">        </span><span class="s">&quot;    var z = uv * 1.5;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">        </span><span class="s">&quot;    let c = vec2f(</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">        </span><span class="s">&quot;        sin(params.time * 0.3) * 0.7885,</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">        </span><span class="s">&quot;        cos(params.time * 0.23) * 0.7885</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">        </span><span class="s">&quot;    );</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="w">        </span><span class="s">&quot;    // ... iterate z = z² + c, color by iteration count ...</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="w">        </span><span class="s">&quot;    textureStore(output, id.xy, color);</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="w">        </span><span class="s">&quot;}</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+</span></code></pre></div>
+<p>The descriptor declares a storage texture binding and a uniform buffer, both with compute visibility:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="w">    </span><span class="n">CgfxShader</span><span class="w"> </span><span class="n">compute_shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;julia_compute&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">compute_wgsl</span><span class="p">,</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">        </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxShaderDesc</span><span class="p">){</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">            </span><span class="p">.</span><span class="n">group_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">            </span><span class="p">.</span><span class="n">groups</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CgfxGroupDesc</span><span class="p">[]){{</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">                </span><span class="p">.</span><span class="n">binding_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">                </span><span class="p">.</span><span class="n">bindings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CgfxBindingDesc</span><span class="p">[]){</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">                    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">kind</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CGFX_BINDING_STORAGE_TEXTURE</span><span class="p">,</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">                      </span><span class="p">.</span><span class="n">storage_format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUTextureFormat_RGBA8Unorm</span><span class="p">,</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">                      </span><span class="p">.</span><span class="n">visibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUShaderStage_Compute</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">                    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">                      </span><span class="p">.</span><span class="n">min_binding_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">Params</span><span class="p">),</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">                      </span><span class="p">.</span><span class="n">visibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUShaderStage_Compute</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">                </span><span class="p">},</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">            </span><span class="p">}},</span>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">        </span><span class="p">});</span>
+</span></code></pre></div>
+<h3 id="create-the-render-shader">Create the render shader<a class="headerlink" href="#create-the-render-shader" title="Permanent link">&para;</a></h3>
+<p>The render shader draws a fullscreen quad and samples the computed texture. No vertex buffer needed — positions and UVs are generated procedurally from <code>vertex_index</code>:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">render_wgsl</span><span class="w"> </span><span class="o">=</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">        </span><span class="s">&quot;struct VsOut {</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">        </span><span class="s">&quot;    @builtin(position) pos : vec4f,</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">        </span><span class="s">&quot;    @location(0) uv : vec2f,</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">        </span><span class="s">&quot;}</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">        </span><span class="s">&quot;@vertex fn vs_main(@builtin(vertex_index) vi : u32) -&gt; VsOut {</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">        </span><span class="s">&quot;    // 6 vertices = 2 triangles covering [-1,1] in clip space</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">        </span><span class="s">&quot;    var positions = array&lt;vec2f, 6&gt;(</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">        </span><span class="s">&quot;        vec2f(-1, -1), vec2f(1, -1), vec2f(-1, 1),</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">        </span><span class="s">&quot;        vec2f(-1,  1), vec2f(1, -1), vec2f( 1, 1),</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">        </span><span class="s">&quot;    );</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">        </span><span class="s">&quot;    // ...</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">        </span><span class="s">&quot;}</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="w">        </span><span class="s">&quot;@group(0) @binding(0) var tex : texture_2d&lt;f32&gt;;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="w">        </span><span class="s">&quot;@group(0) @binding(1) var tex_sampler : sampler;</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="w">        </span><span class="s">&quot;@fragment fn fs_main(@location(0) uv : vec2f) -&gt; @location(0) vec4f {</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="w">        </span><span class="s">&quot;    return textureSample(tex, tex_sampler, uv);</span><span class="se">\n</span><span class="s">&quot;</span>
+</span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="w">        </span><span class="s">&quot;}</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+</span></code></pre></div>
+<p>The descriptor uses default visibility (Fragment) for the texture and sampler — the auto-detection works here because these are standard render-shader bindings:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="w">    </span><span class="n">CgfxShader</span><span class="w"> </span><span class="n">render_shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;quad_render&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">render_wgsl</span><span class="p">,</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">        </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxShaderDesc</span><span class="p">){</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">            </span><span class="p">.</span><span class="n">group_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">            </span><span class="p">.</span><span class="n">groups</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CgfxGroupDesc</span><span class="p">[]){{</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">                </span><span class="p">.</span><span class="n">binding_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">                </span><span class="p">.</span><span class="n">bindings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CgfxBindingDesc</span><span class="p">[]){</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">                    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">kind</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CGFX_BINDING_TEXTURE</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">                    </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">kind</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CGFX_BINDING_SAMPLER</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">                </span><span class="p">},</span>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">            </span><span class="p">}},</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">        </span><span class="p">});</span>
+</span></code></pre></div>
+<h3 id="create-pipelines-and-bind-groups">Create pipelines and bind groups<a class="headerlink" href="#create-pipelines-and-bind-groups" title="Permanent link">&para;</a></h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="w">    </span><span class="n">WGPUComputePipeline</span><span class="w"> </span><span class="n">compute_pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_compute_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">        </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxComputeDesc</span><span class="p">){</span><span class="w"> </span><span class="p">.</span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">compute_shader</span><span class="w"> </span><span class="p">});</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">render_pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">        </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxPipelineDesc</span><span class="p">){</span><span class="w"> </span><span class="p">.</span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">render_shader</span><span class="w"> </span><span class="p">});</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="c1">// vertex_buffer_count = 0 — procedural vertices in shader</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">    </span><span class="n">Params</span><span class="w"> </span><span class="n">params</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">    </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">params_buf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_uniform</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">Params</span><span class="p">));</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">    </span><span class="n">WGPUSampler</span><span class="w"> </span><span class="n">sampler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_sampler_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxSamplerDesc</span><span class="p">){});</span>
+</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>
+</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="w">    </span><span class="c1">// Compute bind group: storage texture + uniform buffer</span>
+</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="w">    </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">compute_bg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_bind_group_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">compute_shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a><span class="w">        </span><span class="p">(</span><span class="n">CgfxBindGroupEntry</span><span class="p">[]){</span>
+</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">texture</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">tex</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a><span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">params_buf</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a><span class="w">        </span><span class="p">},</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a>
+</span><span id="__span-15-20"><a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a><span class="w">    </span><span class="c1">// Render bind group: sampled texture + sampler</span>
+</span><span id="__span-15-21"><a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a><span class="w">    </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">render_bg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_bind_group_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">render_shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-15-22"><a id="__codelineno-15-22" name="__codelineno-15-22" href="#__codelineno-15-22"></a><span class="w">        </span><span class="p">(</span><span class="n">CgfxBindGroupEntry</span><span class="p">[]){</span>
+</span><span id="__span-15-23"><a id="__codelineno-15-23" name="__codelineno-15-23" href="#__codelineno-15-23"></a><span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">texture</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">tex</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-15-24"><a id="__codelineno-15-24" name="__codelineno-15-24" href="#__codelineno-15-24"></a><span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">sampler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sampler</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-15-25"><a id="__codelineno-15-25" name="__codelineno-15-25" href="#__codelineno-15-25"></a><span class="w">        </span><span class="p">},</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Notice how the same <code>tex</code> appears in both bind groups. The compute bind group references it as a storage texture (for writing), the render bind group references it as a sampled texture (for reading). This is determined by the bind group layout, not the texture itself.</p>
+<h3 id="the-render-loop">The render loop<a class="headerlink" href="#the-render-loop" title="Permanent link">&para;</a></h3>
+<p>This is where everything comes together — two-phase frame begin with compute before render:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">        </span><span class="n">params</span><span class="p">.</span><span class="n">time</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mf">0.016f</span><span class="p">;</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">        </span><span class="n">wgpuQueueWriteBuffer</span><span class="p">(</span><span class="n">ctx</span><span class="p">.</span><span class="n">queue</span><span class="p">,</span><span class="w"> </span><span class="n">params_buf</span><span class="p">.</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">params</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">params</span><span class="p">));</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">        </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin_encoder</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">            </span><span class="c1">// Phase 1: compute pass — write to storage texture</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">            </span><span class="n">CgfxComputePass</span><span class="w"> </span><span class="n">cp</span><span class="p">;</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">            </span><span class="n">cgfx_compute_pass_begin</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">encoder</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cp</span><span class="p">);</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">            </span><span class="n">wgpuComputePassEncoderSetPipeline</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="n">compute_pipeline</span><span class="p">);</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">            </span><span class="n">cgfx_shader_bind_compute</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">compute_bg</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">            </span><span class="n">wgpuComputePassEncoderDispatchWorkgroups</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="mi">512</span><span class="o">/</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">512</span><span class="o">/</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="w">            </span><span class="n">cgfx_compute_pass_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cp</span><span class="p">);</span>
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="w">            </span><span class="c1">// Phase 2: render pass — sample the texture, draw fullscreen quad</span>
+</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="w">            </span><span class="n">cgfx_frame_begin_render_pass</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">});</span>
+</span><span id="__span-16-17"><a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="w">            </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">render_pipeline</span><span class="p">);</span>
+</span><span id="__span-16-18"><a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="w">            </span><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">render_bg</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-16-19"><a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="w">            </span><span class="n">wgpuRenderPassEncoderDraw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-16-20"><a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a><span class="w">            </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
+</span><span id="__span-16-21"><a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-16-22"><a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a><span class="w">    </span><span class="p">}</span>
+</span></code></pre></div>
+<p>The dispatch call <code>(512/8, 512/8, 1)</code> launches 64×64 workgroups, each with 8×8 threads — totaling 512×512 threads, one per pixel. The workgroup size (8, 8) is declared in the WGSL <code>@workgroup_size</code> annotation and must match.</p>
+<h3 id="cleanup">Cleanup<a class="headerlink" href="#cleanup" title="Permanent link">&para;</a></h3>
+<p>Resources are destroyed in reverse order of creation. Bind groups before shaders (since bind groups reference shader layouts), pipelines before shaders, texture and context last:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="w">    </span><span class="n">wgpuBindGroupRelease</span><span class="p">(</span><span class="n">render_bg</span><span class="p">);</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="n">wgpuBindGroupRelease</span><span class="p">(</span><span class="n">compute_bg</span><span class="p">);</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">params_buf</span><span class="p">);</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="n">wgpuSamplerRelease</span><span class="p">(</span><span class="n">sampler</span><span class="p">);</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="n">wgpuRenderPipelineRelease</span><span class="p">(</span><span class="n">render_pipeline</span><span class="p">);</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">    </span><span class="n">wgpuComputePipelineRelease</span><span class="p">(</span><span class="n">compute_pipeline</span><span class="p">);</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">    </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">render_shader</span><span class="p">);</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">    </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">compute_shader</span><span class="p">);</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">    </span><span class="n">cgfx_texture_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tex</span><span class="p">);</span>
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="w">    </span><span class="n">cgfx_ctx_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">);</span>
+</span></code></pre></div>
+<h2 id="standalone-compute-with-read-back">Standalone compute with read-back<a class="headerlink" href="#standalone-compute-with-read-back" title="Permanent link">&para;</a></h2>
+<p>Not all compute work produces images. For data-parallel computation (physics, sorting, reduction), you write to storage buffers and read results back to the CPU. The <code>examples/compute/</code> example demonstrates this with vector addition.</p>
+<p>The read-back pattern requires three steps:</p>
+<ol>
+<li><strong>Create storage buffers</strong> with <code>cgfx_buffer_create_storage()</code> — includes <code>CopySrc</code> usage so the buffer can be copied.</li>
+<li><strong>Copy to a mapping buffer</strong> with <code>cgfx_buffer_copy()</code> — you cannot map a storage buffer directly; WebGPU requires a separate buffer with <code>MapRead</code> usage.</li>
+<li><strong>Map and read</strong> with <code>wgpuBufferMapAsync()</code> + <code>wgpuBufferGetConstMappedRange()</code>.</li>
+</ol>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1">// After compute dispatch:</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">readback</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_mapping</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="n">cgfx_buffer_copy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">output</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">readback</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">  </span><span class="c1">// GPU-to-GPU copy</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="n">wgpuBufferMapAsync</span><span class="p">(</span><span class="n">readback</span><span class="p">.</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="n">WGPUMapMode_Read</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">readback</span><span class="p">.</span><span class="n">size</span><span class="p">,</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">                    </span><span class="o">&amp;</span><span class="n">on_mapped</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">readback</span><span class="p">);</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1">// ... poll until readback.ready ...</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="k">const</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="o">*</span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wgpuBufferGetConstMappedRange</span><span class="p">(</span><span class="n">readback</span><span class="p">.</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">readback</span><span class="p">.</span><span class="n">size</span><span class="p">);</span>
+</span></code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Why the intermediate copy?</p>
+<p>WebGPU separates storage and mapping into different buffer usage flags for performance reasons. Storage buffers live in fast GPU memory optimized for shader access. Mapping buffers live in shared memory accessible to the CPU. <code>cgfx_buffer_copy</code> bridges the two with a one-shot command encoder submission.</p>
+</div>
+<h2 id="design-decisions">Design decisions<a class="headerlink" href="#design-decisions" title="Permanent link">&para;</a></h2>
+<h3 id="why-a-separate-compute-module">Why a separate compute module?<a class="headerlink" href="#why-a-separate-compute-module" title="Permanent link">&para;</a></h3>
+<p>The compute pipeline could have been folded into <code>cgfx_pipeline.h</code> (which handles render pipelines) or <code>cgfx_frame.h</code> (which manages the frame lifecycle). We chose a separate <code>cgfx_compute.h</code> because:</p>
+<ul>
+<li><strong>Render pipelines are complex</strong> — vertex layouts, blend state, depth testing, cull modes. Compute pipelines have none of that. Mixing them would mean a descriptor where most fields are irrelevant depending on the pipeline type.</li>
+<li><strong>Compute passes are independent of surfaces</strong> — they do not acquire textures or present frames. Putting them in <code>cgfx_frame.h</code> would create a false dependency on windowing.</li>
+<li><strong>The module is self-contained</strong> — <code>CgfxComputeDesc</code>, <code>CgfxComputePass</code>, and five functions. Small modules are easier to understand.</li>
+</ul>
+<h3 id="why-cgfx_buffer_copy-lives-in-the-buffer-module">Why cgfx_buffer_copy lives in the buffer module<a class="headerlink" href="#why-cgfx_buffer_copy-lives-in-the-buffer-module" title="Permanent link">&para;</a></h3>
+<p><code>cgfx_buffer_copy</code> is a general-purpose buffer-to-buffer copy. While it is most commonly used for compute read-back, it is equally useful for duplicating vertex data, copying uniform snapshots, or any GPU-to-GPU transfer. It lives in <code>cgfx_buffer.h</code> alongside the other buffer operations.</p>
+<h3 id="entry-point-convention">Entry point convention<a class="headerlink" href="#entry-point-convention" title="Permanent link">&para;</a></h3>
+<p>cgfx defaults to <code>"cs_main"</code> for compute entry points, matching the <code>"vs_main"</code> / <code>"fs_main"</code> convention for vertex and fragment shaders. This is a cgfx convention, not a WebGPU requirement — WGSL entry points can be named anything.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.tabs.link", "search.suggest", "search.highlight", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

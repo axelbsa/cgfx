@@ -609,6 +609,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guides/compute-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compute Pipeline & Render-to-Texture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guides/using-slang/" class="md-nav__link">
         
   
@@ -1007,6 +1035,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_buffer_copy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_buffer_copy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_buffer_destroy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1395,6 +1434,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_buffer_copy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_buffer_copy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_buffer_destroy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1774,9 +1824,60 @@
 </span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">storage</span><span class="p">);</span>
 </span></code></pre></div>
 <hr />
+<h3 id="cgfx_buffer_copy">cgfx_buffer_copy<a class="headerlink" href="#cgfx_buffer_copy" title="Permanent link">&para;</a></h3>
+<p>Copies data from one GPU buffer to another via an immediate command submission.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_buffer_copy</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">                                </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="o">*</span><span class="n">src</span><span class="p">,</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">                                </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="o">*</span><span class="n">dst</span><span class="p">,</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">                                </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctx</code></td>
+<td><code>const CgfxCtx*</code></td>
+<td>Initialized context.</td>
+</tr>
+<tr>
+<td><code>src</code></td>
+<td><code>const CgfxBuffer*</code></td>
+<td>Source buffer. Must have <code>CopySrc</code> usage.</td>
+</tr>
+<tr>
+<td><code>dst</code></td>
+<td><code>const CgfxBuffer*</code></td>
+<td>Destination buffer. Must have <code>CopyDst</code> usage.</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td><code>uint64_t</code></td>
+<td>Number of bytes to copy. <code>0</code> = <code>min(src.size, dst.size)</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Creates a temporary command encoder, records the copy, submits, and releases. Useful for copying compute results to a mapping buffer for read-back, duplicating vertex data, or any buffer-to-buffer transfer.</p>
+<p><strong>Example (compute read-back):</strong></p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_storage</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">data_size</span><span class="p">);</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="c1">// ... dispatch compute shader that writes to output ...</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">readback</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_mapping</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">cgfx_buffer_copy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">output</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">readback</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1">// Map and read results</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="n">wgpuBufferMapAsync</span><span class="p">(</span><span class="n">readback</span><span class="p">.</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="n">WGPUMapMode_Read</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">readback</span><span class="p">.</span><span class="n">size</span><span class="p">,</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">                    </span><span class="o">&amp;</span><span class="n">on_mapped</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">readback</span><span class="p">);</span>
+</span></code></pre></div>
+<hr />
 <h3 id="cgfx_buffer_destroy">cgfx_buffer_destroy<a class="headerlink" href="#cgfx_buffer_destroy" title="Permanent link">&para;</a></h3>
 <p>Releases the GPU buffer and zeros the struct.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
