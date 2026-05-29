@@ -18,6 +18,7 @@ Bundles a GPU uniform buffer, its bind group, and a pointer to user-owned data i
 | `bind_group` | `WGPUBindGroup` | -- | Bind group referencing this buffer. |
 | `data` | `const void *` | -- | Pointer to user-owned data (never freed by cgfx). |
 | `size` | `uint64_t` | -- | Size of the uniform data in bytes. |
+| `ok` | `bool` | -- | `true` if creation succeeded. Check before use. |
 
 ---
 
@@ -28,7 +29,7 @@ Bundles a GPU uniform buffer, its bind group, and a pointer to user-owned data i
 Create a uniform buffer and bind group in one call.
 
 ```c
-CgfxUniform cgfx_uniform_create(const CgfxCtx *ctx,
+CGFX_API CgfxUniform cgfx_uniform_create(const CgfxCtx *ctx,
                                  const CgfxShader *shader,
                                  uint32_t group_index,
                                  const void *data,
@@ -57,7 +58,7 @@ Allocates a GPU uniform buffer, uploads the initial data, and creates a bind gro
 Upload the uniform's data to the GPU.
 
 ```c
-void cgfx_uniform_write(const CgfxCtx *ctx, const CgfxUniform *uniform);
+CGFX_API void cgfx_uniform_write(const CgfxCtx *ctx, const CgfxUniform *uniform);
 ```
 
 | Parameter | Type | Description |
@@ -74,7 +75,7 @@ Writes the data pointed to by `uniform->data` to the GPU buffer via `wgpuQueueWr
 Destroy a uniform and release its GPU resources.
 
 ```c
-void cgfx_uniform_destroy(CgfxUniform *uniform);
+CGFX_API void cgfx_uniform_destroy(CgfxUniform *uniform);
 ```
 
 | Parameter | Type | Description |

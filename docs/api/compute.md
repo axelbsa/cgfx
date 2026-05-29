@@ -179,9 +179,10 @@ wgpuComputePassEncoderDispatchWorkgroups(cp.pass, 64, 1, 1);
 cgfx_compute_end(&ctx, &cp);
 
 // 6. Read back results
-CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, output.size, 0);
 cgfx_buffer_copy(&ctx, &output, &readback, 0);
-// ... map and read readback.buffer ...
+float result[256];
+cgfx_buffer_read(&ctx, &readback, result, sizeof(result));
 ```
 
 !!! note "Visibility must be explicit"
@@ -218,16 +219,12 @@ if (cgfx_frame_begin_encoder(&ctx, &frame)) {
 After compute dispatch, copy results to a mapping buffer and read them on the CPU:
 
 ```c
-// Copy storage buffer to mapping buffer
-CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+// Copy storage buffer to mapping buffer, then read to CPU
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, output.size, 0);
 cgfx_buffer_copy(&ctx, &output, &readback, 0);
 
-// Map and read
-wgpuBufferMapAsync(readback.buffer, WGPUMapMode_Read, 0, readback.size,
-                    &on_mapped, &readback);
-// ... poll until readback.ready ...
-const float *result = wgpuBufferGetConstMappedRange(readback.buffer, 0, readback.size);
+float result[256];
+cgfx_buffer_read(&ctx, &readback, result, sizeof(result));
 // ... use result ...
-wgpuBufferUnmap(readback.buffer);
 cgfx_buffer_destroy(&readback);
 ```

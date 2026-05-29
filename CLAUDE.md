@@ -24,9 +24,9 @@ This is a C23 rendering engine library (`cgfx`) wrapping WebGPU, with GLFW for w
 | `cgfx_export` | `CGFX_API` macro for shared library export/import (`dllexport`/`visibility`) |
 | `cgfx_ctx` | Context: `cgfx_ctx_init` (GLFW) or `cgfx_ctx_init_external` (HWND) + device + queue + surface. Optional depth buffer stored as `CgfxTexture`. |
 | `cgfx_shader` | CgfxShader: WGSL compilation + bind group layouts + pipeline layout |
-| `cgfx_pipeline` | Render pipeline with zero-init defaults, reads layout from CgfxShader. Color targets via `CgfxColorTarget[]` — opaque by default, per-target blend (presets: `cgfx_blend_alpha/additive/premultiplied`), offscreen formats, and MRT. |
-| `cgfx_frame` | Per-frame begin/end cycle (acquire texture, encoder, pass, submit, present). `cgfx_frame_begin_render_pass_ex` renders to caller-supplied color views (offscreen / MRT) via `CgfxRenderPassDesc`; `cgfx_frame_end_render_pass` closes a pass for multi-pass frames. |
-| `cgfx_buffer` | GPU buffer creation (vertex, index, uniform, storage, mapping, generic) |
+| `cgfx_pipeline` | Render pipeline with zero-init defaults, reads layout from CgfxShader. Color targets via `CgfxColorTarget[]` - opaque by default, per-target blend (presets: `cgfx_blend_alpha/additive/premultiplied`), offscreen formats, and MRT. Configurable depth compare/write, MSAA sample count, alpha-to-coverage. Strip index format auto-derived for strip topologies. |
+| `cgfx_frame` | Per-frame begin/end cycle (acquire texture, encoder, pass, submit, present). `cgfx_frame_begin_render_pass_ex` renders to caller-supplied color views (offscreen / MRT) via `CgfxRenderPassDesc` with optional MSAA resolve targets; `cgfx_frame_end_render_pass` closes a pass for multi-pass frames. |
+| `cgfx_buffer` | GPU buffer creation (vertex, index, uniform, storage, mapping, generic). `cgfx_buffer_read()` for synchronous GPU-to-CPU readback. |
 | `cgfx_uniform` | CgfxUniform: buffer + bind group + data pointer bundle for per-object uniforms |
 | `cgfx_mesh` | CgfxVertex (96 bytes: pos + normal + tangent + texcoord0 + texcoord1 + color + joints + weights) + CgfxMesh + vertex layout + draw |
 | `cgfx_texture` | CgfxTexture (GPU texture + view) + sampler helper. Supports sampled, storage, render-target, and depth textures. Cube maps via `view_dimension` + `depth=6`. Per-layer writes with `cgfx_texture_write_layer()`. |
@@ -56,7 +56,7 @@ Key types: `CgfxBindingDesc` → `CgfxGroupDesc` → `CgfxShaderDesc` → `CgfxS
 - **Transparent structs** — fields are public so users can access raw WebGPU handles (e.g., `ctx.device`, `shader.group_layouts[0]`)
 - **Context passed by pointer** — no global state
 - **Error handling** — three signalling conventions, all also printing a diagnostic to stderr:
-  - Constructors returning a wrapped `Cgfx*` struct (`cgfx_shader_create`, `cgfx_buffer_create_*`, `cgfx_texture_create`, `cgfx_mesh_create`, `cgfx_uniform_create`, `cgfx_camera_create`) set a trailing `bool ok;` — check it before use. A zeroed or destroyed struct is `ok == false`. `cgfx_shader_create` surfaces WGSL compile errors (with source line/column) on stderr and reports them via `ok`.
+  - Constructors returning a wrapped `Cgfx*` struct (`cgfx_shader_create`, `cgfx_buffer_create_*`, `cgfx_texture_create`, `cgfx_mesh_create`, `cgfx_uniform_create`, `cgfx_camera_create`) set a trailing `bool ok;` - check it before use. A zeroed or destroyed struct is `ok == false`. Shader compile errors reach stderr through the device uncaptured-error callback. (Note: detailed line/column reporting via `wgpuShaderModuleGetCompilationInfo` is implemented but disabled - the vendored wgpu-native v0.19.4.1 has not implemented this API.)
   - Constructors returning a raw WGPU handle (`cgfx_pipeline_create`, `cgfx_compute_pipeline_create`, `cgfx_sampler_create`) return `NULL` on failure.
   - Lifecycle functions (`cgfx_ctx_init`, `cgfx_ctx_resize`, `cgfx_frame_begin`, `cgfx_compute_begin`) return `bool`.
 - **Caller-owned event loop** — the caller polls events (e.g., `glfwPollEvents()`) before `cgfx_frame_begin`; cgfx does not call any windowing event functions

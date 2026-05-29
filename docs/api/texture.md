@@ -21,6 +21,7 @@ A GPU texture with its default view. All fields are public.
 | `height` | `uint32_t` | Height in pixels. |
 | `depth` | `uint32_t` | Depth or array layers (1 for 2D). |
 | `mip_levels` | `uint32_t` | Number of mip levels. |
+| `ok` | `bool` | `true` if creation succeeded. Check before use. |
 
 ---
 

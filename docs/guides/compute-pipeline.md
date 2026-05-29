@@ -410,20 +410,20 @@ Not all compute work produces images. For data-parallel computation (physics, so
 
 The read-back pattern requires three steps:
 
-1. **Create storage buffers** with `cgfx_buffer_create_storage()` — includes `CopySrc` usage so the buffer can be copied.
-2. **Copy to a mapping buffer** with `cgfx_buffer_copy()` — you cannot map a storage buffer directly; WebGPU requires a separate buffer with `MapRead` usage.
-3. **Map and read** with `wgpuBufferMapAsync()` + `wgpuBufferGetConstMappedRange()`.
+1. **Create storage buffers** with `cgfx_buffer_create_storage()` -- includes `CopySrc` usage so the buffer can be copied.
+2. **Copy to a mapping buffer** with `cgfx_buffer_copy()` -- you cannot map a storage buffer directly; WebGPU requires a separate buffer with `MapRead` usage.
+3. **Read back to the CPU** with `cgfx_buffer_read()` -- synchronously maps, copies, and unmaps.
 
 ```c
 // After compute dispatch:
-CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, output.size, 0);
 cgfx_buffer_copy(&ctx, &output, &readback, 0);  // GPU-to-GPU copy
 
-wgpuBufferMapAsync(readback.buffer, WGPUMapMode_Read, 0, readback.size,
-                    &on_mapped, &readback);
-// ... poll until readback.ready ...
-const float *result = wgpuBufferGetConstMappedRange(readback.buffer, 0, readback.size);
+float result[256];
+cgfx_buffer_read(&ctx, &readback, result, sizeof(result));  // GPU-to-CPU read
 ```
+
+`cgfx_buffer_read` handles the async map/poll/memcpy/unmap dance internally, including the backend-specific synchronization (`wgpuDevicePoll` vs `wgpuDeviceTick`). No callbacks, no `#ifdef`, no spin loops.
 
 !!! tip "Why the intermediate copy?"
     WebGPU separates storage and mapping into different buffer usage flags for performance reasons. Storage buffers live in fast GPU memory optimized for shader access. Mapping buffers live in shared memory accessible to the CPU. `cgfx_buffer_copy` bridges the two with a one-shot command encoder submission.

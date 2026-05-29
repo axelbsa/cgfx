@@ -11,15 +11,14 @@ cgfx is organized into focused modules, each in its own header/source pair. The 
 | **Export** | `cgfx_export.h` | `CGFX_API` macro for shared library export/import |
 | **Context** | `cgfx_ctx.h` | Window, WebGPU instance, device, queue, surface |
 | **Shader** | `cgfx_shader.h` | WGSL compilation, bind group layouts, pipeline layout |
-| **Pipeline** | `cgfx_pipeline.h` | Render pipeline with zero-init defaults |
-| **Frame** | `cgfx_frame.h` | Per-frame begin/end cycle (acquire, encode, submit, present) |
-| **Buffer** | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, mapping) |
+| **Pipeline** | `cgfx_pipeline.h` | Render pipeline with zero-init defaults. Color targets, depth compare/write, MSAA, blend presets |
+| **Frame** | `cgfx_frame.h` | Per-frame begin/end cycle (acquire, encode, submit, present). Offscreen/MRT passes, MSAA resolve |
+| **Buffer** | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, storage, mapping). Synchronous readback via `cgfx_buffer_read` |
 | **Uniform** | `cgfx_uniform.h` | Uniform buffer + bind group + data pointer bundle |
 | **Mesh** | `cgfx_mesh.h` | Vertex format, mesh creation, vertex layout, draw helper |
 | **Texture** | `cgfx_texture.h` | GPU texture + view, sampler. Sampled, storage, render-target, depth, cube maps |
 | **Compute** | `cgfx_compute.h` | Compute pipeline, compute pass, buffer copy |
 | **Camera** | `cgfx_camera.h` | Projection/view matrices with GPU uniform management |
-| **Primitives** | `cgfx_primitives.h` | Plane, triangle, sphere, cube generators |
 | **Loader** | `cgfx_loader.h` | Load geometry from LearnWebGPU text format (temporary) |
 
 ## Module Dependency Diagram
@@ -46,8 +45,6 @@ cgfx.h  (umbrella — includes everything)
   +-- cgfx_mesh.h           [ctx, buffer]
   |     |
   +-- cgfx_camera.h         [cglm, ctx, buffer, shader]
-  |     |
-  +-- cgfx_primitives.h     [ctx, mesh]
   |     |
   +-- cgfx_loader.h         [mesh]
 ```
@@ -195,7 +192,7 @@ cgfx_ctx_destroy(&ctx):
 
 ### Pure C23
 
-cgfx is written in C23 with no C++ dependencies. It compiles with `-std=c23` (GCC/Clang) or `/std:c23` (MSVC). C23 features used include compound literals with designated initializers, `nullptr`, and `= {}` zero-initialization.
+cgfx is written in C23 and compiles with `-std=c23` (GCC/Clang) or `/std:c23` (MSVC). C23 features used include compound literals with designated initializers, `nullptr`, and `= {}` zero-initialization.
 
 ### Transparent Structs
 
@@ -221,7 +218,7 @@ Every descriptor struct is designed so that `= {}` (all zeros) produces sensible
 // All defaults: 1280x720 window titled "cgfx", VSync, no depth buffer
 cgfx_ctx_init(&ctx, &(CgfxCtxDesc){});
 
-// All defaults: triangle list, no culling, alpha blending, vs_main/fs_main
+// All defaults: triangle list, no culling, opaque (no blend), vs_main/fs_main
 cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){ .shader = &shader });
 ```
 

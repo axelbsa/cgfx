@@ -22,16 +22,16 @@ cgfx's core idea is sound and well-executed: zero-init descriptors with document
 defaults, transparent structs, "you record raw draws between begin/end." The triangle path
 reads beautifully. The trouble is concentrated in three places:
 
-1. **Pipeline/frame descriptors hardcode choices that should be parameters** — and several
-   of those defaults are *silently wrong*, not just limiting.
-2. **The CPU↔GPU data story is half-finished** — upload works, readback is unwrapped and
-   duplicated across examples.
+1. ~~**Pipeline/frame descriptors hardcode choices that should be parameters.**~~
+   Largely resolved - blend, depth compare/write, MSAA, MRT, strip index format, stencil all
+   configurable now. Remaining: load-op control (T2.2).
+2. ~~**The CPU-GPU data story is half-finished.**~~
+   Resolved - `cgfx_buffer_read()` wraps readback; backend `#ifdef` no longer leaks.
 3. **Cross-cutting conventions (errors, ownership, naming) drifted** as second idioms were
-   bolted on without retrofitting the first.
+   bolted on without retrofitting the first. (T3.x - not yet addressed.)
 
-Recurring theme: the "thin wrapper, drop to raw WebGPU" escape hatch is **non-uniform**.
-Where cgfx monopolizes the object you'd need (the device, the pipeline's blend/target
-state, the render pass), there is no escape short of abandoning the abstraction.
+Remaining theme: **device-level control is still locked** (no feature requests T2.3, no
+device-lost callback T4.4, no resize recovery T2.8). These are the ctx-level gaps.
 
 ---
 
@@ -49,30 +49,30 @@ state, the render pass), there is no escape short of abandoning the abstraction.
 
 ## Tier 1 — Wrong or incoherent (fail silently or self-contradict)
 
-| ID | Finding | Key location | Note |
-|----|---------|--------------|------|
-| **T1.1 ⊕** | Hardcoded alpha blend on every pipeline | `cgfx_pipeline.c:71-86` | WebGPU default is *no blend*; cgfx inverted it. Opaque shaders emitting alpha<1 ghost; framebuffer alpha never written. No field to control. |
-| **T1.2** | `depthCompare=Less` + `depthWriteEnabled=true` hardcoded | `cgfx_pipeline.c:109-110` | Breaks skybox (needs LessEqual), depth pre-pass / read-only-depth transparency, and reverse-Z — and the build forces `CGLM_FORCE_DEPTH_ZERO_TO_ONE`, the exact reverse-Z setup. |
-| **T1.3** | `topology` settable but `stripIndexFormat=Undefined` hardcoded | `cgfx_pipeline.c:46-47` | Pure coherence bug: a knob that can't be used correctly. Indexed strip draw → validation error from a hidden field. |
-| **T1.4** | Stencil attachment is internally contradictory | `cgfx_frame.c:97-100` | `stencilLoadOp=Clear`+`Store` **and** `stencilReadOnly=true` — spec violation, masked only because depth format is locked to Depth24Plus (no stencil aspect). Latent. |
-| **T1.5 ⊕** | Error model broken, contradicts its own contract | `cgfx_shader.c:80,172`; CLAUDE.md | Constructors return struct-by-value with no error channel; shader compile errors never surfaced. No way to write a robust app today. |
-| **T1.6** | MSAA advertised but impossible end-to-end | `cgfx_pipeline.c:129`, `cgfx_frame.c:81` | `sample_count` exists on textures but pipeline `multisample.count=1` and `resolveTarget=nullptr` are hardcoded. A trap. |
-| **T1.7** | Mipmaps: sampler configured for content the API can't produce | `cgfx_texture.c` (write mip 0 only), sampler `lodMaxClamp=32` | `mip_levels>1` allocates levels that are never filled → garbage. Trilinear/aniso inert. Must be library-provided. |
+| ID | Finding | Status |
+|----|---------|--------|
+| **T1.1 ⊕** | Hardcoded alpha blend on every pipeline | **Done** - `CgfxColorTarget[]`, opaque default, blend presets |
+| **T1.2** | `depthCompare=Less` + `depthWriteEnabled=true` hardcoded | **Done** - `depth_compare` + `depth_write_disabled` fields |
+| **T1.3** | `stripIndexFormat=Undefined` hardcoded | **Done** - auto-derived for strip topologies |
+| **T1.4** | Stencil attachment contradictory | **Done** (step 1) - ops set to Undefined for Depth24Plus |
+| **T1.5 ⊕** | Error model broken | **Done** (partial) - `bool ok;` on structs. Compile-info disabled (wgpu v0.19) |
+| **T1.6** | MSAA impossible end-to-end | **Done** - `sample_count` on pipeline, `resolve_views` on frame |
+| **T1.7** | Mipmaps: sampler configured for unfillable content | Not started |
 
 ---
 
 ## Tier 2 — Hard walls (common task, no in-desc escape)
 
-| ID | Finding | Key location | Note |
-|----|---------|--------------|------|
-| **T2.1 ⊕** | Single color target, format-locked to surface | `cgfx_pipeline.c:84-90`, `cgfx_frame.c:105` | No MRT (deferred/G-buffer) and no offscreen render to a different format (HDR/picking). `CgfxTexture` RTs exist but pipeline can't connect. |
-| **T2.2** | No load-op control — can't preserve target | `cgfx_frame.c:82,94` | `loadOp=Clear` hardcoded. UI-over-3D, accumulation, partial redraw all wiped. |
-| **T2.3 ⊕** | No device feature-request path | `cgfx_ctx.c:119` | `requiredFeatureCount=0`; descs expose only limits. Cannot enable timestamp queries, texture compression, float32-filterable, etc. Cheap mechanical fix. |
-| **T2.4 ⊕** | Async readback unwrapped; backend `#ifdef` leaks into user code | examples `compute`, `playing_with_buffers` | Sync-wrapper pattern already exists in-tree (`cgfx__request_adapter_sync`) but not applied to mapping. ~25 lines duplicated; copies disagree on poll flag. |
-| **T2.5** | Sampler binding type hardcoded to `Filtering` | `cgfx_shader.c:132-135` | No `comparison` (shadow maps) or `non-filtering` (R32F data). No field in `CgfxBindingDesc`. |
-| **T2.6** | No instancing in `cgfx_mesh_draw` | `cgfx_mesh.c:38` | `instanceCount=1` hardwired. Particles/grass/tiles must abandon the helper. |
-| **T2.7** | No dynamic offsets / sub-buffer ranges | `cgfx_shader.c:196-198,255` | Headline "uniforms per object" pattern forces one buffer + one bind group per object (10k objects → 10k of each). |
-| **T2.8** | Black-window-on-resize: surface status collapsed to pass/fail | `cgfx_frame.c:31` | `Outdated`/`Lost` discarded; no reconfigure-and-retry; resize recovery depends on manual GLFW wiring. |
+| ID | Finding | Status |
+|----|---------|--------|
+| **T2.1 ⊕** | Single color target, format-locked to surface | **Done** - `CgfxColorTarget[]`, `CgfxRenderPassDesc`, MRT example |
+| **T2.2** | No load-op control - can't preserve target | Not started |
+| **T2.3 ⊕** | No device feature-request path | Not started |
+| **T2.4 ⊕** | Async readback unwrapped; backend `#ifdef` leaks | **Done** - `cgfx_buffer_read()` |
+| **T2.5** | Sampler binding type hardcoded to `Filtering` | Not started |
+| **T2.6** | No instancing in `cgfx_mesh_draw` | Not started |
+| **T2.7** | No dynamic offsets / sub-buffer ranges | Not started |
+| **T2.8** | Black-window-on-resize | Not started |
 
 ---
 
@@ -92,35 +92,56 @@ state, the render pass), there is no escape short of abandoning the abstraction.
 
 ## Tier 4 — Outright defects (quick wins)
 
-| ID | Finding | Key location | Note |
-|----|---------|--------------|------|
-| **T4.1** | Index buffer mislabeled `"cgfx vertex buffer"` | `cgfx_buffer.c:51` | Pollutes GPU capture tooling. One-line fix. |
-| **T4.2** | `cgfx_buffer_create_mapping` ignores its `data` param | `cgfx_buffer.c:99` | `(void)data;` — the parameter is a lie. Remove from signature or document hard. |
-| **T4.3** | `cgfx_frame_end` null-derefs on compute-only frame | `cgfx_frame.c:124` | `wgpuRenderPassEncoderEnd(frame->render_pass)` unconditional; encoder-only frame crashes. Needs a guard. |
-| **T4.4** | No device-lost / uncaptured-error user hook | `cgfx_ctx.c:26-44` | Callbacks only `fprintf(stderr)`, `user_data=nullptr`. App can't recover or show UI. |
+| ID | Finding | Status |
+|----|---------|--------|
+| **T4.1** | Index buffer mislabeled `"cgfx vertex buffer"` | **Done** - label fixed |
+| **T4.2** | `cgfx_buffer_create_mapping` ignores its `data` param | **Done** - param removed |
+| **T4.3** | `cgfx_frame_end` null-derefs on compute-only frame | **Done** - null guard |
+| **T4.4** | No device-lost / uncaptured-error user hook | Not started |
 
 ---
 
-## Suggested fix order (cross-tier)
+## Fix order and status
 
-1. **T1.5** error model + surface shader-compile errors — without it no robust app is possible.
-2. **T1.1** blend control, defaulting to opaque — biggest single correctness win.
-3. **T2.4** `cgfx_buffer_read()` — closes the backend-abstraction leak, deletes the most-copied snippet, retires the leaked `CgfxBuffer.ready` field.
-4. **T2.3 + T4.4** plumb `features[]` + device-lost callback into the ctx desc — mechanical, removes a hard ceiling.
-5. **T2.8** reconfigure-and-retry on Outdated/Lost — fixes black-window-on-resize.
-6. **T1.2 + T2.1 + T2.7** depth compare/write + color-target/format/MRT + dynamic offsets — the real architectural work that makes a forward+ renderer expressible.
-7. **T1.3 + T1.4** strip index format + stencil contradiction — fix regardless; simply wrong.
+**Done:**
+1. ~~**T1.5** error model~~ - `bool ok;` on wrapped structs. WGSL compile-info disabled (wgpu-native v0.19 limitation).
+2. ~~**T1.1 + T2.1** blend control + color targets/MRT~~ - `CgfxColorTarget[]`, `CgfxRenderPassDesc`, blend presets.
+3. ~~**T2.4 + T4.1 + T4.2** buffer readback~~ - `cgfx_buffer_read()`, label fix, phantom param removed.
+4. ~~**T1.2 + T1.3 + T1.4 + T1.6** pipeline/frame cluster~~ - depth compare/write, strip index auto-derive, stencil contradiction fix, MSAA sample_count + resolve targets.
+5. ~~**T4.3** null-deref guard~~ - incidental with T2.1.
 
-The quick wins in Tier 4 (T4.1–T4.3) can be batched anytime; they're independent.
+**Remaining (recommended order):**
+1. **T2.3 + T4.4** - device features + device-lost callback in ctx desc. Same descriptor surface, removes a hard capability ceiling.
+2. **T2.8** - reconfigure-and-retry on Outdated/Lost. Fixes black-window-on-resize.
+3. **T2.2** - load-op control (can't preserve target contents). Touches the pass-begin surface.
+4. **T2.5 + T2.7** - sampler binding type + dynamic offsets. Both add to `CgfxBindingDesc`.
+5. **T2.6** - instanced draw. Standalone new function.
+6. **T3.x** - coherence/naming cleanup pass.
+7. **T1.7** - mipmap generation. Larger feature, needs per-mip views.
+
+## wgpu-native version constraint
+
+The vendored wgpu-native (v0.19.4.1, from Elie Michel's LearnWebGPU distribution) is
+significantly behind the current WebGPU spec. Some APIs exist in the header but are
+unimplemented stubs that panic at runtime (e.g. `wgpuShaderModuleGetCompilationInfo`).
+
+This affects implemented work:
+- **T1.5**: detailed WGSL compile-error capture (`wgpuShaderModuleGetCompilationInfo`) is
+  disabled; falls back to NULL-check.
+
+Updating wgpu-native is not in scope for this review pass, but it is a prerequisite for the
+full T1.5 implementation. Future findings relying on newer APIs (T2.3 device features may
+need newer feature enum values) could also be constrained.
+
+---
 
 ## Dependency notes
 
 - **T1.7 (mipmaps)** needs per-mip texture *views* (currently only the whole-resource view
-  exists) — implementing mip generation forces that view work, which also unblocks
+  exists) - implementing mip generation forces that view work, which also unblocks
   texture readback / per-face views.
-- **T2.4 (readback)** retires the leaked `CgfxBuffer.ready` field (a T3-class smell).
-- **T2.1 (MRT/offscreen)** and **T1.6 (MSAA)** both argue for a small off-screen
-  render-target type feeding pipeline target formats and a generalized pass-begin — do them
-  together rather than twice.
-- **T1.1 (blend)** and **T2.1 (color targets)** are the same descriptor surface; a
-  `CgfxColorTarget[] { format, blend, writeMask }` addition subsumes both.
+- ~~**T2.4 (readback)** retires the leaked `CgfxBuffer.ready` field.~~ Done.
+- ~~**T2.1 + T1.6** generalized pass-begin + MSAA resolve.~~ Done - `CgfxRenderPassDesc`
+  with `color_views` and `resolve_views`.
+- ~~**T1.1 + T2.1** blend + color targets.~~ Done - `CgfxColorTarget[]`.
+- **T3.4 (camera)** depends on T3.2 (bind-group naming cleanup) landing first.

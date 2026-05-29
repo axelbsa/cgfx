@@ -65,9 +65,15 @@ typedef struct CgfxPipelineDesc {
     WGPUPrimitiveTopology   topology;    /**< Primitive topology. 0 = TriangleList.     */
     WGPUCullMode            cull_mode;       /**< Face culling mode. 0 = None.              */
     WGPUFrontFace           front_face;      /**< Front face winding. 0 = CCW.              */
-    bool                    depth_test;      /**< Enable depth/stencil testing. Default: false. */
-    WGPUTextureFormat       depth_format;    /**< Depth texture format (only if depth_test).
-                                            0 = Depth24Plus.                          */
+    bool                    depth_test;          /**< Enable depth/stencil testing. Default: false. */
+    WGPUTextureFormat       depth_format;        /**< Depth texture format (only if depth_test).
+                                                      0 = Depth24Plus.                          */
+    WGPUCompareFunction     depth_compare;       /**< Depth compare function. 0 = Less.         */
+    bool                    depth_write_disabled; /**< true = depth test without writing depth.
+                                                      false (default) = depth writes enabled.   */
+
+    uint32_t                sample_count;        /**< MSAA sample count. 0 = 1 (no MSAA).       */
+    bool                    alpha_to_coverage;   /**< Enable alpha-to-coverage. Default: false.  */
 
     /** Vertex buffer layouts (optional). Pass the result of
      *  cgfx_mesh_vertex_layout() here when rendering meshes. */
@@ -113,14 +119,15 @@ CGFX_API WGPUBlendState cgfx_blend_premultiplied(void);
  *   Primitive state:
  *   - Configurable topology (default: triangle list)
  *   - Configurable cull mode and front face
- *   - No strip index format (vertices processed sequentially)
+ *   - Strip index format auto-derived (Uint32 for strip topologies)
  *
  *   Depth/stencil:
- *   - Disabled by default. When enabled, creates a depth-less comparison
- *     with write enabled.
+ *   - Disabled by default. When enabled: Less comparison, depth writes on.
+ *     Configurable via depth_compare and depth_write_disabled.
  *
  *   Multisample:
- *   - 1 sample per pixel, full mask, no alpha-to-coverage
+ *   - Configurable sample count (default: 1, no MSAA), full mask,
+ *     optional alpha-to-coverage
  *
  *   Layout:
  *   - Uses shader->pipeline_layout (NULL = automatic, when shader has no bind groups)

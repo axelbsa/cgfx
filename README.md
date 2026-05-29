@@ -89,7 +89,7 @@ Between `cgfx_frame_begin` and `cgfx_frame_end` you record draw commands directl
 Design
 ------
 
-- **Pure C23**, no C++ required
+- **Pure C23**
 - **Transparent structs**, access raw WebGPU handles (e.g. `ctx.device`, `shader.group_layouts[0]`) for anything cgfx doesn't wrap
 - **Zero-init defaults**, `CgfxPipelineDesc desc = { .shader = &s };` gives you working defaults
 - **No global state**, context is passed by pointer

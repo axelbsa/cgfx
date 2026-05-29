@@ -6,15 +6,8 @@
  * the GPU command encoder, then reads back the data to verify the copy.
  */
 #include <stdio.h>
-#include <webgpu/wgpu.h>
 
 #include "cgfx.h"
-
-static void on_buffer_mapped(const WGPUBufferMapAsyncStatus status, void *user_data) {
-    CgfxBuffer *buffer = (CgfxBuffer *)user_data;
-    if (status != WGPUBufferMapAsyncStatus_Success) return;
-    buffer->ready = true;
-}
 
 int main(void) {
     CgfxCtx ctx;
@@ -33,29 +26,22 @@ int main(void) {
         WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst,
         data, sizeof(data));
 
-    CgfxBuffer dst = cgfx_buffer_create_mapping(&ctx, nullptr, sizeof(data), 16);
+    CgfxBuffer dst = cgfx_buffer_create_mapping(&ctx, sizeof(data), 16);
 
-    WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(ctx.device, nullptr);
-    wgpuCommandEncoderCopyBufferToBuffer(encoder, src.buffer, 0, dst.buffer, 0, sizeof(data));
-    WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, nullptr);
-    wgpuCommandEncoderRelease(encoder);
-    wgpuQueueSubmit(ctx.queue, 1, &command);
-    wgpuCommandBufferRelease(command);
+    cgfx_buffer_copy(&ctx, &src, &dst, 0);
 
-    wgpuBufferMapAsync(dst.buffer, WGPUMapMode_Read, 0, sizeof(data), &on_buffer_mapped, &dst);
-    while (!dst.ready) {
-        wgpuDevicePoll(ctx.device, false, nullptr);
+    uint64_t result[16];
+    if (!cgfx_buffer_read(&ctx, &dst, result, sizeof(result))) {
+        fprintf(stderr, "Failed to read back buffer data\n");
+        return 1;
     }
 
-    const uint64_t *result = (const uint64_t *)wgpuBufferGetConstMappedRange(dst.buffer, 0, sizeof(data));
     fprintf(stderr, "Read back: [");
     for (int i = 0; i < 16; ++i) {
         if (i > 0) fprintf(stderr, ", ");
         fprintf(stderr, "%d", (int)result[i]);
     }
     fprintf(stderr, "]\n");
-
-    wgpuBufferUnmap(dst.buffer);
 
     cgfx_buffer_destroy(&src);
     cgfx_buffer_destroy(&dst);

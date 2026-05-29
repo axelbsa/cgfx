@@ -69,6 +69,7 @@ A compiled shader with its bind group layouts and pipeline layout. All fields ar
 | `pipeline_layout` | `WGPUPipelineLayout` | Pipeline layout built from group layouts. `NULL` when no descriptor was provided (automatic layout). |
 | `group_layouts` | `WGPUBindGroupLayout*` | Array of bind group layouts, one per `@group(N)`. |
 | `group_count` | `uint32_t` | Number of bind group layouts. |
+| `ok` | `bool` | `true` if creation succeeded. Check before use. A zeroed struct has `ok == false`. |
 
 ---
 
@@ -92,7 +93,7 @@ CGFX_API CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
 | `wgsl` | `const char*` | Null-terminated WGSL source code. |
 | `desc` | `const CgfxShaderDesc*` | Bind group layout description, or `NULL` for no bindings. |
 
-**Returns:** A `CgfxShader`. If `desc` is `NULL` or has no groups, only the shader module is created and `pipeline_layout` is `NULL`.
+**Returns:** A `CgfxShader`. Check `.ok` before use -- it is `false` if the shader module could not be created (e.g., file not found for `_from_file`, or invalid WGSL). If `desc` is `NULL` or has no groups, only the shader module is created and `pipeline_layout` is `NULL`.
 
 **Example (no bindings):**
 

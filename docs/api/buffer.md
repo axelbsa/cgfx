@@ -17,7 +17,7 @@ A GPU buffer with associated metadata.
 | `buffer` | `WGPUBuffer` | The WebGPU buffer handle. |
 | `size` | `uint64_t` | Total size of the buffer in bytes. |
 | `count` | `uint32_t` | Number of elements (vertices, indices, or other). |
-| `ready` | `bool` | Callback completion flag (used internally for async mapping). |
+| `ok` | `bool` | True if creation succeeded — check before use. |
 
 ---
 
@@ -175,7 +175,7 @@ CgfxBuffer output = cgfx_buffer_create_storage(&ctx, NULL, sizeof(input_data));
 // ... dispatch compute shader ...
 
 // Read back results
-CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, output.size, 0);
 cgfx_buffer_copy(&ctx, &output, &readback, 0);
 
 cgfx_buffer_destroy(&output);
@@ -186,11 +186,10 @@ cgfx_buffer_destroy(&input);
 
 ### cgfx_buffer_create_mapping
 
-Creates a mappable buffer for GPU-to-CPU readback.
+Creates a `MapRead | CopyDst` buffer for GPU-to-CPU readback via `cgfx_buffer_read()`.
 
 ```c
 CGFX_API CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
-                                                const void *data,
                                                 uint64_t data_size,
                                                 uint32_t count);
 ```
@@ -198,7 +197,6 @@ CGFX_API CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `ctx` | `const CgfxCtx*` | Initialized context. |
-| `data` | `const void*` | Initial data to upload, or `NULL`. |
 | `data_size` | `uint64_t` | Size of the buffer in bytes. |
 | `count` | `uint32_t` | Number of elements. |
 
@@ -270,12 +268,47 @@ Creates a temporary command encoder, records the copy, submits, and releases. Us
 CgfxBuffer output = cgfx_buffer_create_storage(&ctx, NULL, data_size);
 // ... dispatch compute shader that writes to output ...
 
-CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, output.size, 0);
 cgfx_buffer_copy(&ctx, &output, &readback, 0);
 
-// Map and read results
-wgpuBufferMapAsync(readback.buffer, WGPUMapMode_Read, 0, readback.size,
-                    &on_mapped, &readback);
+float result[256];
+cgfx_buffer_read(&ctx, &readback, result, sizeof(result));
+```
+
+---
+
+### cgfx_buffer_read
+
+Synchronously maps a buffer, copies its data into a caller-owned destination, and unmaps.
+
+```c
+CGFX_API bool cgfx_buffer_read(const CgfxCtx *ctx,
+                                const CgfxBuffer *buf,
+                                void *out,
+                                uint64_t size);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ctx` | `const CgfxCtx*` | Initialized context (used for device polling). |
+| `buf` | `const CgfxBuffer*` | Buffer to read from. Must have `MapRead` usage. |
+| `out` | `void*` | Caller-owned destination for the data. |
+| `size` | `uint64_t` | Number of bytes to read. `0` = `buf->size`. |
+
+**Returns:** `true` on success, `false` on map failure.
+
+**Example:**
+
+```c
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, output.size, 0);
+cgfx_buffer_copy(&ctx, &output, &readback, 0);
+
+float result[256];
+if (cgfx_buffer_read(&ctx, &readback, result, sizeof(result))) {
+    printf("first value: %f\n", result[0]);
+}
+
+cgfx_buffer_destroy(&readback);
 ```
 
 ---

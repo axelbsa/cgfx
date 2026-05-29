@@ -110,6 +110,15 @@ descs; pass into the device descriptor. Cheap, mechanical, removes a hard ceilin
 
 ## T2.4 — Async readback unwrapped; backend `#ifdef` leaks into user code ⊕
 
+**Status: IMPLEMENTED.** Added `bool cgfx_buffer_read(ctx, buf, out, size)` - a synchronous
+map-read helper following the established sync-wrapper pattern from `cgfx_internal.h`. Maps
+the buffer, memcpys into caller-owned output, unmaps. Backend `#ifdef` (wgpuDevicePoll vs
+wgpuDeviceTick) is now inside the library. Both examples (`compute`, `playing_with_buffers`)
+updated to use it - the `on_buffer_mapped` callbacks, poll loops, and raw `wgpu*` includes
+are gone. `CgfxBuffer.ready` field removed (only existed for the user-written callback
+pattern). `cgfx_buffer_create_mapping` phantom `data` param also removed (T4.2). Runtime
+verified: compute prints "All 256 results correct!", buffers prints correct readback.
+
 **Where:** examples `compute/main.c:99-129`, `playing_with_buffers/main.c:45-58`; pattern
 exists but unused at `cgfx_internal.h` (`cgfx__request_adapter_sync` / `_device_sync`)
 

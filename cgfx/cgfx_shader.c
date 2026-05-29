@@ -37,8 +37,19 @@ static WGPUShaderModule create_module(const CgfxCtx *ctx,
 }
 
 
-/* ── WGSL compilation diagnostics (synchronous wrapper) ───────────── */
+/* ── WGSL compilation diagnostics ────────────────────────────────── */
 
+/*
+ * wgpuShaderModuleGetCompilationInfo is not implemented in wgpu-native
+ * v0.19.x (panics at runtime). The detailed line/column error reporting
+ * is disabled until we update wgpu-native. Shader errors still reach
+ * stderr through the device uncaptured-error callback.
+ *
+ * When wgpu-native is updated, re-enable the block below and remove
+ * the simple NULL-check fallback.
+ */
+
+#if 0 /* requires wgpu-native > v0.19 */
 typedef struct {
     bool        done;
     bool        had_error;
@@ -68,14 +79,6 @@ static void cgfx__on_compilation_info(WGPUCompilationInfoRequestStatus status,
     }
 }
 
-/**
- * Return true if the module compiled with no WGSL errors.
- *
- * Wraps wgpuShaderModuleGetCompilationInfo (callback-based) into a blocking
- * check, mirroring the sync pattern in cgfx_internal.h. On native wgpu the
- * callback fires synchronously; a defensive device poll covers the rest.
- * Errors are printed to stderr with their source line/column.
- */
 static bool shader_compile_ok(const CgfxCtx *ctx, WGPUShaderModule module,
                               const char *label) {
     (void)ctx;
@@ -94,6 +97,18 @@ static bool shader_compile_ok(const CgfxCtx *ctx, WGPUShaderModule module,
 #endif
 
     return !data.had_error;
+}
+#endif
+
+static bool shader_compile_ok(const CgfxCtx *ctx, WGPUShaderModule module,
+                              const char *label) {
+    (void)ctx;
+    if (!module) {
+        fprintf(stderr, "[cgfx_shader] Shader module creation failed: '%s'\n",
+                label ? label : "(unnamed)");
+        return false;
+    }
+    return true;
 }
 
 

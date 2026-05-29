@@ -32,6 +32,7 @@ A renderable mesh with GPU-resident vertex and index buffers.
 | `vertex_buffer` | `CgfxBuffer` | -- | GPU vertex buffer (`CgfxVertex` array). |
 | `index_buffer` | `CgfxBuffer` | -- | GPU index buffer (`uint32_t` array). |
 | `index_count` | `uint32_t` | -- | Number of indices (= number of draw elements). |
+| `ok` | `bool` | -- | `true` if creation succeeded. Check before use. |
 
 ---
 
@@ -42,7 +43,7 @@ A renderable mesh with GPU-resident vertex and index buffers.
 Create a mesh from vertex and index data.
 
 ```c
-CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
+CGFX_API CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
                            const CgfxVertex *vertices, uint32_t vertex_count,
                            const uint32_t *indices, uint32_t index_count);
 ```
@@ -66,7 +67,7 @@ Uploads the provided vertex and index arrays to GPU buffers. The caller is respo
 Release a mesh's GPU buffers.
 
 ```c
-void cgfx_mesh_destroy(CgfxMesh *mesh);
+CGFX_API void cgfx_mesh_destroy(CgfxMesh *mesh);
 ```
 
 | Parameter | Type | Description |
@@ -82,7 +83,7 @@ Releases both the vertex buffer and index buffer. After this call, the mesh must
 Record draw commands for a mesh on an active render pass.
 
 ```c
-void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
+CGFX_API void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
 ```
 
 | Parameter | Type | Description |
@@ -109,7 +110,7 @@ Issues the three draw-call commands required to render an indexed mesh:
 Get the vertex buffer layout descriptor for `CgfxVertex`.
 
 ```c
-WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void);
+CGFX_API WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void);
 ```
 
 **Returns:** A `WGPUVertexBufferLayout` matching `CgfxVertex`. The returned layout references static internal storage -- valid for the lifetime of the program.

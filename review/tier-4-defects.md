@@ -7,6 +7,8 @@ fixed regardless of any larger direction. All are small and independent; batch t
 
 ## T4.1 — Index buffer mislabeled `"cgfx vertex buffer"`
 
+**Status: FIXED.** Label changed to `"cgfx index buffer"`.
+
 **Where:** `cgfx_buffer.c:51`
 
 **What's wrong:** `cgfx_buffer_create_index` labels its WGPU buffer `"cgfx vertex buffer"`
@@ -24,6 +26,9 @@ there.
 ---
 
 ## T4.2 — `cgfx_buffer_create_mapping` ignores its `data` parameter
+
+**Status: FIXED.** Removed `const void *data` from the signature. Callers updated (both
+passed `nullptr`). Done alongside T2.4.
 
 **Where:** `cgfx_buffer.c:99` (`(void) data;`)
 

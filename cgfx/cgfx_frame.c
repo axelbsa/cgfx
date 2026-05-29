@@ -92,7 +92,8 @@ void cgfx_frame_begin_render_pass_ex(const CgfxCtx *ctx,
         colors[i].view = (desc->color_count && desc->color_views)
                              ? desc->color_views[i]
                              : frame->target_view;
-        colors[i].resolveTarget = nullptr;
+        colors[i].resolveTarget = desc->resolve_views
+            ? desc->resolve_views[i] : nullptr;
         colors[i].loadOp = WGPULoadOp_Clear;
         colors[i].storeOp = WGPUStoreOp_Store;
         colors[i].clearValue = desc->clear_color;
@@ -114,9 +115,9 @@ void cgfx_frame_begin_render_pass_ex(const CgfxCtx *ctx,
         depth_stencil.depthStoreOp = WGPUStoreOp_Store;
         depth_stencil.depthReadOnly = false;
         depth_stencil.stencilClearValue = 0;
-        depth_stencil.stencilLoadOp = WGPULoadOp_Clear;
-        depth_stencil.stencilStoreOp = WGPUStoreOp_Store;
-        depth_stencil.stencilReadOnly = true;
+        depth_stencil.stencilLoadOp = WGPULoadOp_Undefined;
+        depth_stencil.stencilStoreOp = WGPUStoreOp_Undefined;
+        depth_stencil.stencilReadOnly = false;
     }
 
     WGPURenderPassDescriptor pass_desc = {};

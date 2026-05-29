@@ -35,6 +35,7 @@ Camera state with projection/view matrices and GPU resources.
 | `buffer` | `CgfxBuffer` | -- | GPU uniform buffer (2 x `sizeof(mat4)` = 128 bytes). |
 | `bind_group` | `WGPUBindGroup` | -- | Bind group for the camera buffer. |
 | `group_index` | `uint32_t` | -- | The `@group(N)` this camera binds to. |
+| `ok` | `bool` | -- | `true` if creation succeeded. Check before use. |
 
 ---
 
@@ -45,7 +46,7 @@ Camera state with projection/view matrices and GPU resources.
 Create a camera with projection and view matrices, upload to GPU, and create a bind group.
 
 ```c
-CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,
+CGFX_API CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,
                                const CgfxShader *shader,
                                const CgfxCameraDesc *desc);
 ```
@@ -67,7 +68,7 @@ The aspect ratio is automatically computed from `ctx->width / ctx->height`.
 Recalculate the projection matrix.
 
 ```c
-void cgfx_camera_perspective(CgfxCamera *cam, float fovy_deg,
+CGFX_API void cgfx_camera_perspective(CgfxCamera *cam, float fovy_deg,
                               float aspect, float near_z, float far_z);
 ```
 
@@ -89,7 +90,7 @@ void cgfx_camera_perspective(CgfxCamera *cam, float fovy_deg,
 Recalculate the view matrix.
 
 ```c
-void cgfx_camera_look_at(CgfxCamera *cam, vec3 eye, vec3 center, vec3 up);
+CGFX_API void cgfx_camera_look_at(CgfxCamera *cam, vec3 eye, vec3 center, vec3 up);
 ```
 
 | Parameter | Type | Description |
@@ -106,7 +107,7 @@ void cgfx_camera_look_at(CgfxCamera *cam, vec3 eye, vec3 center, vec3 up);
 Upload both projection and view matrices to the GPU.
 
 ```c
-void cgfx_camera_write(const CgfxCtx *ctx, const CgfxCamera *cam);
+CGFX_API void cgfx_camera_write(const CgfxCtx *ctx, const CgfxCamera *cam);
 ```
 
 | Parameter | Type | Description |
@@ -123,7 +124,7 @@ Call this each frame, or after modifying the projection or view matrices via `cg
 Set the camera's bind group on a render pass.
 
 ```c
-void cgfx_camera_bind(WGPURenderPassEncoder pass, const CgfxCamera *cam);
+CGFX_API void cgfx_camera_bind(WGPURenderPassEncoder pass, const CgfxCamera *cam);
 ```
 
 | Parameter | Type | Description |
@@ -140,7 +141,7 @@ Sets the bind group at the camera's `group_index` (e.g. `@group(0)`).
 Release the camera's GPU resources.
 
 ```c
-void cgfx_camera_destroy(CgfxCamera *cam);
+CGFX_API void cgfx_camera_destroy(CgfxCamera *cam);
 ```
 
 | Parameter | Type | Description |

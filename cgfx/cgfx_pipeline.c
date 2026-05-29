@@ -45,7 +45,11 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
      * - stripIndexFormat: only relevant for strip topologies
      */
     pipeline_desc.primitive.topology = topology;
-    pipeline_desc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+
+    bool is_strip = (topology == WGPUPrimitiveTopology_TriangleStrip ||
+                     topology == WGPUPrimitiveTopology_LineStrip);
+    pipeline_desc.primitive.stripIndexFormat = is_strip
+        ? WGPUIndexFormat_Uint32 : WGPUIndexFormat_Undefined;
     pipeline_desc.primitive.frontFace = front_face;
     pipeline_desc.primitive.cullMode = desc->cull_mode; /* 0 = None */
 
@@ -118,8 +122,9 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
 
         WGPUTextureFormat depth_fmt = desc->depth_format ? desc->depth_format : WGPUTextureFormat_Depth24Plus;
         depth_stencil.format = depth_fmt;
-        depth_stencil.depthWriteEnabled = true;
-        depth_stencil.depthCompare = WGPUCompareFunction_Less;
+        depth_stencil.depthWriteEnabled = !desc->depth_write_disabled;
+        depth_stencil.depthCompare = desc->depth_compare
+            ? desc->depth_compare : WGPUCompareFunction_Less;
         depth_stencil.stencilReadMask = 0xFFFFFFFF;
         depth_stencil.stencilWriteMask = 0xFFFFFFFF;
         depth_stencil.depthBias = 0;
@@ -138,9 +143,9 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
      * mask = ~0u means all sample bits are active.
      * alphaToCoverageEnabled = false (no coverage-based transparency).
      */
-    pipeline_desc.multisample.count = 1;
+    pipeline_desc.multisample.count = desc->sample_count ? desc->sample_count : 1;
     pipeline_desc.multisample.mask = ~0u;
-    pipeline_desc.multisample.alphaToCoverageEnabled = false;
+    pipeline_desc.multisample.alphaToCoverageEnabled = desc->alpha_to_coverage;
 
     pipeline_desc.layout = desc->shader->pipeline_layout;
 

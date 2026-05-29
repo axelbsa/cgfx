@@ -58,6 +58,10 @@ Provide presets: `CGFX_BLEND_NONE`, `CGFX_BLEND_ALPHA`, `CGFX_BLEND_ADDITIVE`,
 
 ## T1.2 — `depthCompare=Less` + `depthWriteEnabled=true` hardcoded
 
+**Status: IMPLEMENTED.** Added `WGPUCompareFunction depth_compare` (0 = Less) and
+`bool depth_write_disabled` (inverted for zero-init compat) to `CgfxPipelineDesc`. Threaded
+to the depth stencil state. All examples use the defaults and continue to work unchanged.
+
 **Where:** `cgfx_pipeline.c:109-110`
 
 **What's wrong:** Whenever `depth_test` is true, compare is always `Less` and depth write is
@@ -88,6 +92,11 @@ the desc.
 
 ## T1.3 — `topology` settable but `stripIndexFormat=Undefined` hardcoded
 
+**Status: IMPLEMENTED.** Auto-derives `stripIndexFormat = Uint32` when topology is
+`TriangleStrip` or `LineStrip`, `Undefined` otherwise. No new desc field needed - cgfx uses
+uint32 indices everywhere so Uint32 is always correct. The topology knob now works correctly
+for indexed strip draws.
+
 **Where:** `cgfx_pipeline.c:46-47`
 
 **What's wrong:** A genuine **coherence bug**, not a missing feature. `topology` is taken from
@@ -110,6 +119,11 @@ since meshes are u32-indexed everywhere, `Uint32` is the obviously-correct deriv
 ---
 
 ## T1.4 — Stencil attachment is internally contradictory
+
+**Status: FIXED (step 1).** Replaced the contradictory `stencilLoadOp=Clear` +
+`stencilReadOnly=true` with `stencilLoadOp/StoreOp=Undefined` and `stencilReadOnly=false`.
+Correct for the current depth format (Depth24Plus has no stencil aspect). Step 2 (making
+stencil formats selectable via `CgfxCtxDesc`) is deferred.
 
 **Where:** `cgfx_frame.c:97-100` (attachment); `cgfx_ctx.c:157` (format locked to Depth24Plus)
 
@@ -147,13 +161,18 @@ work through the managed path.
 
 ## T1.5 — Error model is broken and contradicts its own contract ⊕
 
-**Status: IMPLEMENTED.** Added a trailing `bool ok;` to the 6 wrapped structs
+**Status: IMPLEMENTED (partial).** Added a trailing `bool ok;` to the 6 wrapped structs
 (`CgfxShader`/`Buffer`/`Texture`/`Mesh`/`Uniform`/`Camera`), set on the success path of every
 constructor and propagated through the internal chains (mesh→buffers, uniform/camera→buffer+
-bind_group, ctx→depth texture). `cgfx_shader_create` now captures WGSL compile errors via a
-synchronous `wgpuShaderModuleGetCompilationInfo` wrapper and prints them with source
-line/column. Raw-handle constructors keep `NULL`-on-failure. CLAUDE.md contract updated to
-match. Non-breaking (additive field).
+bind_group, ctx→depth texture). Raw-handle constructors keep `NULL`-on-failure. CLAUDE.md
+contract updated to match. Non-breaking (additive field).
+
+**Partial:** The detailed WGSL compile-error capture via `wgpuShaderModuleGetCompilationInfo`
+is written but disabled (`#if 0` in `cgfx_shader.c`) - the vendored wgpu-native v0.19.4.1
+has not implemented this API (panics at runtime). The fallback detects `module == NULL` on
+creation failure; shader errors still reach stderr through the device uncaptured-error
+callback, but without source line/column detail. The full implementation is preserved and
+ready to re-enable when wgpu-native is updated.
 
 **Where:** `cgfx_shader.c:80` (no compile check), `cgfx_shader.c:172` (returns `(CgfxShader){}`);
 CLAUDE.md ("functions return bool, errors go to stderr")
@@ -199,6 +218,13 @@ model does not, and it violates the library's own stated contract.
 ---
 
 ## T1.6 — MSAA looks supported but is impossible end-to-end
+
+**Status: IMPLEMENTED.** Added `uint32_t sample_count` (0 = 1) and `bool alpha_to_coverage`
+to `CgfxPipelineDesc`, threaded to `multisample`. Added `const WGPUTextureView *resolve_views`
+parallel array to `CgfxRenderPassDesc`, wired in `cgfx_frame_begin_render_pass_ex`. A
+pipeline with `sample_count = 4` rendering into a 4x MSAA texture can now resolve to a
+single-sampled target via `resolve_views`. Zero-init preserves existing behavior (1 sample,
+no resolve).
 
 **Where:** `cgfx_pipeline.c:129` (`multisample.count=1`, no desc field), `cgfx_frame.c:81`
 (`resolveTarget=nullptr`); `CgfxTextureDesc.sample_count` *is* wired through.

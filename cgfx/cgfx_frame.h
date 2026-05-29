@@ -124,11 +124,13 @@ CGFX_API void cgfx_frame_begin_render_pass(const CgfxCtx *ctx,
  * All color attachments use load=Clear (to clear_color) and store=Store.
  */
 typedef struct CgfxRenderPassDesc {
-    uint32_t               color_count; /**< 0 = single surface target. */
-    const WGPUTextureView *color_views; /**< Color attachment views (offscreen / MRT). */
-    WGPUColor              clear_color;  /**< Clear value applied to all color attachments. */
-    WGPUTextureView        depth_view;   /**< Depth view. NULL = ctx->depth_texture.view. */
-    bool                   no_depth;     /**< true = no depth attachment regardless. */
+    uint32_t               color_count;   /**< 0 = single surface target. */
+    const WGPUTextureView *color_views;   /**< Color attachment views (offscreen / MRT). */
+    const WGPUTextureView *resolve_views; /**< MSAA resolve targets, one per color attachment.
+                                               NULL = no resolve (non-MSAA). */
+    WGPUColor              clear_color;   /**< Clear value applied to all color attachments. */
+    WGPUTextureView        depth_view;    /**< Depth view. NULL = ctx->depth_texture.view. */
+    bool                   no_depth;      /**< true = no depth attachment regardless. */
 } CgfxRenderPassDesc;
 
 /**
