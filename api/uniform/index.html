@@ -1511,13 +1511,19 @@
 <td>--</td>
 <td>Size of the uniform data in bytes.</td>
 </tr>
+<tr>
+<td><code>ok</code></td>
+<td><code>bool</code></td>
+<td>--</td>
+<td><code>true</code> if creation succeeded. Check before use.</td>
+</tr>
 </tbody>
 </table>
 <hr />
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <h3 id="cgfx_uniform_create">cgfx_uniform_create<a class="headerlink" href="#cgfx_uniform_create" title="Permanent link">&para;</a></h3>
 <p>Create a uniform buffer and bind group in one call.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">CgfxUniform</span><span class="w"> </span><span class="nf">cgfx_uniform_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">CgfxUniform</span><span class="w"> </span><span class="n">cgfx_uniform_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">                                 </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxShader</span><span class="w"> </span><span class="o">*</span><span class="n">shader</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">                                 </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_index</span><span class="p">,</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">                                 </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span>
@@ -1568,7 +1574,7 @@
 <hr />
 <h3 id="cgfx_uniform_write">cgfx_uniform_write<a class="headerlink" href="#cgfx_uniform_write" title="Permanent link">&para;</a></h3>
 <p>Upload the uniform's data to the GPU.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_uniform_write</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxUniform</span><span class="w"> </span><span class="o">*</span><span class="n">uniform</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_uniform_write</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxUniform</span><span class="w"> </span><span class="o">*</span><span class="n">uniform</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1595,7 +1601,7 @@
 <hr />
 <h3 id="cgfx_uniform_destroy">cgfx_uniform_destroy<a class="headerlink" href="#cgfx_uniform_destroy" title="Permanent link">&para;</a></h3>
 <p>Destroy a uniform and release its GPU resources.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_uniform_destroy</span><span class="p">(</span><span class="n">CgfxUniform</span><span class="w"> </span><span class="o">*</span><span class="n">uniform</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_uniform_destroy</span><span class="p">(</span><span class="n">CgfxUniform</span><span class="w"> </span><span class="o">*</span><span class="n">uniform</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1668,7 +1674,7 @@
 </span></code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Lower-level API</p>
-<p>For advanced use cases, the lower-level <code>cgfx_buffer_create_uniform()</code> and <code>cgfx_shader_create_bind_group()</code> APIs remain available. <code>CgfxUniform</code> is a convenience wrapper on top of those.</p>
+<p>For advanced use cases, the lower-level <code>cgfx_buffer_create_uniform()</code> and <code>cgfx_bind_group_create_buffers()</code> APIs remain available. <code>CgfxUniform</code> is a convenience wrapper on top of those.</p>
 </div>
 
 

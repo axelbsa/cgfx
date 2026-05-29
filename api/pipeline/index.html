@@ -913,6 +913,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#cgfxcolortarget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CgfxColorTarget
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfxpipelinedesc" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -941,10 +952,54 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#cgfx_blend_alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_blend_alpha
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_blend_additive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_blend_additive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_blend_premultiplied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_blend_premultiplied
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_pipeline_create" class="md-nav__link">
     <span class="md-ellipsis">
       
         cgfx_pipeline_create
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_pipeline_destroy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_pipeline_destroy
       
     </span>
   </a>
@@ -978,6 +1033,17 @@
     <span class="md-ellipsis">
       
         Example: Pipeline with vertex buffers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-pipeline-with-alpha-blending" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Pipeline with alpha blending
       
     </span>
   </a>
@@ -1296,6 +1362,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#cgfxcolortarget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CgfxColorTarget
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfxpipelinedesc" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1324,10 +1401,54 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#cgfx_blend_alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_blend_alpha
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_blend_additive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_blend_additive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_blend_premultiplied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_blend_premultiplied
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_pipeline_create" class="md-nav__link">
     <span class="md-ellipsis">
       
         cgfx_pipeline_create
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_pipeline_destroy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_pipeline_destroy
       
     </span>
   </a>
@@ -1367,6 +1488,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#example-pipeline-with-alpha-blending" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Pipeline with alpha blending
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1397,6 +1529,52 @@
 <p><strong>Header:</strong> <code>cgfx_pipeline.h</code></p>
 <hr />
 <h2 id="structs">Structs<a class="headerlink" href="#structs" title="Permanent link">&para;</a></h2>
+<h3 id="cgfxcolortarget">CgfxColorTarget<a class="headerlink" href="#cgfxcolortarget" title="Permanent link">&para;</a></h3>
+<p>Description of a single color render target (one fragment <code>@location</code> output). Zero-initialize for the common case: a target at the surface format, opaque (no blending), writing all channels.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">CgfxColorTarget</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">WGPUTextureFormat</span><span class="w">   </span><span class="n">format</span><span class="p">;</span><span class="w">       </span><span class="c1">// 0 = ctx-&gt;surface_format</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="kt">bool</span><span class="w">                </span><span class="n">blend_enable</span><span class="p">;</span><span class="w"> </span><span class="c1">// false = opaque</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="n">WGPUBlendState</span><span class="w">      </span><span class="n">blend</span><span class="p">;</span><span class="w">        </span><span class="c1">// used only when blend_enable is true</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="n">WGPUColorWriteMask</span><span class="w">  </span><span class="n">write_mask</span><span class="p">;</span><span class="w">   </span><span class="c1">// 0 = All</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span><span class="w"> </span><span class="n">CgfxColorTarget</span><span class="p">;</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>format</code></td>
+<td><code>WGPUTextureFormat</code></td>
+<td><code>ctx-&gt;surface_format</code></td>
+<td>Target texture format. <code>0</code> uses the context's surface format.</td>
+</tr>
+<tr>
+<td><code>blend_enable</code></td>
+<td><code>bool</code></td>
+<td><code>false</code></td>
+<td><code>false</code> = opaque (no blend state attached).</td>
+</tr>
+<tr>
+<td><code>blend</code></td>
+<td><code>WGPUBlendState</code></td>
+<td><em>(unused)</em></td>
+<td>Blend state. Only used when <code>blend_enable</code> is <code>true</code>.</td>
+</tr>
+<tr>
+<td><code>write_mask</code></td>
+<td><code>WGPUColorWriteMask</code></td>
+<td><code>All</code></td>
+<td>Channel write mask. <code>0</code> is treated as <code>All</code>, not "write nothing".</td>
+</tr>
+</tbody>
+</table>
+<hr />
 <h3 id="cgfxpipelinedesc">CgfxPipelineDesc<a class="headerlink" href="#cgfxpipelinedesc" title="Permanent link">&para;</a></h3>
 <p>Configuration for creating a render pipeline. Zero-initialize for sensible defaults -- the only required field is <code>shader</code>.</p>
 <table>
@@ -1458,6 +1636,30 @@
 <td>Depth texture format (only used when <code>depth_test</code> is <code>true</code>).</td>
 </tr>
 <tr>
+<td><code>depth_compare</code></td>
+<td><code>WGPUCompareFunction</code></td>
+<td><code>Less</code></td>
+<td>Depth compare function (only used when <code>depth_test</code> is <code>true</code>).</td>
+</tr>
+<tr>
+<td><code>depth_write_disabled</code></td>
+<td><code>bool</code></td>
+<td><code>false</code></td>
+<td><code>true</code> = depth test without writing depth. <code>false</code> = depth writes enabled.</td>
+</tr>
+<tr>
+<td><code>sample_count</code></td>
+<td><code>uint32_t</code></td>
+<td><code>1</code></td>
+<td>MSAA sample count. <code>0</code> is treated as <code>1</code>.</td>
+</tr>
+<tr>
+<td><code>alpha_to_coverage</code></td>
+<td><code>bool</code></td>
+<td><code>false</code></td>
+<td>Enable alpha-to-coverage.</td>
+</tr>
+<tr>
 <td><code>vertex_buffer_count</code></td>
 <td><code>uint32_t</code></td>
 <td><code>0</code></td>
@@ -1469,14 +1671,47 @@
 <td><code>NULL</code></td>
 <td>Vertex buffer layout descriptors.</td>
 </tr>
+<tr>
+<td><code>color_target_count</code></td>
+<td><code>uint32_t</code></td>
+<td><code>0</code></td>
+<td>Number of color targets. <code>0</code> = single opaque target at <code>ctx-&gt;surface_format</code>.</td>
+</tr>
+<tr>
+<td><code>color_targets</code></td>
+<td><code>const CgfxColorTarget*</code></td>
+<td><code>NULL</code></td>
+<td>Color target array for per-target blend, offscreen formats, or MRT.</td>
+</tr>
 </tbody>
 </table>
 <hr />
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
+<h3 id="cgfx_blend_alpha">cgfx_blend_alpha<a class="headerlink" href="#cgfx_blend_alpha" title="Permanent link">&para;</a></h3>
+<p>Returns a <code>WGPUBlendState</code> for straight alpha blending (<code>SrcAlpha</code> / <code>OneMinusSrcAlpha</code>).</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">WGPUBlendState</span><span class="w"> </span><span class="n">cgfx_blend_alpha</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+</span></code></pre></div>
+<hr />
+<h3 id="cgfx_blend_additive">cgfx_blend_additive<a class="headerlink" href="#cgfx_blend_additive" title="Permanent link">&para;</a></h3>
+<p>Returns a <code>WGPUBlendState</code> for additive blending (<code>One</code> / <code>One</code>).</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">WGPUBlendState</span><span class="w"> </span><span class="n">cgfx_blend_additive</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+</span></code></pre></div>
+<hr />
+<h3 id="cgfx_blend_premultiplied">cgfx_blend_premultiplied<a class="headerlink" href="#cgfx_blend_premultiplied" title="Permanent link">&para;</a></h3>
+<p>Returns a <code>WGPUBlendState</code> for premultiplied alpha blending (<code>One</code> / <code>OneMinusSrcAlpha</code>).</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">WGPUBlendState</span><span class="w"> </span><span class="n">cgfx_blend_premultiplied</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+</span></code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Using blend presets</p>
+<p>Pass these as the <code>blend</code> field of a <code>CgfxColorTarget</code> with <code>blend_enable = true</code>:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">(</span><span class="n">CgfxColorTarget</span><span class="p">){</span><span class="w"> </span><span class="p">.</span><span class="n">blend_enable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">blend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_blend_alpha</span><span class="p">()</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+</div>
+<hr />
 <h3 id="cgfx_pipeline_create">cgfx_pipeline_create<a class="headerlink" href="#cgfx_pipeline_create" title="Permanent link">&para;</a></h3>
 <p>Creates a render pipeline with sensible defaults filled in from the descriptor.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">                                                   </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxPipelineDesc</span><span class="w"> </span><span class="o">*</span><span class="n">desc</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">                                                   </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxPipelineDesc</span><span class="w"> </span><span class="o">*</span><span class="n">desc</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1503,57 +1738,78 @@
 <p><strong>Pipeline configuration details:</strong></p>
 <ul>
 <li><strong>Layout:</strong> Read from <code>shader-&gt;pipeline_layout</code>. When the shader has no bind groups, this is <code>NULL</code> and WebGPU uses automatic layout inference.</li>
-<li><strong>Alpha blending:</strong> Always enabled with <code>srcAlpha</code> / <code>oneMinusSrcAlpha</code> for color channels, <code>zero</code> / <code>one</code> for alpha.</li>
-<li><strong>Color target:</strong> Single target matching <code>ctx-&gt;surface_format</code>, all channels writable.</li>
-<li><strong>Multisample:</strong> 1 sample per pixel, full mask, no alpha-to-coverage.</li>
-<li><strong>Depth testing:</strong> Opt-in via <code>depth_test = true</code>. Uses less-than comparison with depth write enabled.</li>
+<li><strong>Color targets:</strong> Opaque by default (no blending). When <code>color_target_count</code> is <code>0</code>, the pipeline uses a single opaque target at <code>ctx-&gt;surface_format</code>. Supply a <code>CgfxColorTarget</code> array for per-target blend, offscreen formats, or multiple render targets (MRT).</li>
+<li><strong>Strip index format:</strong> Auto-derived (<code>Uint32</code> for strip topologies, <code>Undefined</code> otherwise).</li>
+<li><strong>Multisample:</strong> Configurable via <code>sample_count</code> (default <code>1</code>, no MSAA), full mask, optional <code>alpha_to_coverage</code>.</li>
+<li><strong>Depth testing:</strong> Opt-in via <code>depth_test = true</code>. Uses <code>depth_compare</code> (default <code>Less</code>) with depth writes enabled. Set <code>depth_write_disabled = true</code> for depth testing without writing.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Caller-owned pipeline</p>
-<p><code>cgfx_pipeline_create</code> returns a raw <code>WGPURenderPipeline</code>. Release it with <code>wgpuRenderPipelineRelease()</code> when done. There is no <code>cgfx_pipeline_destroy</code> function.</p>
+<p><code>cgfx_pipeline_create</code> returns a raw <code>WGPURenderPipeline</code>. Caller must release with <code>cgfx_pipeline_destroy()</code> when done.</p>
 </div>
+<hr />
+<h3 id="cgfx_pipeline_destroy">cgfx_pipeline_destroy<a class="headerlink" href="#cgfx_pipeline_destroy" title="Permanent link">&para;</a></h3>
+<p>Release a render pipeline.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pipeline</code></td>
+<td><code>WGPURenderPipeline</code></td>
+<td>Render pipeline to release.</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h3 id="example-minimal-pipeline-no-vertex-buffers">Example: Minimal pipeline (no vertex buffers)<a class="headerlink" href="#example-minimal-pipeline-no-vertex-buffers" title="Permanent link">&para;</a></h3>
 <p>Vertices are generated procedurally in the shader using <code>@builtin(vertex_index)</code>.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CgfxShader</span><span class="w"> </span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;triangle&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">wgsl</span><span class="p">,</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">);</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxPipelineDesc</span><span class="p">){</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="p">.</span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">});</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1">// Render loop</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderDraw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p">}</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1">// Cleanup</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="n">wgpuRenderPipelineRelease</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">shader</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">CgfxShader</span><span class="w"> </span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;triangle&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">wgsl</span><span class="p">,</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">);</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxPipelineDesc</span><span class="p">){</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="p">.</span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">});</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">// Render loop</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderDraw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="p">}</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1">// Cleanup</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">shader</span><span class="p">);</span>
 </span></code></pre></div>
 <hr />
 <h3 id="example-pipeline-with-depth-testing">Example: Pipeline with depth testing<a class="headerlink" href="#example-pipeline-with-depth-testing" title="Permanent link">&para;</a></h3>
 <p>Enable depth testing for 3D scenes with overlapping geometry. Requires the context to have a depth buffer (<code>depth_buffer = true</code> in <code>CgfxCtxDesc</code>).</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">CgfxCtx</span><span class="w"> </span><span class="n">ctx</span><span class="p">;</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">cgfx_ctx_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxCtxDesc</span><span class="p">){</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="p">.</span><span class="n">width</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="mi">1280</span><span class="p">,</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="p">.</span><span class="n">height</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="mi">720</span><span class="p">,</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="p">.</span><span class="n">depth_buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="p">.</span><span class="n">limits</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_default_limits</span><span class="p">(),</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">});</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxPipelineDesc</span><span class="p">){</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="p">.</span><span class="n">shader</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="p">.</span><span class="n">depth_test</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="p">.</span><span class="n">cull_mode</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUCullMode_Back</span><span class="p">,</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">});</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">wgpuRenderPipelineRelease</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">CgfxCtx</span><span class="w"> </span><span class="n">ctx</span><span class="p">;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">cgfx_ctx_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxCtxDesc</span><span class="p">){</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="p">.</span><span class="n">width</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="mi">1280</span><span class="p">,</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="p">.</span><span class="n">height</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="mi">720</span><span class="p">,</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p">.</span><span class="n">depth_buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="p">.</span><span class="n">limits</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_default_limits</span><span class="p">(),</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">});</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxPipelineDesc</span><span class="p">){</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">    </span><span class="p">.</span><span class="n">shader</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="p">.</span><span class="n">depth_test</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="p">.</span><span class="n">cull_mode</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUCullMode_Back</span><span class="p">,</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="p">});</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Depth buffer must be enabled on the context</p>
@@ -1562,29 +1818,49 @@
 <hr />
 <h3 id="example-pipeline-with-vertex-buffers">Example: Pipeline with vertex buffers<a class="headerlink" href="#example-pipeline-with-vertex-buffers" title="Permanent link">&para;</a></h3>
 <p>Use <code>cgfx_mesh_vertex_layout()</code> to get the layout matching <code>CgfxVertex</code>, or provide a custom layout for your own vertex format.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">WGPUVertexBufferLayout</span><span class="w"> </span><span class="n">layout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_mesh_vertex_layout</span><span class="p">();</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxPipelineDesc</span><span class="p">){</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="p">.</span><span class="n">shader</span><span class="w">              </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="p">.</span><span class="n">vertex_buffer_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="p">.</span><span class="n">vertex_layouts</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">layout</span><span class="p">,</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="p">.</span><span class="n">depth_test</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="p">.</span><span class="n">cull_mode</span><span class="w">           </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUCullMode_Back</span><span class="p">,</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">});</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1">// Render a mesh</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="n">cgfx_mesh_draw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mesh</span><span class="p">);</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="p">}</span>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="n">wgpuRenderPipelineRelease</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">WGPUVertexBufferLayout</span><span class="w"> </span><span class="n">layout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_mesh_vertex_layout</span><span class="p">();</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxPipelineDesc</span><span class="p">){</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="p">.</span><span class="n">shader</span><span class="w">              </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="p">.</span><span class="n">vertex_buffer_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="p">.</span><span class="n">vertex_layouts</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">layout</span><span class="p">,</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="p">.</span><span class="n">depth_test</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="p">.</span><span class="n">cull_mode</span><span class="w">           </span><span class="o">=</span><span class="w"> </span><span class="n">WGPUCullMode_Back</span><span class="p">,</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="p">});</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="c1">// Render a mesh</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">    </span><span class="n">cgfx_mesh_draw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mesh</span><span class="p">);</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">    </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="p">}</span>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
 </span></code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Custom vertex formats</p>
 <p>If you use a vertex format other than <code>CgfxVertex</code>, build your own <code>WGPUVertexBufferLayout</code> with the appropriate attributes and stride, and pass it via <code>vertex_layouts</code>.</p>
+</div>
+<hr />
+<h3 id="example-pipeline-with-alpha-blending">Example: Pipeline with alpha blending<a class="headerlink" href="#example-pipeline-with-alpha-blending" title="Permanent link">&para;</a></h3>
+<p>Enable straight alpha blending for transparent geometry. Use <code>CgfxColorTarget</code> with a blend preset.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">CgfxColorTarget</span><span class="w"> </span><span class="n">target</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="p">.</span><span class="n">blend_enable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="p">.</span><span class="n">blend</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_blend_alpha</span><span class="p">(),</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="p">};</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">WGPURenderPipeline</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_pipeline_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxPipelineDesc</span><span class="p">){</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="p">.</span><span class="n">shader</span><span class="w">             </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="p">.</span><span class="n">color_target_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="p">.</span><span class="n">color_targets</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">target</span><span class="p">,</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">});</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
+</span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Other blend modes</p>
+<p>Use <code>cgfx_blend_additive()</code> for additive blending (e.g., particles, glow effects) or <code>cgfx_blend_premultiplied()</code> for premultiplied alpha (e.g., compositing pre-blended textures).</p>
 </div>
 
 

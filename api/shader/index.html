@@ -979,10 +979,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cgfx_shader_create_bind_group" class="md-nav__link">
+  <a href="#cgfx_bind_group_create_buffers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        cgfx_shader_create_bind_group
+        cgfx_bind_group_create_buffers
       
     </span>
   </a>
@@ -1005,6 +1005,17 @@
     <span class="md-ellipsis">
       
         cgfx_bind_group_create
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_bind_group_destroy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_bind_group_destroy
       
     </span>
   </a>
@@ -1478,10 +1489,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cgfx_shader_create_bind_group" class="md-nav__link">
+  <a href="#cgfx_bind_group_create_buffers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        cgfx_shader_create_bind_group
+        cgfx_bind_group_create_buffers
       
     </span>
   </a>
@@ -1504,6 +1515,17 @@
     <span class="md-ellipsis">
       
         cgfx_bind_group_create
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_bind_group_destroy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_bind_group_destroy
       
     </span>
   </a>
@@ -1749,6 +1771,11 @@
 <td><code>uint32_t</code></td>
 <td>Number of bind group layouts.</td>
 </tr>
+<tr>
+<td><code>ok</code></td>
+<td><code>bool</code></td>
+<td><code>true</code> if creation succeeded. Check before use. A zeroed struct has <code>ok == false</code>.</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -1791,7 +1818,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> A <code>CgfxShader</code>. If <code>desc</code> is <code>NULL</code> or has no groups, only the shader module is created and <code>pipeline_layout</code> is <code>NULL</code>.</p>
+<p><strong>Returns:</strong> A <code>CgfxShader</code>. Check <code>.ok</code> before use -- it is <code>false</code> if the shader module could not be created (e.g., file not found for <code>_from_file</code>, or invalid WGSL). If <code>desc</code> is <code>NULL</code> or has no groups, only the shader module is created and <code>pipeline_layout</code> is <code>NULL</code>.</p>
 <p><strong>Example (no bindings):</strong></p>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CgfxShader</span><span class="w"> </span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;simple&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">wgsl_source</span><span class="p">,</span><span class="w"> </span><span class="nb">nullptr</span><span class="p">);</span>
 </span></code></pre></div>
@@ -1863,13 +1890,13 @@
 </span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="p">});</span>
 </span></code></pre></div>
 <hr />
-<h3 id="cgfx_shader_create_bind_group">cgfx_shader_create_bind_group<a class="headerlink" href="#cgfx_shader_create_bind_group" title="Permanent link">&para;</a></h3>
+<h3 id="cgfx_bind_group_create_buffers">cgfx_bind_group_create_buffers<a class="headerlink" href="#cgfx_bind_group_create_buffers" title="Permanent link">&para;</a></h3>
 <p>Creates a bind group for a specific <code>@group</code> index using the shader's layout. Each buffer maps to consecutive binding indices.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">cgfx_shader_create_bind_group</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">                                                      </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxShader</span><span class="w"> </span><span class="o">*</span><span class="n">shader</span><span class="p">,</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">                                                      </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_index</span><span class="p">,</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">                                                      </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="o">*</span><span class="n">buffers</span><span class="p">,</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">                                                      </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">buffer_count</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">cgfx_bind_group_create_buffers</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">                                                       </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxShader</span><span class="w"> </span><span class="o">*</span><span class="n">shader</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">                                                       </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_index</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">                                                       </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxBuffer</span><span class="w"> </span><span class="o">*</span><span class="n">buffers</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">                                                       </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">buffer_count</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1907,26 +1934,26 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> A <code>WGPUBindGroup</code> handle, or <code>nullptr</code> if <code>group_index</code> is out of range. The caller owns this handle and must release it with <code>wgpuBindGroupRelease()</code>.</p>
+<p><strong>Returns:</strong> A <code>WGPUBindGroup</code> handle, or <code>nullptr</code> if <code>group_index</code> is out of range. The caller owns this handle and must release it with <code>cgfx_bind_group_destroy()</code>.</p>
 <p><strong>Example:</strong></p>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">ubuf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_uniform</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">my_data</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">my_data</span><span class="p">));</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create_bind_group</span><span class="p">(</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_bind_group_create_buffers</span><span class="p">(</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">        </span><span class="c1">// @group(0)</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="o">&amp;</span><span class="n">ubuf</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w">                  </span><span class="c1">// one buffer at @binding(0)</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">);</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1">// Use during rendering, then release:</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">wgpuBindGroupRelease</span><span class="p">(</span><span class="n">group</span><span class="p">);</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">cgfx_bind_group_destroy</span><span class="p">(</span><span class="n">group</span><span class="p">);</span>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ubuf</span><span class="p">);</span>
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Bind groups are caller-owned</p>
-<p><code>cgfx_shader_destroy</code> does <strong>not</strong> release bind groups created with this function. You must call <code>wgpuBindGroupRelease()</code> yourself, or use <code>CgfxUniform</code> / <code>CgfxCamera</code> which handle this automatically.</p>
+<p><code>cgfx_shader_destroy</code> does <strong>not</strong> release bind groups created with this function. You must call <code>cgfx_bind_group_destroy()</code> yourself, or use <code>CgfxUniform</code> which handles this automatically.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Non-consecutive bindings</p>
-<p><code>cgfx_shader_create_bind_group</code> assumes consecutive buffer bindings. For non-consecutive bindings or mixed resource types (textures, samplers), use <code>cgfx_bind_group_create</code> below.</p>
+<p><code>cgfx_bind_group_create_buffers</code> assumes consecutive buffer bindings. For non-consecutive bindings or mixed resource types (textures, samplers), use <code>cgfx_bind_group_create</code> below.</p>
 </div>
 <hr />
 <h3 id="cgfxbindgroupentry">CgfxBindGroupEntry<a class="headerlink" href="#cgfxbindgroupentry" title="Permanent link">&para;</a></h3>
@@ -2007,7 +2034,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> A <code>WGPUBindGroup</code> handle. The caller owns this handle and must release it with <code>wgpuBindGroupRelease()</code>.</p>
+<p><strong>Returns:</strong> A <code>WGPUBindGroup</code> handle. The caller owns this handle and must release it with <code>cgfx_bind_group_destroy()</code>.</p>
 <p><strong>Example (texture + sampler):</strong></p>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">bg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_bind_group_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="p">(</span><span class="n">CgfxBindGroupEntry</span><span class="p">[]){</span>
@@ -2016,11 +2043,32 @@
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
 </span></code></pre></div>
 <hr />
+<h3 id="cgfx_bind_group_destroy">cgfx_bind_group_destroy<a class="headerlink" href="#cgfx_bind_group_destroy" title="Permanent link">&para;</a></h3>
+<p>Release a bind group.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_bind_group_destroy</span><span class="p">(</span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">group</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>group</code></td>
+<td><code>WGPUBindGroup</code></td>
+<td>Bind group to release.</td>
+</tr>
+</tbody>
+</table>
+<hr />
 <h3 id="cgfx_shader_bind">cgfx_shader_bind<a class="headerlink" href="#cgfx_shader_bind" title="Permanent link">&para;</a></h3>
 <p>Sets bind groups on an active render pass. <code>groups[0]</code> is set at <code>@group(0)</code>, <code>groups[1]</code> at <code>@group(1)</code>, and so on.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">WGPURenderPassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">                                </span><span class="k">const</span><span class="w"> </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="o">*</span><span class="n">groups</span><span class="p">,</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">                                </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_count</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">WGPURenderPassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">                                </span><span class="k">const</span><span class="w"> </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="o">*</span><span class="n">groups</span><span class="p">,</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">                                </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_count</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2049,19 +2097,19 @@
 </tbody>
 </table>
 <p><strong>Example:</strong></p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1">// Bind a single group at @group(0)</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">my_bind_group</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1">// Bind multiple groups: @group(0) = camera, @group(1) = material</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">groups</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">camera_group</span><span class="p">,</span><span class="w"> </span><span class="n">material_group</span><span class="w"> </span><span class="p">};</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">groups</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1">// Bind a single group at @group(0)</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">my_bind_group</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1">// Bind multiple groups: @group(0) = camera, @group(1) = material</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">groups</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">camera_group</span><span class="p">,</span><span class="w"> </span><span class="n">material_group</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">cgfx_shader_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">groups</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
 </span></code></pre></div>
 <hr />
 <h3 id="cgfx_shader_bind_compute">cgfx_shader_bind_compute<a class="headerlink" href="#cgfx_shader_bind_compute" title="Permanent link">&para;</a></h3>
 <p>Sets bind groups on an active compute pass. <code>groups[0]</code> is set at <code>@group(0)</code>, <code>groups[1]</code> at <code>@group(1)</code>, and so on.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_bind_compute</span><span class="p">(</span><span class="n">WGPUComputePassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">                                        </span><span class="k">const</span><span class="w"> </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="o">*</span><span class="n">groups</span><span class="p">,</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">                                        </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_count</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_bind_compute</span><span class="p">(</span><span class="n">WGPUComputePassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">                                        </span><span class="k">const</span><span class="w"> </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="o">*</span><span class="n">groups</span><span class="p">,</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">                                        </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_count</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2090,14 +2138,14 @@
 </tbody>
 </table>
 <p><strong>Example:</strong></p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">// Bind a single group at @group(0) on a compute pass</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">cgfx_shader_bind_compute</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">my_bind_group</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">// Bind a single group at @group(0) on a compute pass</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">cgfx_shader_bind_compute</span><span class="p">(</span><span class="n">cp</span><span class="p">.</span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">my_bind_group</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 </span></code></pre></div>
 <p>Mirror of <code>cgfx_shader_bind</code> for compute passes instead of render passes.</p>
 <hr />
 <h3 id="cgfx_shader_destroy">cgfx_shader_destroy<a class="headerlink" href="#cgfx_shader_destroy" title="Permanent link">&para;</a></h3>
 <p>Releases the shader module, pipeline layout, and all bind group layouts.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="n">CgfxShader</span><span class="w"> </span><span class="o">*</span><span class="n">shader</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="n">CgfxShader</span><span class="w"> </span><span class="o">*</span><span class="n">shader</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2117,7 +2165,7 @@
 </table>
 <div class="admonition warning">
 <p class="admonition-title">Does NOT release bind groups</p>
-<p>Bind groups created via <code>cgfx_shader_create_bind_group</code> are owned by the caller and are not released here. Release them with <code>wgpuBindGroupRelease()</code> before destroying the shader. <code>CgfxUniform</code> and <code>CgfxCamera</code> handle their own bind group cleanup in their respective <code>_destroy</code> functions.</p>
+<p>Bind groups created via <code>cgfx_bind_group_create_buffers</code> are owned by the caller and are not released here. Release them with <code>cgfx_bind_group_destroy()</code> before destroying the shader. <code>CgfxUniform</code> handles its own bind group cleanup in its <code>_destroy</code> function.</p>
 </div>
 <p>See the <a href="../../guides/shader-bind-groups/">Shader and Bind Group Ownership guide</a> for a full explanation of the ownership model.</p>
 

@@ -1612,12 +1612,6 @@
 <td><code>{0, 0, 0}</code> = <code>{0, 1, 0}</code></td>
 <td>Up direction.</td>
 </tr>
-<tr>
-<td><code>group_index</code></td>
-<td><code>uint32_t</code></td>
-<td><code>0</code> = <code>@group(0)</code></td>
-<td>Bind group index for the camera uniform.</td>
-</tr>
 </tbody>
 </table>
 <h3 id="cgfxcamera">CgfxCamera<a class="headerlink" href="#cgfxcamera" title="Permanent link">&para;</a></h3>
@@ -1651,26 +1645,19 @@
 <td>GPU uniform buffer (2 x <code>sizeof(mat4)</code> = 128 bytes).</td>
 </tr>
 <tr>
-<td><code>bind_group</code></td>
-<td><code>WGPUBindGroup</code></td>
+<td><code>ok</code></td>
+<td><code>bool</code></td>
 <td>--</td>
-<td>Bind group for the camera buffer.</td>
-</tr>
-<tr>
-<td><code>group_index</code></td>
-<td><code>uint32_t</code></td>
-<td>--</td>
-<td>The <code>@group(N)</code> this camera binds to.</td>
+<td><code>true</code> if creation succeeded. Check before use.</td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <h3 id="cgfx_camera_create">cgfx_camera_create<a class="headerlink" href="#cgfx_camera_create" title="Permanent link">&para;</a></h3>
-<p>Create a camera with projection and view matrices, upload to GPU, and create a bind group.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">CgfxCamera</span><span class="w"> </span><span class="nf">cgfx_camera_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">                               </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxShader</span><span class="w"> </span><span class="o">*</span><span class="n">shader</span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">                               </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCameraDesc</span><span class="w"> </span><span class="o">*</span><span class="n">desc</span><span class="p">);</span>
+<p>Create a camera with projection and view matrices and upload to GPU.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">CgfxCamera</span><span class="w"> </span><span class="n">cgfx_camera_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">                               </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCameraDesc</span><span class="w"> </span><span class="o">*</span><span class="n">desc</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1687,11 +1674,6 @@
 <td>Initialized context.</td>
 </tr>
 <tr>
-<td><code>shader</code></td>
-<td><code>const CgfxShader *</code></td>
-<td>Shader with bind group layouts (used to create the bind group).</td>
-</tr>
-<tr>
 <td><code>desc</code></td>
 <td><code>const CgfxCameraDesc *</code></td>
 <td>Camera configuration. Zero-initialized fields use defaults.</td>
@@ -1703,7 +1685,7 @@
 <hr />
 <h3 id="cgfx_camera_perspective">cgfx_camera_perspective<a class="headerlink" href="#cgfx_camera_perspective" title="Permanent link">&para;</a></h3>
 <p>Recalculate the projection matrix.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_camera_perspective</span><span class="p">(</span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fovy_deg</span><span class="p">,</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_camera_perspective</span><span class="p">(</span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">fovy_deg</span><span class="p">,</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">                              </span><span class="kt">float</span><span class="w"> </span><span class="n">aspect</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">near_z</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">far_z</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
@@ -1749,7 +1731,7 @@
 <hr />
 <h3 id="cgfx_camera_look_at">cgfx_camera_look_at<a class="headerlink" href="#cgfx_camera_look_at" title="Permanent link">&para;</a></h3>
 <p>Recalculate the view matrix.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_camera_look_at</span><span class="p">(</span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">,</span><span class="w"> </span><span class="n">vec3</span><span class="w"> </span><span class="n">eye</span><span class="p">,</span><span class="w"> </span><span class="n">vec3</span><span class="w"> </span><span class="n">center</span><span class="p">,</span><span class="w"> </span><span class="n">vec3</span><span class="w"> </span><span class="n">up</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_camera_look_at</span><span class="p">(</span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">,</span><span class="w"> </span><span class="n">vec3</span><span class="w"> </span><span class="n">eye</span><span class="p">,</span><span class="w"> </span><span class="n">vec3</span><span class="w"> </span><span class="n">center</span><span class="p">,</span><span class="w"> </span><span class="n">vec3</span><span class="w"> </span><span class="n">up</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1785,7 +1767,7 @@
 <hr />
 <h3 id="cgfx_camera_write">cgfx_camera_write<a class="headerlink" href="#cgfx_camera_write" title="Permanent link">&para;</a></h3>
 <p>Upload both projection and view matrices to the GPU.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_camera_write</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_camera_write</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1811,8 +1793,10 @@
 <p>Call this each frame, or after modifying the projection or view matrices via <code>cgfx_camera_perspective</code> or <code>cgfx_camera_look_at</code>.</p>
 <hr />
 <h3 id="cgfx_camera_bind">cgfx_camera_bind<a class="headerlink" href="#cgfx_camera_bind" title="Permanent link">&para;</a></h3>
-<p>Set the camera's bind group on a render pass.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_camera_bind</span><span class="p">(</span><span class="n">WGPURenderPassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">);</span>
+<p>Set a bind group on a render pass for the camera.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_camera_bind</span><span class="p">(</span><span class="n">WGPURenderPassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">                                </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">bind_group</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">                                </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_index</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1829,17 +1813,22 @@
 <td>Active render pass encoder.</td>
 </tr>
 <tr>
-<td><code>cam</code></td>
-<td><code>const CgfxCamera *</code></td>
-<td>Camera whose bind group to set.</td>
+<td><code>bind_group</code></td>
+<td><code>WGPUBindGroup</code></td>
+<td>Bind group containing the camera buffer.</td>
+</tr>
+<tr>
+<td><code>group_index</code></td>
+<td><code>uint32_t</code></td>
+<td>The <code>@group(N)</code> index to bind to.</td>
 </tr>
 </tbody>
 </table>
-<p>Sets the bind group at the camera's <code>group_index</code> (e.g. <code>@group(0)</code>).</p>
+<p>Sets the given bind group at the specified <code>group_index</code> (e.g. <code>@group(0)</code>).</p>
 <hr />
 <h3 id="cgfx_camera_destroy">cgfx_camera_destroy<a class="headerlink" href="#cgfx_camera_destroy" title="Permanent link">&para;</a></h3>
 <p>Release the camera's GPU resources.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_camera_destroy</span><span class="p">(</span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_camera_destroy</span><span class="p">(</span><span class="n">CgfxCamera</span><span class="w"> </span><span class="o">*</span><span class="n">cam</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1857,7 +1846,7 @@
 </tr>
 </tbody>
 </table>
-<p>Releases the bind group and uniform buffer.</p>
+<p>Releases the uniform buffer.</p>
 <hr />
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="matching-wgsl-shader">Matching WGSL shader<a class="headerlink" href="#matching-wgsl-shader" title="Permanent link">&para;</a></h3>
@@ -1869,28 +1858,33 @@
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nd">@group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="nd">@binding</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="kd">var</span><span class="o">&lt;</span><span class="nb">uniform</span><span class="o">&gt;</span><span class="w"> </span><span class="n">camera</span><span class="p">:</span><span class="w"> </span><span class="n">Camera</span><span class="p">;</span>
 </span></code></pre></div>
 <h3 id="basic-camera-setup">Basic camera setup<a class="headerlink" href="#basic-camera-setup" title="Permanent link">&para;</a></h3>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">CgfxCamera</span><span class="w"> </span><span class="n">cam</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_camera_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxCameraDesc</span><span class="p">){</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">CgfxCamera</span><span class="w"> </span><span class="n">cam</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_camera_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxCameraDesc</span><span class="p">){</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="p">.</span><span class="n">fovy</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mf">45.0f</span><span class="p">,</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="p">.</span><span class="n">eye</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">-2.0f</span><span class="p">},</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="p">.</span><span class="n">center</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">0.0f</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">,</span><span class="w">  </span><span class="mf">0.0f</span><span class="p">},</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">});</span>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">// In render loop:</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">// Create a bind group from the camera&#39;s buffer</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">cam_bg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_bind_group_create_buffers</span><span class="p">(</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cam</span><span class="p">.</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 </span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="n">cgfx_camera_write</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cam</span><span class="p">);</span>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">        </span><span class="n">cgfx_camera_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cam</span><span class="p">);</span>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">        </span><span class="n">cgfx_mesh_draw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mesh</span><span class="p">);</span>
-</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
-</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="p">}</span>
-</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
-</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="n">cgfx_camera_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cam</span><span class="p">);</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c1">// In render loop:</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_ctx_is_running</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">    </span><span class="n">glfwPollEvents</span><span class="p">();</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="n">cgfx_camera_write</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cam</span><span class="p">);</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">    </span><span class="n">CgfxFrame</span><span class="w"> </span><span class="n">frame</span><span class="p">;</span>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cgfx_frame_begin</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">WGPUColor</span><span class="p">){</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">        </span><span class="n">wgpuRenderPassEncoderSetPipeline</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">        </span><span class="n">cgfx_camera_bind</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="n">cam_bg</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">        </span><span class="n">cgfx_mesh_draw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mesh</span><span class="p">);</span>
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">        </span><span class="n">cgfx_frame_end</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">frame</span><span class="p">);</span>
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="p">}</span>
+</span><span id="__span-7-25"><a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>
+</span><span id="__span-7-26"><a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a><span class="n">cgfx_bind_group_destroy</span><span class="p">(</span><span class="n">cam_bg</span><span class="p">);</span>
+</span><span id="__span-7-27"><a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a><span class="n">cgfx_camera_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cam</span><span class="p">);</span>
 </span></code></pre></div>
 <h3 id="animated-camera">Animated camera<a class="headerlink" href="#animated-camera" title="Permanent link">&para;</a></h3>
 <div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kt">float</span><span class="w"> </span><span class="n">angle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0f</span><span class="p">;</span>

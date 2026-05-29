@@ -1325,7 +1325,7 @@
 <hr />
 <h2 id="at-a-glance">At a Glance<a class="headerlink" href="#at-a-glance" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Pure C23</strong> -- no C++ required</li>
+<li><strong>Pure C23</strong></li>
 <li><strong>Transparent structs</strong> -- access raw WebGPU handles (<code>ctx.device</code>, <code>shader.group_layouts[0]</code>) for anything cgfx doesn't wrap</li>
 <li><strong>Zero-init defaults</strong> -- <code>CgfxPipelineDesc desc = { .shader = &amp;s };</code> gives you working defaults</li>
 <li><strong>No global state</strong> -- context passed by pointer</li>
@@ -1368,7 +1368,7 @@
 </span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="w">        </span><span class="p">}</span>
 </span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>
-</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="w">    </span><span class="n">wgpuRenderPipelineRelease</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="w">    </span><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
 </span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="w">    </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">shader</span><span class="p">);</span>
 </span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="w">    </span><span class="n">cgfx_ctx_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">);</span>
 </span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="p">}</span>

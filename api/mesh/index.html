@@ -1598,13 +1598,19 @@
 <td>--</td>
 <td>Number of indices (= number of draw elements).</td>
 </tr>
+<tr>
+<td><code>ok</code></td>
+<td><code>bool</code></td>
+<td>--</td>
+<td><code>true</code> if creation succeeded. Check before use.</td>
+</tr>
 </tbody>
 </table>
 <hr />
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <h3 id="cgfx_mesh_create">cgfx_mesh_create<a class="headerlink" href="#cgfx_mesh_create" title="Permanent link">&para;</a></h3>
 <p>Create a mesh from vertex and index data.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">CgfxMesh</span><span class="w"> </span><span class="nf">cgfx_mesh_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">CgfxMesh</span><span class="w"> </span><span class="n">cgfx_mesh_create</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">CgfxCtx</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">                           </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxVertex</span><span class="w"> </span><span class="o">*</span><span class="n">vertices</span><span class="p">,</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">vertex_count</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">                           </span><span class="k">const</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="o">*</span><span class="n">indices</span><span class="p">,</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">index_count</span><span class="p">);</span>
 </span></code></pre></div>
@@ -1649,7 +1655,7 @@
 <hr />
 <h3 id="cgfx_mesh_destroy">cgfx_mesh_destroy<a class="headerlink" href="#cgfx_mesh_destroy" title="Permanent link">&para;</a></h3>
 <p>Release a mesh's GPU buffers.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_mesh_destroy</span><span class="p">(</span><span class="n">CgfxMesh</span><span class="w"> </span><span class="o">*</span><span class="n">mesh</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_mesh_destroy</span><span class="p">(</span><span class="n">CgfxMesh</span><span class="w"> </span><span class="o">*</span><span class="n">mesh</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1671,7 +1677,7 @@
 <hr />
 <h3 id="cgfx_mesh_draw">cgfx_mesh_draw<a class="headerlink" href="#cgfx_mesh_draw" title="Permanent link">&para;</a></h3>
 <p>Record draw commands for a mesh on an active render pass.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">cgfx_mesh_draw</span><span class="p">(</span><span class="n">WGPURenderPassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxMesh</span><span class="w"> </span><span class="o">*</span><span class="n">mesh</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_mesh_draw</span><span class="p">(</span><span class="n">WGPURenderPassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">CgfxMesh</span><span class="w"> </span><span class="o">*</span><span class="n">mesh</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1711,7 +1717,7 @@
 <hr />
 <h3 id="cgfx_mesh_vertex_layout">cgfx_mesh_vertex_layout<a class="headerlink" href="#cgfx_mesh_vertex_layout" title="Permanent link">&para;</a></h3>
 <p>Get the vertex buffer layout descriptor for <code>CgfxVertex</code>.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">WGPUVertexBufferLayout</span><span class="w"> </span><span class="nf">cgfx_mesh_vertex_layout</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="n">WGPUVertexBufferLayout</span><span class="w"> </span><span class="n">cgfx_mesh_vertex_layout</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 </span></code></pre></div>
 <p><strong>Returns:</strong> A <code>WGPUVertexBufferLayout</code> matching <code>CgfxVertex</code>. The returned layout references static internal storage -- valid for the lifetime of the program.</p>
 <p>The layout describes 8 attributes at shader locations 0--7:</p>

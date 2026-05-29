@@ -1569,7 +1569,7 @@
 </span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="w">        </span><span class="p">}</span>
 </span><span id="__span-2-39"><a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a>
-</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">    </span><span class="n">wgpuRenderPipelineRelease</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">    </span><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
 </span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">    </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">shader</span><span class="p">);</span>
 </span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">    </span><span class="n">cgfx_ctx_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">);</span>
 </span><span id="__span-2-44"><a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a>
@@ -1636,7 +1636,7 @@
 <li><strong>Topology</strong>: Triangle list</li>
 <li><strong>Culling</strong>: None (both faces visible)</li>
 <li><strong>Front face</strong>: Counter-clockwise</li>
-<li><strong>Blending</strong>: Standard alpha blending</li>
+<li><strong>Blending</strong>: Opaque (no blending) -- opt in via <code>CgfxColorTarget</code></li>
 <li><strong>Entry points</strong>: <code>"vs_main"</code> / <code>"fs_main"</code></li>
 <li><strong>Layout</strong>: Taken from <code>shader-&gt;pipeline_layout</code> (automatic for this example)</li>
 </ul>
@@ -1672,11 +1672,11 @@
 <p>cgfx wraps the boilerplate (initialization, frame management, buffer creation) but leaves draw recording to you. This means you get the full power of WebGPU without cgfx becoming a bottleneck or limiting what you can do. Any WebGPU tutorial or reference applies directly to the code between <code>frame_begin</code> and <code>frame_end</code>.</p>
 </div>
 <h3 id="step-5-cleanup">Step 5: Cleanup<a class="headerlink" href="#step-5-cleanup" title="Permanent link">&para;</a></h3>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">wgpuRenderPipelineRelease</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">shader</span><span class="p">);</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">cgfx_ctx_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">);</span>
 </span></code></pre></div>
-<p>Resources are destroyed in reverse creation order. The pipeline is a raw WebGPU handle, so you release it with <code>wgpuRenderPipelineRelease</code>. The shader and context use cgfx destroy functions that handle their internal resources.</p>
+<p>Resources are destroyed in reverse creation order. All cgfx-created resources use <code>cgfx_*_destroy()</code> for cleanup.</p>
 <div class="admonition warning">
 <p class="admonition-title">Destruction Order</p>
 <p>Always destroy resources in reverse creation order. Destroying the context first would invalidate the device, making it impossible to properly release the pipeline and shader.</p>

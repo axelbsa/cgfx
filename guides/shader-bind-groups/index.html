@@ -1692,7 +1692,7 @@
 </ul>
 <h3 id="what-the-caller-owns">What the Caller Owns<a class="headerlink" href="#what-the-caller-owns" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>WGPUBindGroup</code> -- created via <code>cgfx_shader_create_bind_group()</code> or <code>cgfx_uniform_create()</code></li>
+<li><code>WGPUBindGroup</code> -- created via <code>cgfx_bind_group_create_buffers()</code> or <code>cgfx_uniform_create()</code></li>
 <li><code>CgfxBuffer</code> / <code>WGPUBuffer</code> -- the GPU buffers holding actual data</li>
 <li>The CPU-side data that gets uploaded to those buffers</li>
 </ul>
@@ -1870,7 +1870,7 @@
 </span><span id="__span-7-61"><a id="__codelineno-7-61" name="__codelineno-7-61" href="#__codelineno-7-61"></a><span class="w">    </span><span class="cm">/* Cleanup */</span>
 </span><span id="__span-7-62"><a id="__codelineno-7-62" name="__codelineno-7-62" href="#__codelineno-7-62"></a><span class="w">    </span><span class="n">cgfx_uniform_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">u_a</span><span class="p">);</span>
 </span><span id="__span-7-63"><a id="__codelineno-7-63" name="__codelineno-7-63" href="#__codelineno-7-63"></a><span class="w">    </span><span class="n">cgfx_uniform_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">u_b</span><span class="p">);</span>
-</span><span id="__span-7-64"><a id="__codelineno-7-64" name="__codelineno-7-64" href="#__codelineno-7-64"></a><span class="w">    </span><span class="n">wgpuRenderPipelineRelease</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
+</span><span id="__span-7-64"><a id="__codelineno-7-64" name="__codelineno-7-64" href="#__codelineno-7-64"></a><span class="w">    </span><span class="n">cgfx_pipeline_destroy</span><span class="p">(</span><span class="n">pipeline</span><span class="p">);</span>
 </span><span id="__span-7-65"><a id="__codelineno-7-65" name="__codelineno-7-65" href="#__codelineno-7-65"></a><span class="w">    </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">shader</span><span class="p">);</span>
 </span><span id="__span-7-66"><a id="__codelineno-7-66" name="__codelineno-7-66" href="#__codelineno-7-66"></a><span class="w">    </span><span class="n">cgfx_ctx_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">);</span>
 </span><span id="__span-7-67"><a id="__codelineno-7-67" name="__codelineno-7-67" href="#__codelineno-7-67"></a>
@@ -1915,7 +1915,7 @@
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">buf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_uniform</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">my_data</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">my_data</span><span class="p">));</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="cm">/* Create a bind group from the shader&#39;s layout */</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create_bind_group</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_bind_group_create_buffers</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 </span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="cm">/* Upload data each frame */</span>
 </span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">wgpuQueueWriteBuffer</span><span class="p">(</span><span class="n">ctx</span><span class="p">.</span><span class="n">queue</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="p">.</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">my_data</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">my_data</span><span class="p">));</span>
@@ -1924,7 +1924,7 @@
 </span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="n">wgpuRenderPassEncoderSetBindGroup</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">group</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
 </span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>
 </span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="cm">/* Cleanup */</span>
-</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="n">wgpuBindGroupRelease</span><span class="p">(</span><span class="n">group</span><span class="p">);</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="n">cgfx_bind_group_destroy</span><span class="p">(</span><span class="n">group</span><span class="p">);</span>
 </span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="n">cgfx_buffer_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">);</span>
 </span></code></pre></div>
 <p><strong>Use when:</strong></p>
@@ -1936,7 +1936,7 @@
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Low-Level Bind Group Creation</p>
-<p><code>cgfx_shader_create_bind_group</code> assumes consecutive buffer bindings: <code>buffers[0]</code> maps to <code>@binding(0)</code>, <code>buffers[1]</code> to <code>@binding(1)</code>, etc. For non-consecutive bindings or mixed resource types (textures, samplers), use <code>cgfx_bind_group_create()</code> with explicit <code>CgfxBindGroupEntry</code> entries.</p>
+<p><code>cgfx_bind_group_create_buffers</code> assumes consecutive buffer bindings: <code>buffers[0]</code> maps to <code>@binding(0)</code>, <code>buffers[1]</code> to <code>@binding(1)</code>, etc. For non-consecutive bindings or mixed resource types (textures, samplers), use <code>cgfx_bind_group_create()</code> with explicit <code>CgfxBindGroupEntry</code> entries.</p>
 </div>
 <h3 id="comparison">Comparison<a class="headerlink" href="#comparison" title="Permanent link">&para;</a></h3>
 <table>

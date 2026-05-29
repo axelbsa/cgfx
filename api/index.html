@@ -1515,28 +1515,28 @@
 <tr>
 <td><code>WGPUSampler</code></td>
 <td><code>cgfx_sampler_create</code></td>
-<td><code>wgpuSamplerRelease</code> (caller-owned)</td>
+<td><code>cgfx_sampler_destroy</code></td>
 </tr>
 <tr>
 <td><code>WGPURenderPipeline</code></td>
 <td><code>cgfx_pipeline_create</code></td>
-<td><code>wgpuRenderPipelineRelease</code> (caller-owned)</td>
+<td><code>cgfx_pipeline_destroy</code></td>
 </tr>
 <tr>
 <td><code>WGPUComputePipeline</code></td>
 <td><code>cgfx_compute_pipeline_create</code></td>
-<td><code>wgpuComputePipelineRelease</code> (caller-owned)</td>
+<td><code>cgfx_compute_pipeline_destroy</code></td>
 </tr>
 <tr>
 <td><code>WGPUBindGroup</code></td>
-<td><code>cgfx_shader_create_bind_group</code></td>
-<td><code>wgpuBindGroupRelease</code> (caller-owned)</td>
+<td><code>cgfx_bind_group_create_buffers</code> / <code>cgfx_bind_group_create</code></td>
+<td><code>cgfx_bind_group_destroy</code></td>
 </tr>
 </tbody>
 </table>
 <div class="admonition warning">
 <p class="admonition-title">Bind groups are caller-owned</p>
-<p>Bind groups created via <code>cgfx_shader_create_bind_group</code> are <strong>not</strong> released by <code>cgfx_shader_destroy</code>. The caller must release them with <code>wgpuBindGroupRelease()</code>. When using <code>CgfxUniform</code> or <code>CgfxCamera</code>, their <code>_destroy</code> functions handle this automatically.</p>
+<p>Bind groups created via <code>cgfx_bind_group_create_buffers</code> or <code>cgfx_bind_group_create</code> are <strong>not</strong> released by <code>cgfx_shader_destroy</code>. The caller must release them with <code>cgfx_bind_group_destroy()</code>. <code>CgfxUniform.destroy</code> handles its internal bind group automatically.</p>
 </div>
 <h2 id="transparent-structs">Transparent structs<a class="headerlink" href="#transparent-structs" title="Permanent link">&para;</a></h2>
 <p>All cgfx structs have public fields. You can read and use the raw WebGPU handles directly for advanced usage that cgfx does not wrap:</p>
