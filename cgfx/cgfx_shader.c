@@ -37,6 +37,66 @@ static WGPUShaderModule create_module(const CgfxCtx *ctx,
 }
 
 
+/* ── WGSL compilation diagnostics (synchronous wrapper) ───────────── */
+
+typedef struct {
+    bool        done;
+    bool        had_error;
+    const char *label;
+} CgfxCompileInfo;
+
+static void cgfx__on_compilation_info(WGPUCompilationInfoRequestStatus status,
+                                      const WGPUCompilationInfo *info,
+                                      void *user_data) {
+    CgfxCompileInfo *data = user_data;
+    data->done = true;
+
+    if (status != WGPUCompilationInfoRequestStatus_Success || !info)
+        return;
+
+    for (size_t i = 0; i < info->messageCount; i++) {
+        const WGPUCompilationMessage *m = &info->messages[i];
+        if (m->type != WGPUCompilationMessageType_Error)
+            continue;
+
+        data->had_error = true;
+        fprintf(stderr, "[cgfx_shader] WGSL compile error in '%s' at %llu:%llu: %s\n",
+                data->label ? data->label : "(unnamed)",
+                (unsigned long long)m->lineNum,
+                (unsigned long long)m->linePos,
+                m->message ? m->message : "");
+    }
+}
+
+/**
+ * Return true if the module compiled with no WGSL errors.
+ *
+ * Wraps wgpuShaderModuleGetCompilationInfo (callback-based) into a blocking
+ * check, mirroring the sync pattern in cgfx_internal.h. On native wgpu the
+ * callback fires synchronously; a defensive device poll covers the rest.
+ * Errors are printed to stderr with their source line/column.
+ */
+static bool shader_compile_ok(const CgfxCtx *ctx, WGPUShaderModule module,
+                              const char *label) {
+    (void)ctx;
+    if (!module)
+        return false;
+
+    CgfxCompileInfo data = { .done = false, .had_error = false, .label = label };
+    wgpuShaderModuleGetCompilationInfo(module, &cgfx__on_compilation_info, &data);
+
+#if defined(__EMSCRIPTEN__)
+    while (!data.done)
+        emscripten_sleep(100);
+#elif defined(WEBGPU_BACKEND_WGPU)
+    if (!data.done)
+        wgpuDevicePoll(ctx->device, true, nullptr);
+#endif
+
+    return !data.had_error;
+}
+
+
 static char *read_file(const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) {
@@ -80,8 +140,12 @@ CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
     CgfxShader shader = {};
     shader.module = create_module(ctx, label, wgsl);
 
-    if (!desc || desc->group_count == 0)
+    bool compiled = shader_compile_ok(ctx, shader.module, label);
+
+    if (!desc || desc->group_count == 0) {
+        shader.ok = compiled;
         return shader;
+    }
 
     shader.group_count = desc->group_count;
     shader.group_layouts = malloc(desc->group_count * sizeof(WGPUBindGroupLayout));
@@ -158,6 +222,13 @@ CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
         .bindGroupLayouts = shader.group_layouts,
     };
     shader.pipeline_layout = wgpuDeviceCreatePipelineLayout(ctx->device, &pl_desc);
+
+    bool layouts_ok = (shader.pipeline_layout != nullptr);
+    for (uint32_t i = 0; i < shader.group_count; i++) {
+        if (!shader.group_layouts[i])
+            layouts_ok = false;
+    }
+    shader.ok = compiled && layouts_ok;
 
     return shader;
 }

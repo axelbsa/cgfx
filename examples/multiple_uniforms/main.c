@@ -4,6 +4,7 @@
  *        uniform data, demonstrating per-object CgfxUniform.
  */
 #include <math.h>
+#include <stdio.h>
 #include "cgfx.h"
 
 typedef struct {
@@ -37,6 +38,11 @@ int main(void) {
             }},
         });
 
+    if (!shader.ok) {
+        fprintf(stderr, "shader creation failed\n");
+        cgfx_ctx_destroy(&ctx);
+        return 1;
+    }
 
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
         .shader = &shader,

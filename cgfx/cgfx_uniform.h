@@ -31,6 +31,7 @@ typedef struct CgfxUniform {
     WGPUBindGroup  bind_group;  /**< Bind group referencing this buffer.          */
     const void    *data;        /**< Pointer to user-owned data (never freed).    */
     uint64_t       size;        /**< Size of the uniform data in bytes.           */
+    bool           ok;          /**< True if creation succeeded — check before use. */
 } CgfxUniform;
 
 /**

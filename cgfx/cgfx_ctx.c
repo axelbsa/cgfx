@@ -157,6 +157,15 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
             .format = WGPUTextureFormat_Depth24Plus,
             .usage  = WGPUTextureUsage_RenderAttachment,
         });
+
+        if (!ctx->depth_texture.ok) {
+            fprintf(stderr, "[cgfx] Failed to create depth buffer\n");
+            wgpuSurfaceUnconfigure(ctx->surface);
+            wgpuQueueRelease(ctx->queue);
+            wgpuSurfaceRelease(ctx->surface);
+            wgpuDeviceRelease(ctx->device);
+            return false;
+        }
     }
 
     return true;
@@ -271,6 +280,11 @@ bool cgfx_ctx_resize(CgfxCtx *ctx, uint32_t width, uint32_t height) {
             .format = depth_fmt,
             .usage  = WGPUTextureUsage_RenderAttachment,
         });
+
+        if (!ctx->depth_texture.ok) {
+            fprintf(stderr, "[cgfx] Failed to recreate depth buffer on resize\n");
+            return false;
+        }
     }
 
     ctx->width = width;

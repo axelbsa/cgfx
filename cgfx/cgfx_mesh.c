@@ -23,6 +23,7 @@ CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
 
     mesh.index_buffer = cgfx_buffer_create_index(ctx, indices, index_count);
     mesh.index_count = index_count;
+    mesh.ok = mesh.vertex_buffer.ok && mesh.index_buffer.ok;
 
     return mesh;
 }

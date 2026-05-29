@@ -35,6 +35,7 @@ CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
 
     result.size = data_size;
     result.count = count;
+    result.ok = (result.buffer != nullptr);
 
     return result;
 }
@@ -58,6 +59,7 @@ CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
 
     result.size = size;
     result.count = count;
+    result.ok = (result.buffer != nullptr);
 
     return result;
 }
@@ -95,6 +97,7 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
     result.buffer = wgpuDeviceCreateBuffer(ctx->device, &bufferDesc);
     result.size = data_size;
     result.count = count;
+    result.ok = (result.buffer != nullptr);
 
     (void) data;
 
@@ -131,6 +134,7 @@ CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
     }
 
     result.size = data_size;
+    result.ok = (result.buffer != nullptr);
 
     return result;
 }

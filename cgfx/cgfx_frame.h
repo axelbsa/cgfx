@@ -27,6 +27,7 @@
 
 #include <webgpu/webgpu.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "cgfx_ctx.h"
 #include "cgfx_export.h"
 
@@ -105,6 +106,58 @@ CGFX_API bool cgfx_frame_begin_encoder(const CgfxCtx *ctx, CgfxFrame *frame);
 CGFX_API void cgfx_frame_begin_render_pass(const CgfxCtx *ctx,
                                             CgfxFrame *frame,
                                             WGPUColor clear_color);
+
+/**
+ * Description of a render pass for cgfx_frame_begin_render_pass_ex().
+ *
+ * Zero-initialize for the default swapchain pass (equivalent to
+ * cgfx_frame_begin_render_pass): one color attachment on the surface, plus
+ * the context depth buffer if one exists.
+ *
+ *   - color_count = 0  → single attachment on frame->target_view (the surface)
+ *   - color_count > 0  → color_views[0..color_count) are the attachments (MRT
+ *                        or offscreen). The pipeline's color targets must match
+ *                        these in count and format.
+ *   - depth_view NULL  → use ctx->depth_texture.view if the context has one
+ *   - no_depth true    → no depth attachment, even if the context has one
+ *
+ * All color attachments use load=Clear (to clear_color) and store=Store.
+ */
+typedef struct CgfxRenderPassDesc {
+    uint32_t               color_count; /**< 0 = single surface target. */
+    const WGPUTextureView *color_views; /**< Color attachment views (offscreen / MRT). */
+    WGPUColor              clear_color;  /**< Clear value applied to all color attachments. */
+    WGPUTextureView        depth_view;   /**< Depth view. NULL = ctx->depth_texture.view. */
+    bool                   no_depth;     /**< true = no depth attachment regardless. */
+} CgfxRenderPassDesc;
+
+/**
+ * Begin a render pass against caller-chosen color targets.
+ *
+ * Generalizes cgfx_frame_begin_render_pass() to support offscreen render
+ * targets and multiple render targets (MRT). Call after
+ * cgfx_frame_begin_encoder(). Pair each begin with cgfx_frame_end_render_pass()
+ * when starting more than one pass in a frame; the final pass may instead be
+ * closed by cgfx_frame_end().
+ *
+ * @param ctx    Initialized context.
+ * @param frame  Frame started with cgfx_frame_begin_encoder().
+ * @param desc   Render pass configuration (zero-init = default surface pass).
+ */
+CGFX_API void cgfx_frame_begin_render_pass_ex(const CgfxCtx *ctx,
+                                              CgfxFrame *frame,
+                                              const CgfxRenderPassDesc *desc);
+
+/**
+ * End the current render pass without ending the frame.
+ *
+ * Use between passes when recording more than one render pass into a single
+ * frame (e.g. an offscreen pass followed by a surface pass). After this,
+ * frame->render_pass is NULL; begin the next pass or call cgfx_frame_end().
+ *
+ * @param frame  Frame whose current render pass should be ended.
+ */
+CGFX_API void cgfx_frame_end_render_pass(CgfxFrame *frame);
 
 /**
  * End and submit the current frame.

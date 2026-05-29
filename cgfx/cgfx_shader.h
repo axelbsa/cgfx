@@ -94,6 +94,7 @@ typedef struct CgfxShader {
     WGPUPipelineLayout    pipeline_layout; /**< Pipeline layout (NULL = automatic). */
     WGPUBindGroupLayout  *group_layouts;   /**< Array of bind group layouts.        */
     uint32_t              group_count;     /**< Number of bind group layouts.       */
+    bool                  ok;              /**< True if creation fully succeeded — check before use. */
 } CgfxShader;
 
 /**

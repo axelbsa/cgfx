@@ -29,6 +29,7 @@ typedef struct CgfxBuffer {
     uint64_t    size;    /**< Total size of the buffer in bytes.               */
     uint32_t    count;   /**< Number of elements (vertices or indices).        */
     bool        ready;   /**< Set ready flag in callback                       */
+    bool        ok;      /**< True if creation succeeded — check before use.   */
 } CgfxBuffer;
 
 /**

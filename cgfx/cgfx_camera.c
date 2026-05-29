@@ -41,6 +41,7 @@ CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,
     cam.bind_group = cgfx_shader_create_bind_group(ctx, shader,
                                                    desc->group_index,
                                                    &cam.buffer, 1);
+    cam.ok = cam.buffer.ok && (cam.bind_group != nullptr);
     return cam;
 }
 

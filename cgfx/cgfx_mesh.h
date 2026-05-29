@@ -59,6 +59,7 @@ typedef struct CgfxMesh {
     CgfxBuffer  vertex_buffer;  /**< GPU vertex buffer (CgfxVertex array).    */
     CgfxBuffer  index_buffer;   /**< GPU index buffer (uint32_t array).       */
     uint32_t    index_count;    /**< Number of indices (= number of draw elements). */
+    bool        ok;             /**< True if creation succeeded — check before use. */
 } CgfxMesh;
 
 /**

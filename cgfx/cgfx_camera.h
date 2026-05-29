@@ -53,6 +53,7 @@ typedef struct CgfxCamera {
     CgfxBuffer     buffer;       /**< GPU uniform buffer for the matrices.     */
     WGPUBindGroup  bind_group;   /**< Bind group referencing the buffer.       */
     uint32_t       group_index;  /**< The @group(N) this camera binds to.      */
+    bool           ok;           /**< True if creation succeeded — check before use. */
 } CgfxCamera;
 
 CGFX_API CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,

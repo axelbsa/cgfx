@@ -3,6 +3,7 @@
  * @brief Depth buffer example — renders a rotating 3D pyramid with depth
  *        testing so back faces are properly occluded.
  */
+#include <stdio.h>
 #include "cgfx.h"
 
 typedef struct {
@@ -34,6 +35,12 @@ int main(void) {
             }},
         });
 
+    if (!shader.ok) {
+        fprintf(stderr, "shader creation failed\n");
+        cgfx_ctx_destroy(&ctx);
+        return 1;
+    }
+
     WGPUVertexBufferLayout layout = cgfx_mesh_vertex_layout();
     WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
         .shader = &shader,
@@ -43,9 +50,19 @@ int main(void) {
     });
 
     CgfxMesh mesh = cgfx_load_tutorial_mesh(&ctx, "pyramid.txt");
+    if (!mesh.ok) {
+        fprintf(stderr, "mesh load failed\n");
+        cgfx_ctx_destroy(&ctx);
+        return 1;
+    }
 
     Uniforms uniforms = {};
     CgfxUniform uniform = cgfx_uniform_create(&ctx, &shader, 0, &uniforms, sizeof(Uniforms));
+    if (!uniform.ok) {
+        fprintf(stderr, "uniform creation failed\n");
+        cgfx_ctx_destroy(&ctx);
+        return 1;
+    }
 
     while (cgfx_ctx_is_running(&ctx)) {
         uniforms.time += 0.016f;

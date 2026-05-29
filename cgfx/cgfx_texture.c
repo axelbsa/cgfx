@@ -142,6 +142,7 @@ CgfxTexture cgfx_texture_create(const CgfxCtx *ctx,
     tex.height     = height;
     tex.depth      = depth;
     tex.mip_levels = mip_levels;
+    tex.ok         = (tex.texture != nullptr && tex.view != nullptr);
 
     return tex;
 }

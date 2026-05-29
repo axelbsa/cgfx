@@ -21,6 +21,7 @@ CgfxUniform cgfx_uniform_create(const CgfxCtx *ctx,
     uniform.bind_group = cgfx_shader_create_bind_group(ctx, shader,
                                                        group_index,
                                                        &uniform.buffer, 1);
+    uniform.ok = uniform.buffer.ok && (uniform.bind_group != nullptr);
 
     return uniform;
 }

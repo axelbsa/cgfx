@@ -35,6 +35,7 @@ typedef struct CgfxTexture {
     uint32_t           height;      /**< Height in pixels.                           */
     uint32_t           depth;       /**< Depth or array layers (1 for 2D).           */
     uint32_t           mip_levels;  /**< Number of mip levels.                       */
+    bool               ok;          /**< True if creation succeeded — check before use. */
 } CgfxTexture;
 
 /**
