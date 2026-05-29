@@ -15,7 +15,6 @@ _Static_assert(
 
 
 CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,
-                               const CgfxShader *shader,
                                const CgfxCameraDesc *desc) {
     float fovy   = desc->fovy   ? desc->fovy   : 45.0f;
     float near_z = desc->near_z ? desc->near_z : 0.01f;
@@ -31,17 +30,13 @@ CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,
         glm_vec3_copy((float *)desc->up, up);
 
     CgfxCamera cam = {};
-    cam.group_index = desc->group_index;
 
     glm_perspective(glm_rad(fovy), aspect, near_z, far_z, cam.projection);
     glm_lookat(eye, center, up, cam.view);
 
     cam.buffer = cgfx_buffer_create_uniform(ctx, cam.projection,
                                             CGFX_CAMERA_GPU_SIZE);
-    cam.bind_group = cgfx_shader_create_bind_group(ctx, shader,
-                                                   desc->group_index,
-                                                   &cam.buffer, 1);
-    cam.ok = cam.buffer.ok && (cam.bind_group != nullptr);
+    cam.ok = cam.buffer.ok;
     return cam;
 }
 
@@ -59,14 +54,13 @@ void cgfx_camera_write(const CgfxCtx *ctx, const CgfxCamera *cam) {
                          0, cam->projection, CGFX_CAMERA_GPU_SIZE);
 }
 
-void cgfx_camera_bind(WGPURenderPassEncoder pass, const CgfxCamera *cam) {
-    wgpuRenderPassEncoderSetBindGroup(pass, cam->group_index,
-                                     cam->bind_group, 0, nullptr);
+void cgfx_camera_bind(WGPURenderPassEncoder pass,
+                       WGPUBindGroup bind_group, uint32_t group_index) {
+    wgpuRenderPassEncoderSetBindGroup(pass, group_index,
+                                     bind_group, 0, nullptr);
 }
 
 void cgfx_camera_destroy(CgfxCamera *cam) {
-    if (cam->bind_group)
-        wgpuBindGroupRelease(cam->bind_group);
     cgfx_buffer_destroy(&cam->buffer);
     *cam = (CgfxCamera){};
 }

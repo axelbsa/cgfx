@@ -76,6 +76,11 @@ the wrapper (ties to T2.2).
 
 ## T4.4 — No device-lost / uncaptured-error user hook
 
+**Status: IMPLEMENTED.** Added `CgfxDeviceLostCallback` and `CgfxDeviceErrorCallback`
+typedefs (matching WebGPU callback signatures). Both `CgfxCtxDesc` and `CgfxCtxExternalDesc`
+now have `on_device_lost`, `on_device_error`, and `callback_user_data` fields. NULL = fall
+back to the existing stderr defaults. The internal callbacks remain as the default behavior.
+
 **Where:** `cgfx_ctx.c:26-44` (both callbacks only `fprintf(stderr, ...)`, `user_data=nullptr`)
 
 **What's wrong:** Device-lost and uncaptured-error callbacks just print to stderr; no

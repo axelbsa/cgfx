@@ -153,6 +153,12 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
 }
 
 
+void cgfx_pipeline_destroy(WGPURenderPipeline pipeline) {
+    if (pipeline)
+        wgpuRenderPipelineRelease(pipeline);
+}
+
+
 WGPUBlendState cgfx_blend_alpha(void) {
     return (WGPUBlendState){
         .color = { .srcFactor = WGPUBlendFactor_SrcAlpha,

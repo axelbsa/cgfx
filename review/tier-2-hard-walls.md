@@ -83,6 +83,11 @@ first-class.
 
 ## T2.3 — No device feature-request path ⊕
 
+**Status: IMPLEMENTED.** Added `feature_count` + `features` to both `CgfxCtxDesc` and
+`CgfxCtxExternalDesc`. Features are passed through to the device descriptor. Before device
+creation, each requested feature is checked against the adapter via `wgpuAdapterHasFeature`
+with a warning on stderr if unsupported. Zero-init (no features) preserves existing behavior.
+
 **Where:** `cgfx_ctx.c:119` (`requiredFeatureCount = 0`); `CgfxCtxDesc`/`CgfxCtxExternalDesc`
 expose only `limits`
 

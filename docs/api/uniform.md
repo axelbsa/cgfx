@@ -147,4 +147,4 @@ CgfxUniform obj_b = cgfx_uniform_create(&ctx, &shader, 0, &obj_b_data, sizeof(ob
 ```
 
 !!! tip "Lower-level API"
-    For advanced use cases, the lower-level `cgfx_buffer_create_uniform()` and `cgfx_shader_create_bind_group()` APIs remain available. `CgfxUniform` is a convenience wrapper on top of those.
+    For advanced use cases, the lower-level `cgfx_buffer_create_uniform()` and `cgfx_bind_group_create_buffers()` APIs remain available. `CgfxUniform` is a convenience wrapper on top of those.

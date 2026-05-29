@@ -135,9 +135,16 @@ CGFX_API WGPUBlendState cgfx_blend_premultiplied(void);
  * @param ctx   Initialized context (uses ctx->device and ctx->surface_format).
  * @param desc  Pipeline configuration. Zero-init for defaults (shader required).
  * @return      Pipeline handle, or NULL on failure.
- *              Caller must release with wgpuRenderPipelineRelease().
+ *              Caller must release with cgfx_pipeline_destroy().
  */
 CGFX_API WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
                                          const CgfxPipelineDesc *desc);
+
+/**
+ * Release a render pipeline.
+ *
+ * @param pipeline  Pipeline to release (NULL-safe).
+ */
+CGFX_API void cgfx_pipeline_destroy(WGPURenderPipeline pipeline);
 
 #endif /* CGFX_PIPELINE_H */

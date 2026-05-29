@@ -258,3 +258,9 @@ WGPUSampler cgfx_sampler_create(const CgfxCtx *ctx,
 
     return wgpuDeviceCreateSampler(ctx->device, &sampler_desc);
 }
+
+
+void cgfx_sampler_destroy(WGPUSampler sampler) {
+    if (sampler)
+        wgpuSamplerRelease(sampler);
+}

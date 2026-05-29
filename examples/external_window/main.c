@@ -109,7 +109,7 @@ int main(void) {
         }
     }
 
-    wgpuRenderPipelineRelease(pipeline);
+    cgfx_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
     DestroyWindow(hwnd);

@@ -18,7 +18,7 @@ CgfxUniform cgfx_uniform_create(const CgfxCtx *ctx,
     };
 
     uniform.buffer = cgfx_buffer_create_uniform(ctx, data, size);
-    uniform.bind_group = cgfx_shader_create_bind_group(ctx, shader,
+    uniform.bind_group = cgfx_bind_group_create_buffers(ctx, shader,
                                                        group_index,
                                                        &uniform.buffer, 1);
     uniform.ok = uniform.buffer.ok && (uniform.bind_group != nullptr);
@@ -34,8 +34,7 @@ void cgfx_uniform_write(const CgfxCtx *ctx, const CgfxUniform *uniform) {
 
 
 void cgfx_uniform_destroy(CgfxUniform *uniform) {
-    if (uniform->bind_group)
-        wgpuBindGroupRelease(uniform->bind_group);
+    cgfx_bind_group_destroy(uniform->bind_group);
 
     cgfx_buffer_destroy(&uniform->buffer);
 

@@ -119,7 +119,21 @@ CGFX_API WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
 - **Depth testing:** Opt-in via `depth_test = true`. Uses `depth_compare` (default `Less`) with depth writes enabled. Set `depth_write_disabled = true` for depth testing without writing.
 
 !!! note "Caller-owned pipeline"
-    `cgfx_pipeline_create` returns a raw `WGPURenderPipeline`. Release it with `wgpuRenderPipelineRelease()` when done. There is no `cgfx_pipeline_destroy` function.
+    `cgfx_pipeline_create` returns a raw `WGPURenderPipeline`. Caller must release with `cgfx_pipeline_destroy()` when done.
+
+---
+
+### cgfx_pipeline_destroy
+
+Release a render pipeline.
+
+```c
+CGFX_API void cgfx_pipeline_destroy(WGPURenderPipeline pipeline);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pipeline` | `WGPURenderPipeline` | Render pipeline to release. |
 
 ---
 
@@ -146,7 +160,7 @@ while (cgfx_ctx_is_running(&ctx)) {
 }
 
 // Cleanup
-wgpuRenderPipelineRelease(pipeline);
+cgfx_pipeline_destroy(pipeline);
 cgfx_shader_destroy(&shader);
 ```
 
@@ -171,7 +185,7 @@ WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
     .cull_mode  = WGPUCullMode_Back,
 });
 
-wgpuRenderPipelineRelease(pipeline);
+cgfx_pipeline_destroy(pipeline);
 ```
 
 !!! warning "Depth buffer must be enabled on the context"
@@ -202,7 +216,7 @@ if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){0.1, 0.1, 0.2, 1.0})) {
     cgfx_frame_end(&ctx, &frame);
 }
 
-wgpuRenderPipelineRelease(pipeline);
+cgfx_pipeline_destroy(pipeline);
 ```
 
 !!! tip "Custom vertex formats"
@@ -226,7 +240,7 @@ WGPURenderPipeline pipeline = cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
     .color_targets      = &target,
 });
 
-wgpuRenderPipelineRelease(pipeline);
+cgfx_pipeline_destroy(pipeline);
 ```
 
 !!! note "Other blend modes"

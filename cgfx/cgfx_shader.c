@@ -263,7 +263,7 @@ CgfxShader cgfx_shader_create_from_file(const CgfxCtx *ctx,
 }
 
 
-WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
+WGPUBindGroup cgfx_bind_group_create_buffers(const CgfxCtx *ctx,
                                             const CgfxShader *shader,
                                             uint32_t group_index,
                                             const CgfxBuffer *buffers,
@@ -331,6 +331,12 @@ WGPUBindGroup cgfx_bind_group_create(const CgfxCtx *ctx,
     WGPUBindGroup group = wgpuDeviceCreateBindGroup(ctx->device, &bg_desc);
     free(bg_entries);
     return group;
+}
+
+
+void cgfx_bind_group_destroy(WGPUBindGroup group) {
+    if (group)
+        wgpuBindGroupRelease(group);
 }
 
 

@@ -65,11 +65,18 @@ typedef struct CgfxComputePass {
  * @param ctx   Initialized context.
  * @param desc  Compute pipeline configuration. shader is required.
  * @return      Pipeline handle, or NULL on failure.
- *              Caller must release with wgpuComputePipelineRelease().
+ *              Caller must release with cgfx_compute_pipeline_destroy().
  */
 CGFX_API WGPUComputePipeline cgfx_compute_pipeline_create(
     const CgfxCtx *ctx,
     const CgfxComputeDesc *desc);
+
+/**
+ * Release a compute pipeline.
+ *
+ * @param pipeline  Pipeline to release (NULL-safe).
+ */
+CGFX_API void cgfx_compute_pipeline_destroy(WGPUComputePipeline pipeline);
 
 /**
  * Begin a standalone compute pass.

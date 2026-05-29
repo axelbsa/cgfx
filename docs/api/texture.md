@@ -187,15 +187,29 @@ CGFX_API WGPUSampler cgfx_sampler_create(const CgfxCtx *ctx,
 | `ctx` | `const CgfxCtx*` | Initialized context. |
 | `desc` | `const CgfxSamplerDesc*` | Sampler configuration. Zero-initialize for defaults. |
 
-**Returns:** A `WGPUSampler` handle. Release with `wgpuSamplerRelease()`.
+**Returns:** A `WGPUSampler` handle. Release with `cgfx_sampler_destroy()`.
 
 **Example:**
 
 ```c
 WGPUSampler sampler = cgfx_sampler_create(&ctx, &(CgfxSamplerDesc){});
 // ... use in bind group ...
-wgpuSamplerRelease(sampler);
+cgfx_sampler_destroy(sampler);
 ```
+
+---
+
+### cgfx_sampler_destroy
+
+Release a sampler.
+
+```c
+CGFX_API void cgfx_sampler_destroy(WGPUSampler sampler);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `sampler` | `WGPUSampler` | Sampler to release. |
 
 ---
 

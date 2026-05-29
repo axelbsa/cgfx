@@ -227,11 +227,13 @@ int main(void) {
         .vertex_layouts = &layout,
     });
 
-    CgfxCamera camera = cgfx_camera_create(&ctx, &shader, &(CgfxCameraDesc){
+    CgfxCamera camera = cgfx_camera_create(&ctx, &(CgfxCameraDesc){
         .fovy = 45.0f,
         .eye    = { 0.0f, 3.0f, -8.0f },
         .center = { 0.0f, 0.0f,  0.0f },
     });
+    WGPUBindGroup camera_bg = cgfx_bind_group_create_buffers(&ctx, &shader,
+                                                              0, &camera.buffer, 1);
 
     CgfxMesh meshes[4] = {
         create_triangle(&ctx, 1.5f),
@@ -272,7 +274,7 @@ int main(void) {
         CgfxFrame frame;
         if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){0.1, 0.1, 0.15, 1.0})) {
             wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
-            cgfx_camera_bind(frame.render_pass, &camera);
+            cgfx_camera_bind(frame.render_pass, camera_bg, 0);
 
             for (int i = 0; i < 4; i++) {
                 wgpuRenderPassEncoderSetBindGroup(frame.render_pass, 1,
@@ -288,8 +290,9 @@ int main(void) {
         cgfx_uniform_destroy(&obj_uniforms[i]);
         cgfx_mesh_destroy(&meshes[i]);
     }
+    cgfx_bind_group_destroy(camera_bg);
     cgfx_camera_destroy(&camera);
-    wgpuRenderPipelineRelease(pipeline);
+    cgfx_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 

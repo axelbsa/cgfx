@@ -71,7 +71,7 @@ int main(void) {
     CgfxBuffer buf_out = cgfx_buffer_create_storage(&ctx, nullptr, sizeof(a));
 
     /* Create bind group */
-    WGPUBindGroup bg = cgfx_shader_create_bind_group(&ctx, &shader, 0,
+    WGPUBindGroup bg = cgfx_bind_group_create_buffers(&ctx, &shader, 0,
         (CgfxBuffer[]){ buf_a, buf_b, buf_out }, 3);
 
     /* Dispatch compute shader */
@@ -112,12 +112,12 @@ int main(void) {
         printf("All %d results correct!\n", N);
 
     /* Cleanup */
-    wgpuBindGroupRelease(bg);
+    cgfx_bind_group_destroy(bg);
     cgfx_buffer_destroy(&readback);
     cgfx_buffer_destroy(&buf_out);
     cgfx_buffer_destroy(&buf_b);
     cgfx_buffer_destroy(&buf_a);
-    wgpuComputePipelineRelease(pipeline);
+    cgfx_compute_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 

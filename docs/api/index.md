@@ -78,13 +78,13 @@ cgfx follows a simple ownership model: the module that creates a resource provid
 | `CgfxMesh` | `cgfx_mesh_create` | `cgfx_mesh_destroy` |
 | `CgfxTexture` | `cgfx_texture_create` | `cgfx_texture_destroy` |
 | `CgfxBuffer` | `cgfx_buffer_create_*` | `cgfx_buffer_destroy` |
-| `WGPUSampler` | `cgfx_sampler_create` | `wgpuSamplerRelease` (caller-owned) |
-| `WGPURenderPipeline` | `cgfx_pipeline_create` | `wgpuRenderPipelineRelease` (caller-owned) |
-| `WGPUComputePipeline` | `cgfx_compute_pipeline_create` | `wgpuComputePipelineRelease` (caller-owned) |
-| `WGPUBindGroup` | `cgfx_shader_create_bind_group` | `wgpuBindGroupRelease` (caller-owned) |
+| `WGPUSampler` | `cgfx_sampler_create` | `cgfx_sampler_destroy` |
+| `WGPURenderPipeline` | `cgfx_pipeline_create` | `cgfx_pipeline_destroy` |
+| `WGPUComputePipeline` | `cgfx_compute_pipeline_create` | `cgfx_compute_pipeline_destroy` |
+| `WGPUBindGroup` | `cgfx_bind_group_create_buffers` / `cgfx_bind_group_create` | `cgfx_bind_group_destroy` |
 
 !!! warning "Bind groups are caller-owned"
-    Bind groups created via `cgfx_shader_create_bind_group` are **not** released by `cgfx_shader_destroy`. The caller must release them with `wgpuBindGroupRelease()`. When using `CgfxUniform` or `CgfxCamera`, their `_destroy` functions handle this automatically.
+    Bind groups created via `cgfx_bind_group_create_buffers` or `cgfx_bind_group_create` are **not** released by `cgfx_shader_destroy`. The caller must release them with `cgfx_bind_group_destroy()`. `CgfxUniform.destroy` handles its internal bind group automatically.
 
 ## Transparent structs
 

@@ -89,7 +89,7 @@ int main(void) {
 
     cgfx_uniform_destroy(&u_left);
     cgfx_uniform_destroy(&u_right);
-    wgpuRenderPipelineRelease(pipeline);
+    cgfx_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 

@@ -175,12 +175,12 @@ int main(void) {
         }
     }
 
-    wgpuBindGroupRelease(present_bg);
-    wgpuRenderPipelineRelease(present_pipeline);
-    wgpuRenderPipelineRelease(mrt_pipeline);
+    cgfx_bind_group_destroy(present_bg);
+    cgfx_pipeline_destroy(present_pipeline);
+    cgfx_pipeline_destroy(mrt_pipeline);
     cgfx_shader_destroy(&present_shader);
     cgfx_shader_destroy(&mrt_shader);
-    wgpuSamplerRelease(sampler);
+    cgfx_sampler_destroy(sampler);
     cgfx_texture_destroy(&target_b);
     cgfx_texture_destroy(&target_a);
     cgfx_ctx_destroy(&ctx);

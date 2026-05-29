@@ -12,6 +12,11 @@ together they're what makes the API feel arbitrary at the edges. Fix these to ma
 
 ## T3.1 — Wrap-vs-raw policy inconsistent; destroy asymmetric ⊕
 
+**Status: IMPLEMENTED.** Added `cgfx_pipeline_destroy`, `cgfx_compute_pipeline_destroy`,
+`cgfx_sampler_destroy`, `cgfx_bind_group_destroy` as thin wrappers. All examples updated
+to use them. Wrap-vs-raw rule documented in CLAUDE.md: "cgfx wraps objects that carry
+metadata; leaf handles are raw but have cgfx_*_destroy() wrappers for vocabulary symmetry."
+
 **Where:** across modules. Wrapped: `cgfx_shader_create`→`CgfxShader`,
 `cgfx_texture_create`→`CgfxTexture`, `cgfx_buffer_create_*`→`CgfxBuffer` (each with a
 `cgfx_*_destroy`). Raw: `cgfx_pipeline_create`→`WGPURenderPipeline`,
@@ -42,6 +47,11 @@ destroy wrappers for *vocabulary* symmetry even if one-liners: `cgfx_pipeline_de
 ---
 
 ## T3.2 — Three bind-group APIs with inverted naming ⊕
+
+**Status: IMPLEMENTED.** Renamed `cgfx_shader_create_bind_group` to
+`cgfx_bind_group_create_buffers`, aligning with the `cgfx_<noun>_<verb>` convention
+and the existing `cgfx_bind_group_create`. All internal callers (uniform, camera) and
+examples updated. The positional convenience is kept but in the correct namespace.
 
 **Where:** `cgfx_shader.c` — `cgfx_shader_create_bind_group` (positional, buffer-only),
 `cgfx_bind_group_create` (mixed, explicit `.binding`), plus `cgfx_uniform_create` /
@@ -74,6 +84,10 @@ the same namespace as its sibling. Document the contiguous-from-0 requirement lo
 
 ## T3.3 — Two non-mirroring "split lifecycle" idioms
 
+**Status: DOCUMENTED.** Added "Frame and Compute Lifecycle Patterns" section to
+`docs/architecture.md` explaining both idioms and when to use each, with a mixed
+compute+render code example. No structural change - redesigning would couple with T2.2.
+
 **Where:** frame — `cgfx_frame_begin` (all-in-one) vs `cgfx_frame_begin_encoder` +
 `cgfx_frame_begin_render_pass` (separate functions). compute — `cgfx_compute_begin`/`_end`
 (owns encoder, submits) vs `cgfx_compute_pass_begin`/`_pass_end` (borrows encoder, doesn't
@@ -95,6 +109,11 @@ structurally different ways. A user who learns the frame idiom can't transfer it
 ---
 
 ## T3.4 — Camera hard-assumes one buffer at binding 0
+
+**Status: IMPLEMENTED.** Decoupled camera from bind group. `CgfxCamera` now owns only
+the buffer (no `bind_group`, `group_index`, or `shader` parameter). Caller creates their
+own bind group from `cam.buffer`, making camera composable with lights/time in one group.
+`cgfx_camera_bind` takes `bind_group` and `group_index` from the caller.
 
 **Where:** `cgfx_camera.c:41-43` (`cgfx_shader_create_bind_group(..., &cam.buffer, 1)` →
 positional, single buffer at binding 0)
@@ -121,6 +140,10 @@ the `CgfxUniform` philosophy).
 
 ## T3.5 — Auto-visibility heuristic silently wrong cross-stage
 
+**Status: DOCUMENTED.** Added doc comment to `CgfxBindingDesc.visibility` warning about
+cross-stage gotchas: "Set explicitly for vertex-stage textures or compute-only buffers."
+No code change - the explicit field is the escape hatch.
+
 **Where:** `cgfx_shader.c:98-112` — visibility=0 → texture/sampler=Fragment,
 storage_texture=Compute, buffer=Vertex|Fragment.
 
@@ -144,6 +167,10 @@ when building a compute-only pipeline, default buffers to Compute.
 ---
 
 ## T3.6 — Loader marked "temporary" but public + in umbrella; u16 indices
+
+**Status: IMPLEMENTED.** Removed `cgfx_loader.h` from `cgfx.h` umbrella header. The 3
+examples that use it now include it directly. Loader stays functional but is clearly not
+part of the core API. No rename - it's temporary and going away.
 
 **Where:** `cgfx_loader.h` ("Temporary module — remove when no longer following the tutorial"),
 `cgfx.h` (includes it), `CgfxGeometry.index_data` is `uint16_t`.
@@ -169,6 +196,10 @@ removing it from the umbrella is the cleaner call.
 ---
 
 ## T3.7 — `cgfx_default_limits()` returns all-`0xFF`
+
+**Status: IMPLEMENTED.** Added comment pinning the `memset(0xFF)` assumption. Moved the
+`cgfx_default_limits` declaration in `cgfx_ctx.h` so it no longer splits the
+`cgfx_ctx_init` doc block.
 
 **Where:** `cgfx_ctx.c:49` (memset the limits struct to `0xFF`)
 

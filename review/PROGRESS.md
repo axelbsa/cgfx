@@ -40,7 +40,16 @@ to its section in the tier file.
 | **T1.3** | Strip index format auto-derived | **Implemented** - runtime-verified |
 | **T1.4** | Stencil contradiction (step 1) | **Fixed** - runtime-verified |
 | **T1.6** | MSAA sample_count + resolve targets | **Implemented** - runtime-verified |
-| everything else | T1.7, T2.2-T2.3/T2.5-T2.8, T3.x, T4.4 | Not started |
+| **T2.3** | Device feature-request path | **Implemented** - `feature_count`/`features` on both desc types, query+warn |
+| **T4.4** | Device-lost / error user callbacks | **Implemented** - `on_device_lost`/`on_device_error` on both desc types |
+| **T3.1** | Wrap-vs-raw; destroy asymmetric | **Implemented** - `cgfx_pipeline_destroy`, `cgfx_compute_pipeline_destroy`, `cgfx_sampler_destroy`, `cgfx_bind_group_destroy` |
+| **T3.2** | Bind group naming | **Implemented** - renamed `cgfx_shader_create_bind_group` → `cgfx_bind_group_create_buffers` |
+| **T3.3** | Split lifecycle idioms | **Documented** - lifecycle patterns section in architecture.md |
+| **T3.4** | Camera binding coupling | **Implemented** - camera decoupled from bind group, owns only buffer |
+| **T3.5** | Auto-visibility gotcha | **Documented** - warning in visibility field doc comment |
+| **T3.6** | Loader in umbrella | **Implemented** - removed from cgfx.h umbrella |
+| **T3.7** | Default limits memset | **Implemented** - comment, declaration moved |
+| everything else | T1.7, T2.2/T2.5-T2.8 | Not started |
 
 Also done outside the tiers: README.md cleanup (stale content removed) and the error-handling
 contract in `CLAUDE.md` rewritten to match T1.5.
@@ -65,6 +74,23 @@ Quick map of the code touched (detailed notes in each tier file's **Status:** se
 - **T4.1** - Index buffer label fixed.
 - **T4.2** - Phantom `data` param removed from `cgfx_buffer_create_mapping`.
 - **T4.3** - `cgfx_frame_end` null-deref guard.
+- **T2.3** - `feature_count` + `features` on `CgfxCtxDesc` and `CgfxCtxExternalDesc`.
+  Query+warn: checks `wgpuAdapterHasFeature` before device request.
+- **T4.4** - `CgfxDeviceLostCallback` and `CgfxDeviceErrorCallback` typedefs.
+  `on_device_lost`, `on_device_error`, `callback_user_data` on both desc types.
+  NULL = fall back to stderr defaults.
+- **T3.1** - `cgfx_pipeline_destroy`, `cgfx_compute_pipeline_destroy`,
+  `cgfx_sampler_destroy`, `cgfx_bind_group_destroy`. All examples updated.
+  Wrap-vs-raw rule documented in CLAUDE.md.
+- **T3.2** - `cgfx_shader_create_bind_group` → `cgfx_bind_group_create_buffers`.
+  All callers (uniform, camera, examples) updated.
+- **T3.3** - Lifecycle patterns section in `docs/architecture.md`.
+- **T3.4** - Camera decoupled: owns only buffer, no bind_group/group_index.
+  `cgfx_camera_bind` takes bind_group + group_index from caller.
+- **T3.5** - Doc comment on `CgfxBindingDesc.visibility`.
+- **T3.6** - `cgfx_loader.h` removed from `cgfx.h` umbrella. 3 examples
+  updated with direct include.
+- **T3.7** - Comment on `memset(0xFF)`, `cgfx_default_limits` declaration moved.
 
 ---
 
@@ -81,14 +107,11 @@ Quick map of the code touched (detailed notes in each tier file's **Status:** se
 
 Remaining findings, roughly prioritized:
 
-1. **T2.3 + T4.4** - device features + device-lost callbacks in ctx desc (same descriptor
-   surface, removes a hard capability ceiling)
-2. **T2.8** - reconfigure-and-retry on `Outdated`/`Lost` (fixes black-window-on-resize)
-3. **T2.2** - load-op control (can't preserve target contents across passes)
-4. **T2.5 + T2.7** - sampler binding type + dynamic offsets (both add to `CgfxBindingDesc`)
-5. **T2.6** - instanced draw
-6. **T3.x** - coherence/naming cleanup (T3.1 wrap-vs-raw, T3.2 bind-group naming, etc.)
-7. **T1.7** - mipmap generation (larger feature, needs per-mip views)
+1. **T2.8** - reconfigure-and-retry on `Outdated`/`Lost` (fixes black-window-on-resize)
+2. **T2.2** - load-op control (can't preserve target contents across passes)
+3. **T2.5 + T2.7** - sampler binding type + dynamic offsets (both add to `CgfxBindingDesc`)
+4. **T2.6** - instanced draw
+5. **T1.7** - mipmap generation (larger feature, needs per-mip views)
 
 **Working method:** for each finding, plan first (explore → confirm approach → write plan →
 implement → build), then add a **Status:** note to its tier-file section. Keep changes scoped to

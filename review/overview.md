@@ -27,11 +27,13 @@ reads beautifully. The trouble is concentrated in three places:
    configurable now. Remaining: load-op control (T2.2).
 2. ~~**The CPU-GPU data story is half-finished.**~~
    Resolved - `cgfx_buffer_read()` wraps readback; backend `#ifdef` no longer leaks.
-3. **Cross-cutting conventions (errors, ownership, naming) drifted** as second idioms were
-   bolted on without retrofitting the first. (T3.x - not yet addressed.)
+3. ~~**Cross-cutting conventions (errors, ownership, naming) drifted**~~ Resolved - destroy
+   wrappers added for all raw handles, bind group naming unified, camera decoupled, loader
+   removed from umbrella, lifecycle patterns documented, visibility gotcha documented.
 
-Remaining theme: **device-level control is still locked** (no feature requests T2.3, no
-device-lost callback T4.4, no resize recovery T2.8). These are the ctx-level gaps.
+Remaining theme: ~~**device-level control is still locked**~~ Feature requests (T2.3) and
+device-lost/error callbacks (T4.4) are now configurable. Remaining ctx gap: resize recovery
+(T2.8).
 
 ---
 
@@ -67,7 +69,7 @@ device-lost callback T4.4, no resize recovery T2.8). These are the ctx-level gap
 |----|---------|--------|
 | **T2.1 ⊕** | Single color target, format-locked to surface | **Done** - `CgfxColorTarget[]`, `CgfxRenderPassDesc`, MRT example |
 | **T2.2** | No load-op control - can't preserve target | Not started |
-| **T2.3 ⊕** | No device feature-request path | Not started |
+| **T2.3 ⊕** | No device feature-request path | **Done** - `feature_count` + `features` on both desc types, query+warn |
 | **T2.4 ⊕** | Async readback unwrapped; backend `#ifdef` leaks | **Done** - `cgfx_buffer_read()` |
 | **T2.5** | Sampler binding type hardcoded to `Filtering` | Not started |
 | **T2.6** | No instancing in `cgfx_mesh_draw` | Not started |
@@ -78,15 +80,15 @@ device-lost callback T4.4, no resize recovery T2.8). These are the ctx-level gap
 
 ## Tier 3 — Coherence & convention drift
 
-| ID | Finding | Key location | Note |
-|----|---------|--------------|------|
-| **T3.1 ⊕** | Wrap-vs-raw inconsistent; destroy asymmetric | across modules | shader/texture/buffer wrapped (`cgfx_*_destroy`); pipeline/sampler/bind-group raw (`wgpu*Release`). No learnable rule, unstated. |
-| **T3.2 ⊕** | Three bind-group APIs, inverted naming | `cgfx_shader.c` | `cgfx_shader_create_bind_group` (positional, footgun) vs `cgfx_bind_group_create` (explicit) vs `cgfx_uniform_create` (implicit). First breaks `noun_verb` convention. |
-| **T3.3** | Two non-mirroring split-lifecycle idioms | frame vs compute | Frame: separate functions; compute: different pairs + `owns_encoder` flag. Learning one doesn't transfer. |
-| **T3.4** | Camera hard-assumes one buffer at binding 0 | `cgfx_camera.c:41-43` | Can't group camera+lights+time in one per-frame group; contradicts "caller owns bind groups." |
-| **T3.5** | Auto-visibility heuristic silently wrong cross-stage | `cgfx_shader.c:98-112` | Vertex-stage texture sampling or compute-only uniforms get wrong default → confusing validation errors. |
-| **T3.6** | Loader "temporary" but public + in umbrella; u16 indices | `cgfx_loader.h`, `cgfx.h` | Conflicts with the u32-everywhere standard (even parses u16 then widens). |
-| **T3.7** | `cgfx_default_limits()` returns all-`0xFF` | `cgfx_ctx.c:49` | Works today (matches U32/U64 undefined sentinels) but fragile byte-pattern assumption across mixed-width fields. |
+| ID | Finding | Status |
+|----|---------|--------|
+| **T3.1 ⊕** | Wrap-vs-raw inconsistent; destroy asymmetric | **Done** - `cgfx_pipeline_destroy`, `cgfx_compute_pipeline_destroy`, `cgfx_sampler_destroy`, `cgfx_bind_group_destroy` added. Rule documented in CLAUDE.md. |
+| **T3.2 ⊕** | Three bind-group APIs, inverted naming | **Done** - renamed `cgfx_shader_create_bind_group` → `cgfx_bind_group_create_buffers` |
+| **T3.3** | Two non-mirroring split-lifecycle idioms | **Done** (documented) - lifecycle patterns section in architecture.md |
+| **T3.4** | Camera hard-assumes one buffer at binding 0 | **Done** - camera decoupled from bind group, owns only buffer |
+| **T3.5** | Auto-visibility heuristic silently wrong cross-stage | **Done** (documented) - doc comment warning on visibility field |
+| **T3.6** | Loader "temporary" but public + in umbrella; u16 indices | **Done** - removed from umbrella header |
+| **T3.7** | `cgfx_default_limits()` returns all-`0xFF` | **Done** - comment pinning assumption, declaration moved |
 
 ---
 
@@ -97,7 +99,7 @@ device-lost callback T4.4, no resize recovery T2.8). These are the ctx-level gap
 | **T4.1** | Index buffer mislabeled `"cgfx vertex buffer"` | **Done** - label fixed |
 | **T4.2** | `cgfx_buffer_create_mapping` ignores its `data` param | **Done** - param removed |
 | **T4.3** | `cgfx_frame_end` null-derefs on compute-only frame | **Done** - null guard |
-| **T4.4** | No device-lost / uncaptured-error user hook | Not started |
+| **T4.4** | No device-lost / uncaptured-error user hook | **Done** - `on_device_lost` + `on_device_error` callbacks on both desc types |
 
 ---
 
@@ -109,15 +111,15 @@ device-lost callback T4.4, no resize recovery T2.8). These are the ctx-level gap
 3. ~~**T2.4 + T4.1 + T4.2** buffer readback~~ - `cgfx_buffer_read()`, label fix, phantom param removed.
 4. ~~**T1.2 + T1.3 + T1.4 + T1.6** pipeline/frame cluster~~ - depth compare/write, strip index auto-derive, stencil contradiction fix, MSAA sample_count + resolve targets.
 5. ~~**T4.3** null-deref guard~~ - incidental with T2.1.
+6. ~~**T2.3 + T4.4** device features + callbacks~~ - `feature_count`/`features` on both desc types with query+warn. `on_device_lost`/`on_device_error` callbacks with stderr fallback.
+7. ~~**T3.x** coherence/naming cleanup~~ - destroy wrappers for all raw handles, `cgfx_shader_create_bind_group` renamed to `cgfx_bind_group_create_buffers`, camera decoupled from bind group, loader removed from umbrella, lifecycle documented, visibility doc, default_limits comment.
 
 **Remaining (recommended order):**
-1. **T2.3 + T4.4** - device features + device-lost callback in ctx desc. Same descriptor surface, removes a hard capability ceiling.
-2. **T2.8** - reconfigure-and-retry on Outdated/Lost. Fixes black-window-on-resize.
-3. **T2.2** - load-op control (can't preserve target contents). Touches the pass-begin surface.
-4. **T2.5 + T2.7** - sampler binding type + dynamic offsets. Both add to `CgfxBindingDesc`.
-5. **T2.6** - instanced draw. Standalone new function.
-6. **T3.x** - coherence/naming cleanup pass.
-7. **T1.7** - mipmap generation. Larger feature, needs per-mip views.
+1. **T2.8** - reconfigure-and-retry on Outdated/Lost. Fixes black-window-on-resize.
+2. **T2.2** - load-op control (can't preserve target contents). Touches the pass-begin surface.
+3. **T2.5 + T2.7** - sampler binding type + dynamic offsets. Both add to `CgfxBindingDesc`.
+4. **T2.6** - instanced draw. Standalone new function.
+5. **T1.7** - mipmap generation. Larger feature, needs per-mip views.
 
 ## wgpu-native version constraint
 

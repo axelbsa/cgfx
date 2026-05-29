@@ -6,6 +6,30 @@ Window, WebGPU device, queue, and surface management.
 
 ---
 
+## Callback Types
+
+### CgfxDeviceLostCallback
+
+```c
+typedef void (*CgfxDeviceLostCallback)(WGPUDeviceLostReason reason,
+                                       const char *message,
+                                       void *user_data);
+```
+
+Invoked when the WebGPU device is lost (GPU reset, driver TDR, device removed). Signature matches `WGPUDeviceLostCallback`.
+
+### CgfxDeviceErrorCallback
+
+```c
+typedef void (*CgfxDeviceErrorCallback)(WGPUErrorType type,
+                                        const char *message,
+                                        void *user_data);
+```
+
+Invoked on uncaptured WebGPU errors (validation, out-of-memory, internal). Signature matches `WGPUErrorCallback`.
+
+---
+
 ## Structs
 
 ### CgfxCtxDesc
@@ -21,6 +45,11 @@ Configuration for creating a cgfx context. Zero-initialize for sensible defaults
 | `depth_buffer` | `bool` | `false` | Create a depth buffer at surface dimensions. |
 | `present_mode` | `WGPUPresentMode` | `Fifo` (VSync) | Surface present mode. |
 | `limits` | `WGPURequiredLimits` | see note | Device limits. Use `cgfx_default_limits()`. |
+| `feature_count` | `uint32_t` | `0` | Number of required device features. |
+| `features` | `const WGPUFeatureName*` | `NULL` | Required device features array. |
+| `on_device_lost` | `CgfxDeviceLostCallback` | `NULL` | Device-lost callback. `NULL` = print to stderr. |
+| `on_device_error` | `CgfxDeviceErrorCallback` | `NULL` | Uncaptured error callback. `NULL` = print to stderr. |
+| `callback_user_data` | `void*` | `NULL` | Passed to both callbacks. |
 
 !!! tip "Always call `cgfx_default_limits()` for the limits field"
     Setting all limits to `0` requests minimum device limits, which may be too restrictive. `cgfx_default_limits()` sets every field to "undefined" (no preference), letting the device use its own defaults.
@@ -60,6 +89,11 @@ Configuration for creating a context from an externally-owned window handle (e.g
 | `depth_buffer` | `bool` | `false` | Create a depth buffer at surface dimensions. |
 | `present_mode` | `WGPUPresentMode` | `Fifo` (VSync) | Surface present mode. |
 | `limits` | `WGPURequiredLimits` | see note | Device limits. Use `cgfx_default_limits()`. |
+| `feature_count` | `uint32_t` | `0` | Number of required device features. |
+| `features` | `const WGPUFeatureName*` | `NULL` | Required device features array. |
+| `on_device_lost` | `CgfxDeviceLostCallback` | `NULL` | Device-lost callback. `NULL` = print to stderr. |
+| `on_device_error` | `CgfxDeviceErrorCallback` | `NULL` | Uncaptured error callback. `NULL` = print to stderr. |
+| `callback_user_data` | `void*` | `NULL` | Passed to both callbacks. |
 
 ---
 
@@ -109,11 +143,12 @@ CGFX_API bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc);
 2. Create a WebGPU instance
 3. Create a platform-specific surface via `glfwGetWGPUSurface`
 4. Request a GPU adapter (synchronous wrapper around async callback)
-5. Request a logical device from the adapter
-6. Register error and device-lost callbacks (print to `stderr`)
-7. Get the default queue from the device
-8. Query the preferred surface format and configure the surface
-9. Create depth buffer if `desc->depth_buffer` is `true`
+5. Check requested features against adapter support (warn on stderr if unsupported)
+6. Request a logical device from the adapter with requested features
+7. Register device-lost and uncaptured-error callbacks (user-provided or default stderr)
+8. Get the default queue from the device
+9. Query the preferred surface format and configure the surface
+10. Create depth buffer if `desc->depth_buffer` is `true`
 
 **Example:**
 

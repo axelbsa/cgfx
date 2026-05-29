@@ -159,7 +159,7 @@ The one exception is `CGFX_BINDING_STORAGE_TEXTURE` — its default visibility i
 
 ### Mixed bind groups with cgfx_bind_group_create
 
-When a bind group contains different resource types (textures, buffers, samplers), use `cgfx_bind_group_create` with `CgfxBindGroupEntry` instead of the buffer-only `cgfx_shader_create_bind_group`:
+When a bind group contains different resource types (textures, buffers, samplers), use `cgfx_bind_group_create` with `CgfxBindGroupEntry` instead of the buffer-only `cgfx_bind_group_create_buffers`:
 
 ```c
 WGPUBindGroup compute_bg = cgfx_bind_group_create(&ctx, &compute_shader, 0,
@@ -196,7 +196,7 @@ WGPUComputePipeline pipeline = cgfx_compute_pipeline_create(&ctx,
 
 The entry point defaults to `"cs_main"` (matching cgfx's `"vs_main"` / `"fs_main"` convention). Override with `.entry_point = "my_kernel"` if needed.
 
-The returned `WGPUComputePipeline` is caller-owned — release with `wgpuComputePipelineRelease()`.
+The returned `WGPUComputePipeline` is caller-owned — release with `cgfx_compute_pipeline_destroy()`.
 
 ### Pipeline layout comes from the shader
 
@@ -392,12 +392,12 @@ The dispatch call `(512/8, 512/8, 1)` launches 64×64 workgroups, each with 8×8
 Resources are destroyed in reverse order of creation. Bind groups before shaders (since bind groups reference shader layouts), pipelines before shaders, texture and context last:
 
 ```c
-    wgpuBindGroupRelease(render_bg);
-    wgpuBindGroupRelease(compute_bg);
+    cgfx_bind_group_destroy(render_bg);
+    cgfx_bind_group_destroy(compute_bg);
     cgfx_buffer_destroy(&params_buf);
-    wgpuSamplerRelease(sampler);
-    wgpuRenderPipelineRelease(render_pipeline);
-    wgpuComputePipelineRelease(compute_pipeline);
+    cgfx_sampler_destroy(sampler);
+    cgfx_pipeline_destroy(render_pipeline);
+    cgfx_compute_pipeline_destroy(compute_pipeline);
     cgfx_shader_destroy(&render_shader);
     cgfx_shader_destroy(&compute_shader);
     cgfx_texture_destroy(&tex);

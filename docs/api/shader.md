@@ -158,16 +158,16 @@ CgfxShader shader = cgfx_shader_create_from_file(&ctx, "mesh shader",
 
 ---
 
-### cgfx_shader_create_bind_group
+### cgfx_bind_group_create_buffers
 
 Creates a bind group for a specific `@group` index using the shader's layout. Each buffer maps to consecutive binding indices.
 
 ```c
-CGFX_API WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
-                                                      const CgfxShader *shader,
-                                                      uint32_t group_index,
-                                                      const CgfxBuffer *buffers,
-                                                      uint32_t buffer_count);
+CGFX_API WGPUBindGroup cgfx_bind_group_create_buffers(const CgfxCtx *ctx,
+                                                       const CgfxShader *shader,
+                                                       uint32_t group_index,
+                                                       const CgfxBuffer *buffers,
+                                                       uint32_t buffer_count);
 ```
 
 | Parameter | Type | Description |
@@ -178,28 +178,28 @@ CGFX_API WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
 | `buffers` | `const CgfxBuffer*` | Array of `CgfxBuffer`, one per binding. `buffers[0]` maps to `@binding(0)`, `buffers[1]` to `@binding(1)`, etc. |
 | `buffer_count` | `uint32_t` | Number of buffers in the array. |
 
-**Returns:** A `WGPUBindGroup` handle, or `nullptr` if `group_index` is out of range. The caller owns this handle and must release it with `wgpuBindGroupRelease()`.
+**Returns:** A `WGPUBindGroup` handle, or `nullptr` if `group_index` is out of range. The caller owns this handle and must release it with `cgfx_bind_group_destroy()`.
 
 **Example:**
 
 ```c
 CgfxBuffer ubuf = cgfx_buffer_create_uniform(&ctx, &my_data, sizeof(my_data));
 
-WGPUBindGroup group = cgfx_shader_create_bind_group(
+WGPUBindGroup group = cgfx_bind_group_create_buffers(
     &ctx, &shader, 0,        // @group(0)
     &ubuf, 1                  // one buffer at @binding(0)
 );
 
 // Use during rendering, then release:
-wgpuBindGroupRelease(group);
+cgfx_bind_group_destroy(group);
 cgfx_buffer_destroy(&ubuf);
 ```
 
 !!! warning "Bind groups are caller-owned"
-    `cgfx_shader_destroy` does **not** release bind groups created with this function. You must call `wgpuBindGroupRelease()` yourself, or use `CgfxUniform` / `CgfxCamera` which handle this automatically.
+    `cgfx_shader_destroy` does **not** release bind groups created with this function. You must call `cgfx_bind_group_destroy()` yourself, or use `CgfxUniform` which handles this automatically.
 
 !!! note "Non-consecutive bindings"
-    `cgfx_shader_create_bind_group` assumes consecutive buffer bindings. For non-consecutive bindings or mixed resource types (textures, samplers), use `cgfx_bind_group_create` below.
+    `cgfx_bind_group_create_buffers` assumes consecutive buffer bindings. For non-consecutive bindings or mixed resource types (textures, samplers), use `cgfx_bind_group_create` below.
 
 ---
 
@@ -236,7 +236,7 @@ CGFX_API WGPUBindGroup cgfx_bind_group_create(const CgfxCtx *ctx,
 | `entries` | `const CgfxBindGroupEntry*` | Array of bind group entries. |
 | `entry_count` | `uint32_t` | Number of entries. |
 
-**Returns:** A `WGPUBindGroup` handle. The caller owns this handle and must release it with `wgpuBindGroupRelease()`.
+**Returns:** A `WGPUBindGroup` handle. The caller owns this handle and must release it with `cgfx_bind_group_destroy()`.
 
 **Example (texture + sampler):**
 
@@ -247,6 +247,20 @@ WGPUBindGroup bg = cgfx_bind_group_create(&ctx, &shader, 0,
         { .binding = 1, .sampler = my_sampler },
     }, 2);
 ```
+
+---
+
+### cgfx_bind_group_destroy
+
+Release a bind group.
+
+```c
+CGFX_API void cgfx_bind_group_destroy(WGPUBindGroup group);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `group` | `WGPUBindGroup` | Bind group to release. |
 
 ---
 
@@ -319,6 +333,6 @@ CGFX_API void cgfx_shader_destroy(CgfxShader *shader);
 | `shader` | `CgfxShader*` | Shader to destroy. Must not be used after this call. |
 
 !!! warning "Does NOT release bind groups"
-    Bind groups created via `cgfx_shader_create_bind_group` are owned by the caller and are not released here. Release them with `wgpuBindGroupRelease()` before destroying the shader. `CgfxUniform` and `CgfxCamera` handle their own bind group cleanup in their respective `_destroy` functions.
+    Bind groups created via `cgfx_bind_group_create_buffers` are owned by the caller and are not released here. Release them with `cgfx_bind_group_destroy()` before destroying the shader. `CgfxUniform` handles its own bind group cleanup in its `_destroy` function.
 
 See the [Shader and Bind Group Ownership guide](../guides/shader-bind-groups.md) for a full explanation of the ownership model.
