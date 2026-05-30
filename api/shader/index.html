@@ -1045,6 +1045,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_shader_bind_dynamic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_shader_bind_dynamic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_shader_bind_compute_dynamic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_shader_bind_compute_dynamic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_shader_destroy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1555,6 +1577,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cgfx_shader_bind_dynamic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_shader_bind_dynamic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cgfx_shader_bind_compute_dynamic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cgfx_shader_bind_compute_dynamic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#cgfx_shader_destroy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1666,6 +1710,12 @@
 <td>Minimum buffer size in bytes (only for <code>BUFFER</code> kind).</td>
 </tr>
 <tr>
+<td><code>has_dynamic_offset</code></td>
+<td><code>bool</code></td>
+<td><code>false</code></td>
+<td>Buffer uses dynamic offset at bind time (only for <code>BUFFER</code> kind). Use with <code>cgfx_shader_bind_dynamic</code>.</td>
+</tr>
+<tr>
 <td><code>sample_type</code></td>
 <td><code>WGPUTextureSampleType</code></td>
 <td><code>Float</code></td>
@@ -1676,6 +1726,12 @@
 <td><code>WGPUTextureViewDimension</code></td>
 <td><code>2D</code></td>
 <td>Texture view dimension (for <code>TEXTURE</code> and <code>STORAGE_TEXTURE</code> kinds).</td>
+</tr>
+<tr>
+<td><code>sampler_type</code></td>
+<td><code>WGPUSamplerBindingType</code></td>
+<td><code>Filtering</code></td>
+<td>Sampler binding type (only for <code>SAMPLER</code> kind). Use <code>Comparison</code> for shadow mapping, <code>NonFiltering</code> for data textures.</td>
 </tr>
 <tr>
 <td><code>storage_access</code></td>
@@ -1987,6 +2043,16 @@
 <td><code>WGPUSampler</code></td>
 <td>Non-NULL for sampler bindings.</td>
 </tr>
+<tr>
+<td><code>offset</code></td>
+<td><code>uint64_t</code></td>
+<td>Buffer sub-range offset in bytes. 0 = start.</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td><code>uint64_t</code></td>
+<td>Buffer sub-range size in bytes. 0 = entire buffer.</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -2143,9 +2209,94 @@
 </span></code></pre></div>
 <p>Mirror of <code>cgfx_shader_bind</code> for compute passes instead of render passes.</p>
 <hr />
+<h3 id="cgfx_shader_bind_dynamic">cgfx_shader_bind_dynamic<a class="headerlink" href="#cgfx_shader_bind_dynamic" title="Permanent link">&para;</a></h3>
+<p>Set a single bind group on a render pass with dynamic offsets. Use with bind groups whose layout entries have <code>has_dynamic_offset = true</code>.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_bind_dynamic</span><span class="p">(</span><span class="n">WGPURenderPassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">                                        </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_index</span><span class="p">,</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">                                        </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">group</span><span class="p">,</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">                                        </span><span class="k">const</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="o">*</span><span class="n">offsets</span><span class="p">,</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">                                        </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">offset_count</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pass</code></td>
+<td><code>WGPURenderPassEncoder</code></td>
+<td>Active render pass encoder.</td>
+</tr>
+<tr>
+<td><code>group_index</code></td>
+<td><code>uint32_t</code></td>
+<td>The <code>@group(N)</code> index to bind to.</td>
+</tr>
+<tr>
+<td><code>group</code></td>
+<td><code>WGPUBindGroup</code></td>
+<td>Bind group handle.</td>
+</tr>
+<tr>
+<td><code>offsets</code></td>
+<td><code>const uint32_t*</code></td>
+<td>Array of byte offsets into the dynamic buffers.</td>
+</tr>
+<tr>
+<td><code>offset_count</code></td>
+<td><code>uint32_t</code></td>
+<td>Number of offsets (must match the number of dynamic-offset bindings in the layout).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example (one uniform buffer with dynamic offset):</strong></p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1">// Layout: one dynamic uniform</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">CgfxShader</span><span class="w"> </span><span class="n">shader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_shader_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;dyn&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">wgsl</span><span class="p">,</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="o">&amp;</span><span class="p">(</span><span class="n">CgfxShaderDesc</span><span class="p">){</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">        </span><span class="p">.</span><span class="n">group_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">        </span><span class="p">.</span><span class="n">groups</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CgfxGroupDesc</span><span class="p">[]){{</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">            </span><span class="p">.</span><span class="n">binding_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">            </span><span class="p">.</span><span class="n">bindings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CgfxBindingDesc</span><span class="p">[]){{</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">                </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">                </span><span class="p">.</span><span class="n">min_binding_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">ObjectData</span><span class="p">),</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">                </span><span class="p">.</span><span class="n">has_dynamic_offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">,</span>
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">            </span><span class="p">}},</span>
+</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="w">        </span><span class="p">}},</span>
+</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="w">    </span><span class="p">});</span>
+</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>
+</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a><span class="c1">// One big buffer, one bind group</span>
+</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="n">CgfxBuffer</span><span class="w"> </span><span class="n">big_buf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_buffer_create_uniform</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">all_objects</span><span class="p">,</span>
+</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a><span class="w">    </span><span class="n">object_count</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">aligned_size</span><span class="p">);</span>
+</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">bg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cgfx_bind_group_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">shader</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a><span class="w">    </span><span class="p">(</span><span class="n">CgfxBindGroupEntry</span><span class="p">[]){{</span>
+</span><span id="__span-15-20"><a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a><span class="w">        </span><span class="p">.</span><span class="n">binding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">.</span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">big_buf</span><span class="p">,</span>
+</span><span id="__span-15-21"><a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a><span class="w">        </span><span class="p">.</span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">ObjectData</span><span class="p">),</span>
+</span><span id="__span-15-22"><a id="__codelineno-15-22" name="__codelineno-15-22" href="#__codelineno-15-22"></a><span class="w">    </span><span class="p">}},</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-15-23"><a id="__codelineno-15-23" name="__codelineno-15-23" href="#__codelineno-15-23"></a>
+</span><span id="__span-15-24"><a id="__codelineno-15-24" name="__codelineno-15-24" href="#__codelineno-15-24"></a><span class="c1">// Per-draw: change only the offset</span>
+</span><span id="__span-15-25"><a id="__codelineno-15-25" name="__codelineno-15-25" href="#__codelineno-15-25"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">object_count</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-15-26"><a id="__codelineno-15-26" name="__codelineno-15-26" href="#__codelineno-15-26"></a><span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">aligned_size</span><span class="p">;</span>
+</span><span id="__span-15-27"><a id="__codelineno-15-27" name="__codelineno-15-27" href="#__codelineno-15-27"></a><span class="w">    </span><span class="n">cgfx_shader_bind_dynamic</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">bg</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</span><span id="__span-15-28"><a id="__codelineno-15-28" name="__codelineno-15-28" href="#__codelineno-15-28"></a><span class="w">    </span><span class="n">cgfx_mesh_draw</span><span class="p">(</span><span class="n">frame</span><span class="p">.</span><span class="n">render_pass</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mesh</span><span class="p">);</span>
+</span><span id="__span-15-29"><a id="__codelineno-15-29" name="__codelineno-15-29" href="#__codelineno-15-29"></a><span class="p">}</span>
+</span></code></pre></div>
+<hr />
+<h3 id="cgfx_shader_bind_compute_dynamic">cgfx_shader_bind_compute_dynamic<a class="headerlink" href="#cgfx_shader_bind_compute_dynamic" title="Permanent link">&para;</a></h3>
+<p>Set a single bind group on a compute pass with dynamic offsets. Mirror of <code>cgfx_shader_bind_dynamic</code> for compute passes.</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_bind_compute_dynamic</span><span class="p">(</span><span class="n">WGPUComputePassEncoder</span><span class="w"> </span><span class="n">pass</span><span class="p">,</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">                                                </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">group_index</span><span class="p">,</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">                                                </span><span class="n">WGPUBindGroup</span><span class="w"> </span><span class="n">group</span><span class="p">,</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">                                                </span><span class="k">const</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="o">*</span><span class="n">offsets</span><span class="p">,</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">                                                </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">offset_count</span><span class="p">);</span>
+</span></code></pre></div>
+<hr />
 <h3 id="cgfx_shader_destroy">cgfx_shader_destroy<a class="headerlink" href="#cgfx_shader_destroy" title="Permanent link">&para;</a></h3>
 <p>Releases the shader module, pipeline layout, and all bind group layouts.</p>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="n">CgfxShader</span><span class="w"> </span><span class="o">*</span><span class="n">shader</span><span class="p">);</span>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">CGFX_API</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">cgfx_shader_destroy</span><span class="p">(</span><span class="n">CgfxShader</span><span class="w"> </span><span class="o">*</span><span class="n">shader</span><span class="p">);</span>
 </span></code></pre></div>
 <table>
 <thead>
