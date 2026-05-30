@@ -100,8 +100,28 @@ Issues the three draw-call commands required to render an indexed mesh:
 !!! note "Pipeline must be set first"
     The pipeline must already be set on the render pass before calling `cgfx_mesh_draw`. Pipelines and meshes are intentionally decoupled so the same mesh can be drawn with different pipelines (e.g. shadow pass and color pass).
 
-!!! tip "Instanced or non-indexed draws"
-    For instanced rendering or non-indexed draws, drop down to the raw WebGPU API using the buffer handles in `mesh->vertex_buffer.buffer` and `mesh->index_buffer.buffer`.
+---
+
+### cgfx_mesh_draw_instanced
+
+Record an instanced draw for a mesh on an active render pass. Same as `cgfx_mesh_draw` but with a caller-supplied instance count.
+
+```c
+CGFX_API void cgfx_mesh_draw_instanced(WGPURenderPassEncoder pass,
+                                        const CgfxMesh *mesh,
+                                        uint32_t instance_count);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pass` | `WGPURenderPassEncoder` | Active render pass encoder. |
+| `mesh` | `const CgfxMesh *` | Mesh to draw. |
+| `instance_count` | `uint32_t` | Number of instances to draw. |
+
+For per-instance data, set a second vertex buffer at slot 1 with `stepMode = Instance` before calling this, and include that layout in `CgfxPipelineDesc.vertex_layouts`.
+
+!!! tip "Non-indexed draws"
+    For non-indexed draws, drop down to the raw WebGPU API using `mesh->vertex_buffer.buffer`.
 
 ---
 

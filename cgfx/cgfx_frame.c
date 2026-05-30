@@ -16,22 +16,40 @@
 /**
  * Acquire the next surface texture and create a view for rendering.
  *
- * Gets the current surface texture from the swap chain, checks its status,
- * and creates a 2D texture view configured for rendering.
+ * Gets the current surface texture from the swap chain and checks its status.
+ * On Outdated or Lost (common after resize, DPI change, or compositor event),
+ * reconfigures the surface with the current ctx dimensions and retries once.
+ * Returns NULL only for genuinely unrecoverable statuses (Timeout, OOM,
+ * DeviceLost) so the caller can safely skip the frame.
  *
  * Backend difference: On non-wgpu-native backends, the surface texture is
  * released after creating the view (the view holds a reference). On
  * wgpu-native, surface textures must NOT be manually released.
  *
- * @param surface  The window surface to acquire from.
- * @return         A texture view for rendering, or NULL if unavailable.
+ * @param ctx  The initialized context (surface, device, format, dimensions).
+ * @return     A texture view for rendering, or NULL if unavailable.
  */
-static WGPUTextureView cgfx__get_surface_texture_view(WGPUSurface surface) {
+static WGPUTextureView cgfx__get_surface_texture_view(const CgfxCtx *ctx) {
     WGPUSurfaceTexture surface_texture;
-    wgpuSurfaceGetCurrentTexture(surface, &surface_texture);
-    if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
-        return nullptr;
+    wgpuSurfaceGetCurrentTexture(ctx->surface, &surface_texture);
+
+    if (surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
+        surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Lost) {
+        WGPUSurfaceConfiguration config = {
+            .device      = ctx->device,
+            .format      = ctx->surface_format,
+            .usage       = WGPUTextureUsage_RenderAttachment,
+            .width       = ctx->width,
+            .height      = ctx->height,
+            .presentMode = ctx->present_mode,
+            .alphaMode   = WGPUCompositeAlphaMode_Auto,
+        };
+        wgpuSurfaceConfigure(ctx->surface, &config);
+        wgpuSurfaceGetCurrentTexture(ctx->surface, &surface_texture);
     }
+
+    if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success)
+        return nullptr;
 
     WGPUTextureViewDescriptor view_desc = {};
     view_desc.nextInChain = nullptr;
@@ -60,7 +78,7 @@ static WGPUTextureView cgfx__get_surface_texture_view(WGPUSurface surface) {
 
 
 bool cgfx_frame_begin_encoder(const CgfxCtx *ctx, CgfxFrame *frame) {
-    frame->target_view = cgfx__get_surface_texture_view(ctx->surface);
+    frame->target_view = cgfx__get_surface_texture_view(ctx);
     if (!frame->target_view)
         return false;
 

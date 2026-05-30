@@ -30,8 +30,10 @@ Describes a single binding slot within a bind group layout.
 | `kind` | `CgfxBindingKind` | `BUFFER` | The resource kind. |
 | `type` | `WGPUBufferBindingType` | `Uniform` | Buffer binding type (only for `BUFFER` kind). |
 | `min_binding_size` | `uint64_t` | `0` (none) | Minimum buffer size in bytes (only for `BUFFER` kind). |
+| `has_dynamic_offset` | `bool` | `false` | Buffer uses dynamic offset at bind time (only for `BUFFER` kind). Use with `cgfx_shader_bind_dynamic`. |
 | `sample_type` | `WGPUTextureSampleType` | `Float` | Texture sample type (only for `TEXTURE` kind). |
 | `view_dimension` | `WGPUTextureViewDimension` | `2D` | Texture view dimension (for `TEXTURE` and `STORAGE_TEXTURE` kinds). |
+| `sampler_type` | `WGPUSamplerBindingType` | `Filtering` | Sampler binding type (only for `SAMPLER` kind). Use `Comparison` for shadow mapping, `NonFiltering` for data textures. |
 | `storage_access` | `WGPUStorageTextureAccess` | `WriteOnly` | Storage texture access (only for `STORAGE_TEXTURE` kind). |
 | `storage_format` | `WGPUTextureFormat` | *(required)* | Storage texture format (only for `STORAGE_TEXTURE` kind). |
 
@@ -213,6 +215,8 @@ An entry in a general-purpose bind group, supporting buffers, textures, and samp
 | `buffer` | `const CgfxBuffer*` | Non-NULL for buffer bindings. |
 | `texture` | `const CgfxTexture*` | Non-NULL for texture bindings (uses `texture->view`). |
 | `sampler` | `WGPUSampler` | Non-NULL for sampler bindings. |
+| `offset` | `uint64_t` | Buffer sub-range offset in bytes. 0 = start. |
+| `size` | `uint64_t` | Buffer sub-range size in bytes. 0 = entire buffer. |
 
 ---
 
@@ -317,6 +321,76 @@ cgfx_shader_bind_compute(cp.pass, &my_bind_group, 1);
 ```
 
 Mirror of `cgfx_shader_bind` for compute passes instead of render passes.
+
+---
+
+### cgfx_shader_bind_dynamic
+
+Set a single bind group on a render pass with dynamic offsets. Use with bind groups whose layout entries have `has_dynamic_offset = true`.
+
+```c
+CGFX_API void cgfx_shader_bind_dynamic(WGPURenderPassEncoder pass,
+                                        uint32_t group_index,
+                                        WGPUBindGroup group,
+                                        const uint32_t *offsets,
+                                        uint32_t offset_count);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pass` | `WGPURenderPassEncoder` | Active render pass encoder. |
+| `group_index` | `uint32_t` | The `@group(N)` index to bind to. |
+| `group` | `WGPUBindGroup` | Bind group handle. |
+| `offsets` | `const uint32_t*` | Array of byte offsets into the dynamic buffers. |
+| `offset_count` | `uint32_t` | Number of offsets (must match the number of dynamic-offset bindings in the layout). |
+
+**Example (one uniform buffer with dynamic offset):**
+
+```c
+// Layout: one dynamic uniform
+CgfxShader shader = cgfx_shader_create(&ctx, "dyn", wgsl,
+    &(CgfxShaderDesc){
+        .group_count = 1,
+        .groups = (CgfxGroupDesc[]){{
+            .binding_count = 1,
+            .bindings = (CgfxBindingDesc[]){{
+                .binding = 0,
+                .min_binding_size = sizeof(ObjectData),
+                .has_dynamic_offset = true,
+            }},
+        }},
+    });
+
+// One big buffer, one bind group
+CgfxBuffer big_buf = cgfx_buffer_create_uniform(&ctx, all_objects,
+    object_count * aligned_size);
+WGPUBindGroup bg = cgfx_bind_group_create(&ctx, &shader, 0,
+    (CgfxBindGroupEntry[]){{
+        .binding = 0, .buffer = &big_buf,
+        .size = sizeof(ObjectData),
+    }}, 1);
+
+// Per-draw: change only the offset
+for (uint32_t i = 0; i < object_count; i++) {
+    uint32_t offset = i * aligned_size;
+    cgfx_shader_bind_dynamic(frame.render_pass, 0, bg, &offset, 1);
+    cgfx_mesh_draw(frame.render_pass, &mesh);
+}
+```
+
+---
+
+### cgfx_shader_bind_compute_dynamic
+
+Set a single bind group on a compute pass with dynamic offsets. Mirror of `cgfx_shader_bind_dynamic` for compute passes.
+
+```c
+CGFX_API void cgfx_shader_bind_compute_dynamic(WGPUComputePassEncoder pass,
+                                                uint32_t group_index,
+                                                WGPUBindGroup group,
+                                                const uint32_t *offsets,
+                                                uint32_t offset_count);
+```
 
 ---
 

@@ -23,12 +23,12 @@ This is a C23 rendering engine library (`cgfx`) wrapping WebGPU, with GLFW for w
 |--------|---------|
 | `cgfx_export` | `CGFX_API` macro for shared library export/import (`dllexport`/`visibility`) |
 | `cgfx_ctx` | Context: `cgfx_ctx_init` (GLFW) or `cgfx_ctx_init_external` (HWND) + device + queue + surface. Optional depth buffer stored as `CgfxTexture`. Device features via `feature_count`/`features`, user callbacks via `on_device_lost`/`on_device_error`. |
-| `cgfx_shader` | CgfxShader: WGSL compilation + bind group layouts + pipeline layout |
+| `cgfx_shader` | CgfxShader: WGSL compilation + bind group layouts + pipeline layout. `CgfxBindingDesc` supports configurable sampler type (`sampler_type`: Filtering/NonFiltering/Comparison) and dynamic offsets (`has_dynamic_offset`). `CgfxBindGroupEntry` supports sub-buffer ranges (`offset`/`size`). Dynamic offset bind via `cgfx_shader_bind_dynamic`/`cgfx_shader_bind_compute_dynamic`. |
 | `cgfx_pipeline` | Render pipeline with zero-init defaults, reads layout from CgfxShader. Color targets via `CgfxColorTarget[]` - opaque by default, per-target blend (presets: `cgfx_blend_alpha/additive/premultiplied`), offscreen formats, and MRT. Configurable depth compare/write, MSAA sample count, alpha-to-coverage. Strip index format auto-derived for strip topologies. |
 | `cgfx_frame` | Per-frame begin/end cycle (acquire texture, encoder, pass, submit, present). `cgfx_frame_begin_render_pass_ex` renders to caller-supplied color views (offscreen / MRT) via `CgfxRenderPassDesc` with optional MSAA resolve targets; `cgfx_frame_end_render_pass` closes a pass for multi-pass frames. |
 | `cgfx_buffer` | GPU buffer creation (vertex, index, uniform, storage, mapping, generic). `cgfx_buffer_read()` for synchronous GPU-to-CPU readback. |
 | `cgfx_uniform` | CgfxUniform: buffer + bind group + data pointer bundle for per-object uniforms |
-| `cgfx_mesh` | CgfxVertex (96 bytes: pos + normal + tangent + texcoord0 + texcoord1 + color + joints + weights) + CgfxMesh + vertex layout + draw |
+| `cgfx_mesh` | CgfxVertex (96 bytes: pos + normal + tangent + texcoord0 + texcoord1 + color + joints + weights) + CgfxMesh + vertex layout + draw. `cgfx_mesh_draw_instanced` for instanced rendering. |
 | `cgfx_texture` | CgfxTexture (GPU texture + view) + sampler helper. Supports sampled, storage, render-target, and depth textures. Cube maps via `view_dimension` + `depth=6`. Per-layer writes with `cgfx_texture_write_layer()`. |
 | `cgfx_compute` | Compute pipeline creation, standalone and mixed compute passes, buffer copy helper |
 
@@ -45,7 +45,7 @@ The pipeline reads `shader->pipeline_layout` automatically. When a shader has no
 
 Key types: `CgfxBindingDesc` → `CgfxGroupDesc` → `CgfxShaderDesc` → `CgfxShader`.
 
-`CgfxBindingDesc` supports four binding kinds via `CgfxBindingKind`: buffer (default, backward compatible), sampled texture, sampler, and storage texture. For mixed bind groups (buffers + textures + samplers), use `cgfx_bind_group_create()` with `CgfxBindGroupEntry`. For buffer-only bind groups, use `cgfx_bind_group_create_buffers()` (positional convenience).
+`CgfxBindingDesc` supports four binding kinds via `CgfxBindingKind`: buffer (default, backward compatible), sampled texture, sampler, and storage texture. Buffer bindings support `has_dynamic_offset` for per-draw offset changes. Sampler bindings support `sampler_type` (Filtering/NonFiltering/Comparison). For mixed bind groups (buffers + textures + samplers), use `cgfx_bind_group_create()` with `CgfxBindGroupEntry` (supports `offset`/`size` for sub-buffer ranges). For buffer-only bind groups, use `cgfx_bind_group_create_buffers()` (positional convenience). Dynamic offsets are passed at bind time via `cgfx_shader_bind_dynamic()`.
 
 ### Uniform architecture
 

@@ -48,6 +48,21 @@ void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh) {
 }
 
 
+void cgfx_mesh_draw_instanced(WGPURenderPassEncoder pass,
+                               const CgfxMesh *mesh,
+                               uint32_t instance_count) {
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 0,
+                                         mesh->vertex_buffer.buffer,
+                                         0, mesh->vertex_buffer.size);
+    wgpuRenderPassEncoderSetIndexBuffer(pass,
+                                        mesh->index_buffer.buffer,
+                                        WGPUIndexFormat_Uint32,
+                                        0, mesh->index_buffer.size);
+    wgpuRenderPassEncoderDrawIndexed(pass, mesh->index_count,
+                                     instance_count, 0, 0, 0);
+}
+
+
 WGPUVertexBufferLayout cgfx_mesh_vertex_layout(void) {
     static WGPUVertexAttribute attributes[] = {
         { .format = WGPUVertexFormat_Float32x3, .offset = offsetof(CgfxVertex, position),  .shaderLocation = 0 },

@@ -60,9 +60,13 @@ typedef struct CgfxBindingDesc {
 
     WGPUBufferBindingType  type;              /**< Buffer binding type. 0 = Uniform.     */
     uint64_t               min_binding_size;  /**< Minimum buffer size. 0 = none.        */
+    bool                   has_dynamic_offset; /**< Buffer uses dynamic offset at bind time. */
 
     WGPUTextureSampleType    sample_type;     /**< Texture sample type. 0 = Float.       */
     WGPUTextureViewDimension view_dimension;  /**< Texture view dimension. 0 = 2D.       */
+
+    WGPUSamplerBindingType   sampler_type;    /**< Sampler binding type. 0 = Filtering.
+                                                   Use Comparison for shadow mapping.     */
 
     WGPUStorageTextureAccess storage_access;  /**< Storage texture access. 0 = WriteOnly.*/
     WGPUTextureFormat        storage_format;  /**< Storage texture format. Required.      */
@@ -180,6 +184,8 @@ typedef struct CgfxBindGroupEntry {
     const CgfxBuffer  *buffer;    /**< Non-NULL for buffer bindings.               */
     const CgfxTexture *texture;   /**< Non-NULL for texture bindings (uses view).  */
     WGPUSampler        sampler;   /**< Non-NULL for sampler bindings.              */
+    uint64_t           offset;    /**< Buffer sub-range offset. 0 = start.         */
+    uint64_t           size;      /**< Buffer sub-range size. 0 = entire buffer.   */
 } CgfxBindGroupEntry;
 
 /**
@@ -236,6 +242,40 @@ CGFX_API void cgfx_shader_bind(WGPURenderPassEncoder pass,
 CGFX_API void cgfx_shader_bind_compute(WGPUComputePassEncoder pass,
                                         const WGPUBindGroup *groups,
                                         uint32_t group_count);
+
+/**
+ * Set a single bind group on a render pass with dynamic offsets.
+ *
+ * Use with bind groups whose layout entries have has_dynamic_offset = true.
+ * Each dynamic-offset binding consumes one uint32_t from the offsets array,
+ * in binding-index order.
+ *
+ * @param pass          Active render pass encoder.
+ * @param group_index   The @group(N) index to bind to.
+ * @param group         Bind group handle.
+ * @param offsets       Array of byte offsets into the dynamic buffers.
+ * @param offset_count  Number of offsets (must match dynamic binding count).
+ */
+CGFX_API void cgfx_shader_bind_dynamic(WGPURenderPassEncoder pass,
+                                        uint32_t group_index,
+                                        WGPUBindGroup group,
+                                        const uint32_t *offsets,
+                                        uint32_t offset_count);
+
+/**
+ * Set a single bind group on a compute pass with dynamic offsets.
+ *
+ * @param pass          Active compute pass encoder.
+ * @param group_index   The @group(N) index to bind to.
+ * @param group         Bind group handle.
+ * @param offsets       Array of byte offsets into the dynamic buffers.
+ * @param offset_count  Number of offsets (must match dynamic binding count).
+ */
+CGFX_API void cgfx_shader_bind_compute_dynamic(WGPUComputePassEncoder pass,
+                                                uint32_t group_index,
+                                                WGPUBindGroup group,
+                                                const uint32_t *offsets,
+                                                uint32_t offset_count);
 
 /**
  * Release a bind group.

@@ -110,6 +110,22 @@ CGFX_API void cgfx_mesh_destroy(CgfxMesh *mesh);
 CGFX_API void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh);
 
 /**
+ * Record an instanced draw for a mesh on an active render pass.
+ *
+ * Same as cgfx_mesh_draw() but with a caller-supplied instance count.
+ * For per-instance data, set a second vertex buffer at slot 1 with
+ * stepMode = Instance before calling this, and include that layout
+ * in CgfxPipelineDesc.vertex_layouts.
+ *
+ * @param pass            Active render pass encoder.
+ * @param mesh            Mesh to draw.
+ * @param instance_count  Number of instances to draw.
+ */
+CGFX_API void cgfx_mesh_draw_instanced(WGPURenderPassEncoder pass,
+                                        const CgfxMesh *mesh,
+                                        uint32_t instance_count);
+
+/**
  * Get the vertex buffer layout descriptor for CgfxVertex.
  *
  * Returns a WGPUVertexBufferLayout that describes the memory layout of
