@@ -164,6 +164,7 @@ int main(void) {
         }, 2);
 
     while (cgfx_ctx_is_running(&ctx)) {
+        glfwPollEvents();
         params.time += 0.016f;
         wgpuQueueWriteBuffer(ctx.queue, params_buf.buffer, 0, &params, sizeof(params));
 

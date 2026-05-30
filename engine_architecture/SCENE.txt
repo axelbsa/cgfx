@@ -1,0 +1,225 @@
+
+SCENE SYSTEM / WORLD
+====================
+The scene layer was missing from the original design (only raw flecs ChildOf
+transforms existed). This file specifies a real scene system: what a scene is,
+how it is loaded/unloaded, how entities are named and owned, how prefabs and
+serialization work, and the entity-lifecycle rules. It is purely additive to
+the existing Engine::tick — no per-frame cost.
+
+
+-------------------------------------------------------------------------------
+1. WHAT A SCENE IS
+-------------------------------------------------------------------------------
+
+DECISION: a Scene is a NAMED flecs entity that OWNS its content through a
+dedicated relationship, in the SAME flecs world. It is also the flecs name
+scope for its entities.
+
+  - One world. All scenes share Engine's single flecs::world. Additive scenes
+    (load a level while a HUD scene stays up) are natural; the tick, the four
+    bridges, and all systems keep operating on one world.
+  - Ownership via a relationship, NOT via ChildOf. Define:
+
+        struct SceneMember { };   // a flecs relationship (tag-pair target)
+
+    Every entity spawned into scene S gets the pair (SceneMember, S). Register it
+    so that destroying S destroys its members exactly:
+
+        world.component<SceneMember>()
+             .add(flecs::Exclusive)            // an entity belongs to one scene
+             .add(flecs::OnDeleteTarget, flecs::Delete); // delete S -> delete members
+
+    Unloading a scene is then ONE call: scene_entity.destruct(); flecs deletes
+    every member. No bookkeeping vector, no chance of leaking or over-deleting.
+
+  - The scene entity is also the NAME SCOPE for its content (flecs scopes), so
+    two scenes can both contain "player" without collision, and serialized
+    references use scoped names.
+
+REJECTED alternatives (and why):
+  - Separate flecs::world per scene: breaks the single-world tick and forces every
+    system/bridge to iterate multiple worlds; cross-scene references become hard.
+  - ChildOf as ownership: conflates TRANSFORM parenting with scene MEMBERSHIP. A
+    child entity must follow its parent's transform, but scene membership is a
+    different axis (a turret is a transform-child of a tank but both are members
+    of the same scene; a HUD element is in the HUD scene with no transform parent).
+    Keep the two relationships orthogonal: ChildOf = transform; SceneMember = ownership.
+
+
+-------------------------------------------------------------------------------
+2. IDENTITY & NAMING
+-------------------------------------------------------------------------------
+
+  - SceneID and EntityID are opaque uint64 wrappers (mirror the existing EntityID),
+    so flecs never leaks to consumers.
+  - Entities that participate in hierarchy, serialization, or prefab references
+    are given a flecs NAME within their scene scope. Names are the stable identity
+    used by save/load and by set_parent-by-name. Unnamed throwaway entities are
+    fine for transient gameplay spawns.
+  - find(scene, "name") -> EntityID resolves a scoped name. Cross-scene refs use
+    the fully-scoped path ("scene_name.entity_name").
+
+
+-------------------------------------------------------------------------------
+3. PUBLIC API  (added to Engine; flecs stays hidden)
+-------------------------------------------------------------------------------
+
+  // scenes
+  SceneID  create_scene(const char* name);
+  void     unload_scene(SceneID);              // scene_entity.destruct()
+  void     clear_scene(SceneID);               // destruct members, keep the scene
+  SceneID  active_scene() const;               // default spawn target
+  void     set_active_scene(SceneID);
+
+  // spawning (every spawn takes/assumes a scene; adds (SceneMember, scene))
+  EntityID spawn(SceneID, const char* name = nullptr);             // empty entity
+  EntityID spawn_mesh(SceneID, const char* name,
+                      const char* mesh_path, const char* material_path,
+                      vec3 pos = {});                              // renderable
+  EntityID spawn_camera(SceneID, const char* name,
+                        float fov, float near, float far, vec3 pos);
+  void     despawn(EntityID);                  // entity.destruct() (cascades, sec 5)
+
+  // hierarchy (transform parenting; distinct from scene membership)
+  void     set_parent(EntityID child, EntityID parent);
+  EntityID find(SceneID, const char* name);
+
+  // prefabs & serialization (section 4)
+  PrefabID load_prefab(const char* path);
+  EntityID instantiate_prefab(SceneID, PrefabID, vec3 pos = {});
+  SceneID  load_scene_file(const char* path);
+  void     save_scene_file(SceneID, const char* path);
+
+  Engine owns a SceneManager (scene/scene_manager.*) that holds the active scene
+  and the SceneID<->scene-entity mapping. create_mesh_entity/create_camera from
+  the original API become thin wrappers over spawn_mesh/spawn_camera on the
+  active scene (keeps the early phases working before scenes land).
+
+
+-------------------------------------------------------------------------------
+4. SERIALIZATION & PREFABS  (one schema, shared)
+-------------------------------------------------------------------------------
+
+Pull serialization forward from "Phase 10" into the scene design so scenes,
+scene files, and prefabs share ONE format instead of bolting save/load on later.
+
+  Scene file = a list of entity records. Each record:
+      name            (scoped, stable identity)
+      parent          (name reference, optional)        -> ChildOf on load
+      Position/Rotation/Scale
+      mesh / material (asset paths, optional)           -> spawn_mesh
+      physics         (shape kind + dims + mass, optional) -> register_body
+      tags            (IsCamera, CastsShadow, ...)
+      prefab          (path, optional)                  -> instantiate then override
+
+  Load is TWO PASSES so order does not matter:
+      pass 1: create every entity by name (no parenting yet)
+      pass 2: resolve parent-by-name (set_parent) and any cross refs
+
+  Text/JSON first (readable beats compact while debugging). Do NOT serialize live
+  physics state (velocities/contacts); save only initial conditions and let
+  physics re-simulate from rest on load.
+
+  PREFABS use flecs Prefab + IsA:
+      - A prefab is authored as a scene sub-tree and stored with the same schema.
+      - load_prefab builds a flecs Prefab entity (and its child sub-tree) ONCE.
+      - instantiate_prefab does entity.is_a(prefab): flecs instances the sub-tree
+        with copy-on-write component overrides (cheap, shares defaults). The
+        instance is added to the target scene (SceneMember) and positioned.
+      - This beats re-parsing the file per instance and gives free overrides.
+
+
+-------------------------------------------------------------------------------
+5. ENTITY LIFECYCLE
+-------------------------------------------------------------------------------
+
+  - CASCADE DELETE is the default and comes from flecs delete traits:
+      ChildOf      with (OnDeleteTarget, Delete)  -> deleting a parent deletes its
+                   transform children (set this on the ChildOf usage).
+      SceneMember  with (OnDeleteTarget, Delete)  -> deleting a scene deletes members.
+    There is intentionally NO "orphan child re-parents to root" path; a destroyed
+    parent takes its sub-tree with it. If detach-without-delete is ever needed,
+    it is an explicit reparent before destruct, not an implicit fallback.
+
+  - RESOURCE CLEANUP via flecs observers:
+      Physics body: register an on_remove observer on PhysicsBodyID that calls
+      PhysicsBridge::unregister_body (removes the Jolt body + both map entries).
+      This fires on component removal AND on entity destruction (flecs strips all
+      components on delete), so it covers despawn and scene unload uniformly.
+      REQUIREMENT: register_body must actually set<PhysicsBodyID> on the entity,
+      or the observer never fires (the original sketch declared the component but
+      never set it).
+
+      GPU / mesh cleanup: do NOT wire mesh/material destruction to entity
+      on_remove. AssetManager assets are SHARED by path across many entities;
+      destroying GPU resources when one entity dies would double-free or pull the
+      rug from other users. GPU lifetime is AssetManager's job (unload / unload_all
+      / future refcounting), not the entity's.
+
+
+-------------------------------------------------------------------------------
+6. TRANSFORM SYSTEM  (concrete; fixes two real bugs)
+-------------------------------------------------------------------------------
+
+  build_trs(out, pos, rot, scale): out = T * R * S via cglm
+      glm_translate_make(T,pos); glm_quat_mat4(rot,R); glm_scale_make(S,scale);
+      glm_mat4_mul(T,R,tmp); glm_mat4_mul(tmp,S,out);
+  Quaternion is cglm versor {x,y,z,w}; matrices column-major (matches cgfx).
+
+  Two passes, but the child pass MUST guarantee parent-before-child:
+
+    pass 1 "Transform_Roots"     : .without(ChildOf, flecs::Wildcard)
+        reads Position/Rotation/Scale -> writes WorldTransform = local TRS
+
+    pass 2 "Transform_Children"  : .with(ChildOf, flecs::Wildcard)
+                                   .parent().cascade()      <-- REQUIRED
+        reads local TRS + parent WorldTransform
+        writes WorldTransform = parent.WorldTransform * local
+
+    [!] BUG in the original sketch: a flat .with(ChildOf, Wildcard) query does
+        NOT order parents before children for MULTI-LEVEL hierarchies; a
+        grandchild can process before its parent and read a stale matrix. The
+        .parent().cascade() ordering (flecs depth ordering up the ChildOf chain)
+        is what makes deep trees correct. This is not optional.
+
+  WorldTransform is the SINGLE source of truth the RenderBridge reads. Keep it
+  convention-neutral (column-major cglm); the LH/Jolt reconciliation happens only
+  at compute_proj and the physics boundary (see RENDER_INTEGRATION section 2),
+  never on WorldTransform.
+
+  [!] BUG: physics writeback. PhysicsBridge writes body results into LOCAL
+      Position/Rotation. That is correct ONLY if the body's entity is a transform
+      ROOT. A dynamic body that is also a ChildOf would have its parent's
+      transform applied on top, double-transforming it. RULE: a dynamic physics
+      body's entity must be a transform root (assert it at register_body). If a
+      dynamic body must visually parent to something later, convert through the
+      parent's inverse world matrix at writeback; not needed for v1.
+
+  Dirty-flagging: brute-force (recompute every WorldTransform every tick) is fine
+  to start and is what the phases assume. If profiling shows it matters, add a
+  changed-this-frame filter (flecs change detection on Position/Rotation/Scale)
+  before optimizing; do not pre-optimize.
+
+
+-------------------------------------------------------------------------------
+7. HOW IT THREADS INTO Engine::tick  (unchanged tick; additive at init)
+-------------------------------------------------------------------------------
+
+  The scene layer adds NO per-frame step. Scenes are built at load time through
+  spawn_*/set_parent (which set components + relationships), and torn down via
+  destruct(). The tick is exactly as in ARCHITECTURE.txt:
+      input -> physics -> world.progress(transform roots/children, camera) -> render
+  Transform_Children simply uses .parent().cascade() now, and the SceneMember /
+  ChildOf delete traits are registered once in Engine::init.
+
+
+-------------------------------------------------------------------------------
+8. WHERE THIS LANDS IN THE BUILD PLAN
+-------------------------------------------------------------------------------
+
+  Scene is Phase 6.5 (after the public API, before physics) in CHALLENGES.txt:
+  by then EntityID + spawn + set_parent form the entity-construction vocabulary a
+  scene is built from, physics bodies (Phase 7) and characters (Phase 9) get
+  registered as part of scene instantiation rather than bolted on, and Phase 10
+  "serialization" becomes "serialize the Scene" using the schema defined here.

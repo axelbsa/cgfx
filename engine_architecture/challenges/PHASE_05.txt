@@ -1,0 +1,137 @@
+===============================================================================
+PHASE 5 — INPUT SYSTEM  (GLFW, via the cgfx window)
+Goal: keyboard/mouse state in the ECS, readable by any system; fly the camera
+Prereqs: Phase 3 (a camera entity to drive), Phase 1 (Renderer exposes window())
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  The scene is static so far. This phase reads the keyboard and mouse each frame,
+  turns them into a small InputState component, and lets a system act on it (fly the
+  camera). The important design idea: gameplay code should NOT call GLFW. It reads
+  InputState from the ECS. Only one file (input_system.cpp) knows GLFW exists, so
+  swapping windowing later (or supporting an editor) touches one place.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - Polling vs events; who pumps. GLFW has two ways to learn about input: callbacks
+    (events) and immediate queries (polling). cgfx is "caller-polled": YOUR loop
+    calls glfwPollEvents() once per frame (it makes GLFW process the OS event queue
+    and update its internal state). After that, glfwGetKey(window, KEY) returns the
+    current up/down state immediately. So InputSystem::poll_and_write does NOT call
+    glfwPollEvents (the sandbox loop already did, before engine.tick); it just reads.
+
+  - Held vs pressed vs released (edge detection). Gameplay needs three questions:
+      held     = the key is down THIS frame (continuous, e.g. "move while W is down")
+      pressed  = it went down THIS frame only (an edge, e.g. "jump on Space")
+      released = it went up THIS frame only (an edge)
+    You get edges by remembering last frame's state:
+      pressed  = held AND NOT held_prev
+      released = held_prev AND NOT held
+    Store per-key bits in std::bitset and keep a copy of last frame's bits.
+
+      Worked example (one key over 4 frames; 1=down):
+        frame:        N    N+1   N+2   N+3
+        raw down:     1     1     0     0
+        held:         1     1     0     0
+        held_prev:    0     1     1     0
+        pressed:      1     0     0     0     (down only at the transition)
+        released:     0     0     1     0     (up only at the transition)
+
+  - Mouse delta. Look controls use how far the mouse MOVED this frame
+    (dx,dy = current pos - last pos), not its absolute position. Two traps: the very
+    first frame has a huge bogus delta (cursor "appears" somewhere), and toggling
+    cursor capture warps the cursor; both must zero the delta that frame or the
+    camera snaps/spins.
+
+  - Cursor capture. For mouse-look you hide and lock the cursor to the window
+    (GLFW_CURSOR_DISABLED) so it can move infinitely; Escape returns it to normal.
+
+  ---- 5.1  Attach to the window; map our enums to GLFW ---------------------
+    [ ] 5.1.a  Public enums (systems/input_keys.hpp) stay GLFW-free: enum class Key
+               { W, A, S, D, Space, LShift, LCtrl, Escape, COUNT }; enum class
+               MouseButton { Left, Right, Middle, COUNT };
+    [ ] 5.1.b  In input_system.cpp ONLY, a static lookup table:
+                   static const int kKeyToGlfw[(size_t)Key::COUNT] = {
+                       GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D,
+                       GLFW_KEY_SPACE, GLFW_KEY_LEFT_SHIFT,
+                       GLFW_KEY_LEFT_CONTROL, GLFW_KEY_ESCAPE };
+    [ ] 5.1.c  InputSystem::attach(GLFWwindow* w) stores the window; Engine::init
+               calls input.attach(renderer.window()) after the Renderer exists.
+  How to know it works: compiles; no GLFW symbol appears in any header outside
+  input_system.cpp (grep to confirm).
+
+  ---- 5.2  Edge detection (unit-tested with synthetic frames) -------------
+    [ ] 5.2.a  Members: bitset<Key::COUNT> held, pressed, released, held_prev.
+    [ ] 5.2.b  Each poll: held_prev = held; rebuild held from glfwGetKey; then
+                   pressed  = held & ~held_prev;
+                   released = held_prev & ~held;
+    [ ] 5.2.c  Unit test (tests/test_input.cpp) by feeding a synthetic "is this key
+               down" function the sequence from the worked example and asserting
+               held/pressed/released match each frame. (Factor the bit math into a
+               pure helper so the test needs no window.)
+  How to know it works: the truth table above reproduces exactly.
+
+  ---- 5.3  poll_and_write: fill InputState ---------------------------------
+    [ ] 5.3.a  Read keys/buttons (immediate; no glfwPollEvents here).
+    [ ] 5.3.b  Mouse: glfwGetCursorPos; dx = x - last_x BEFORE updating last_x;
+               if first_frame (or just toggled capture) set dx=dy=0.
+    [ ] 5.3.c  Compose InputState and write it on the player entity:
+                   InputState in{};
+                   in.move_axis[0] = held[D]?1.f:0.f - held[A]?1.f:0.f;  // (parenthesize!)
+                   in.move_axis[1] = (held[W]?1.f:0.f) - (held[S]?1.f:0.f);
+                   in.look_axis[0] = mouse.dx; in.look_axis[1] = mouse.dy;
+                   in.jump_pressed   = pressed[Space];
+                   in.attack_pressed = mouse_pressed[Left];
+                   player.set<InputState>(in);
+  How to know it works: print InputState; WASD changes move_axis, moving the mouse
+  changes look_axis for exactly one frame's worth of delta.
+  [!] move_axis is RAW intent (-1..1), not velocity. Speed/sensitivity is a gameplay
+      concern (MovementSystem, Phase 9), not InputSystem's.
+
+  ---- 5.4  Scroll (the one event-driven path) -----------------------------
+    [ ] 5.4.a  There is no glfwGetScroll; you MUST use a callback. In attach:
+               glfwSetWindowUserPointer(w, this); glfwSetScrollCallback(w, cb);
+               where cb recovers `this` from the user pointer and adds to a member
+               accumulator m_scroll_accum.
+    [ ] 5.4.b  In poll_and_write: mouse.scroll_dy = m_scroll_accum; m_scroll_accum = 0.
+  How to know it works: scrolling changes scroll_dy for one frame then it returns to 0.
+
+  ---- 5.5  Cursor capture + a fly-camera controller -----------------------
+    [ ] 5.5.a  set_cursor_captured(bool): glfwSetInputMode(w, GLFW_CURSOR,
+               on ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL); enable
+               GLFW_RAW_MOUSE_MOTION when supported. Set first_frame=true on any
+               toggle so the delta spike is discarded.
+    [ ] 5.5.b  Sandbox controller (a small free function or a Flecs system): read the
+               player's InputState, move the camera entity's Position along its
+               forward/right by move_axis*speed*dt, and rotate by look_axis*sensitivity.
+               Right-click captures, Escape releases.
+  How to know it works: WASD + mouse-look flies around the Phase 2 entities smoothly.
+
+  ---- 5.6  Resize -> aspect + surface reconfigure -------------------------
+    [ ] 5.6.a  Register a GLFW framebuffer-size callback; store the latest size.
+    [ ] 5.6.b  When it changes: call cgfx_ctx_resize(ctx, w, h) (rebuilds the
+               swapchain + depth) and pass the new aspect (w/h) into engine.tick.
+               CameraSystem already reprojects from ViewportInfo (Phase 3), so the
+               image stays correct.
+  How to know it works: resizing the window keeps the scene un-stretched and crisp.
+  [!] cgfx_ctx_resize does NOT update the camera projection; ViewportInfo + the
+      Phase 3 reproject is what does. Forgetting the aspect feed re-introduces stretch.
+
+  [M] MILESTONE 5 — Interactive scene
+      WASD + mouse-look fly the camera around the Phase 2 entities. A key pressed
+      logs once, held is continuous, released logs once, all via InputState in the
+      ECS. Resizing keeps the aspect correct. No window/event calls in the sandbox's
+      game logic beyond the loop's glfwPollEvents and the controller reading InputState.
+
+  [!] Mouse delta MUST be zeroed after writing each frame (and on first frame /
+      capture toggle) or look_axis accumulates and the camera spins forever.
+  WHAT FAILURE LOOKS LIKE:
+    - camera spins on startup or when you capture the cursor: first-frame / toggle
+      delta not zeroed (5.3.b, 5.5.a).
+    - move_axis is always 1 or always 0: operator precedence in 5.3.c (parenthesize
+      each ternary) or you didn't rebuild `held` before reading it.
+  [!] One input path only. No gamepad, no rebindable action layer yet — direct key
+      checks are fine and cheaper to reason about at this stage.
+
+

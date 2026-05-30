@@ -3,31 +3,23 @@
 #include "../core/components.hpp"
 
 // =============================================================================
-// TransformSystem
+// TransformSystem — free functions, no state.
 //
-// Not a class — just free functions that Engine::init() registers as Flecs
-// systems. There's no persistent state, so a class would be pointless.
+// Two passes (PHASE_02 / SCENE.txt sec 6):
+//   Transform_Roots    : entities WITHOUT a parent -> WorldTransform = local TRS
+//   Transform_Children : entities WITH a parent, ordered .parent().cascade()
+//                        (parent-before-child for DEEP trees) -> parent.world * local
 //
-// Runs in two passes:
-//   Pass 1 — Entities WITHOUT a parent: build WorldTransform from local TRS.
-//   Pass 2 — Entities WITH a parent:    parent_world * local TRS (recursive).
-//
-// Flecs guarantees Pass 2 runs after Pass 1 because it's registered with
-// .after(pass1_system). Children are always processed after their parent
-// because Flecs topologically sorts ChildOf relationships.
+// register_systems RETURNS the children-pass handle so CameraSystem can register
+// .after() it (the camera must see fresh WorldTransforms).
 // =============================================================================
 
 namespace TransformSystem {
 
-// Build a mat4 from position, rotation (quat), scale.
-// Free function — pure, no side effects.
-void build_trs(mat4 out,
-               const vec3 pos,
-               const versor rot,
-               const vec3 scale);
+// Pure math: out = T * R * S (column-major; rot is a cglm versor quaternion).
+void build_trs(mat4 out, const vec3 pos, const versor rot, const vec3 scale);
 
-// Registers both passes as Flecs systems.
-// Call once from Engine::init().
-void register_systems(flecs::world& world);
+// Registers both passes; returns the Transform_Children system handle.
+flecs::system register_systems(flecs::world& world);
 
 } // namespace TransformSystem

@@ -1,0 +1,281 @@
+
+ENGINE FOUNDATIONS — REPO, BUILD, C/C++ BOUNDARY, LAYERING
+==========================================================
+The decisions in this file are load-bearing. They are cheap to get right at
+the start and very expensive to change once code is built on top of them.
+Read this before writing any CMakeLists or including any cgfx header.
+
+The renderer is cgfx: a standalone C23 WebGPU wrapper with its own repo and
+build. It is NOT a subdirectory you own and edit. Everything below follows
+from that fact.
+
+
+-------------------------------------------------------------------------------
+1. REPO / BUILD TOPOLOGY
+-------------------------------------------------------------------------------
+
+The engine is the OUTER project. cgfx is pulled in as a git submodule and
+built via add_subdirectory. The engine never forks or edits cgfx sources.
+
+  myengine/
+  ├── CMakeLists.txt              root: pulls deps, then engine, examples, tests
+  ├── third_party/
+  │   ├── cgfx/                   git submodule  → the cgfx repo
+  │   │                            (vendors its own glfw, webgpu, glfw3webgpu,
+  │   │                             slang, AND cglm — do not re-vendor these)
+  │   ├── flecs/                  flecs.h + flecs.c (single-file build)
+  │   ├── JoltPhysics/            git submodule
+  │   ├── cgltf/                  single-header glTF importer (assets only)
+  │   └── stb/                    stb_image.h (assets only)
+  │
+  ├── engine/                     add_library(engine STATIC ...)
+  │   ├── core/                   components, entity_id, scene_id, engine (wiring)
+  │   ├── assets/                 asset_manager (cgltf + stb_image live here)
+  │   ├── systems/                transform, camera, input, movement
+  │   ├── physics/                Jolt bridge (Jolt isolated here)
+  │   ├── render/                 cgfx C++ wrapper + render_bridge (cgfx isolated here)
+  │   ├── scene/                  scene_manager, scene_serializer
+  │   └── engine_api.hpp          the ONLY header consumers include
+  │
+  ├── examples/   sandbox/ (windowed game) + headless/ (no window, CI)
+  └── tests/      pure-logic unit tests (no window, no GPU)
+
+NOTE the deliberate deletions from the earlier draft layout:
+  - There is no engine-owned  renderer/   directory. cgfx replaces it.
+  - There is no  third_party/cglm/ .       cgfx provides cglm transitively.
+
+CMake wiring (root):
+
+  cmake_minimum_required(VERSION 3.22)
+  project(myengine LANGUAGES C CXX)   # C is required: cgfx and flecs.c are C
+  set(CMAKE_CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+  add_subdirectory(third_party/cgfx)        # target: cgfx (brings cglm + defines)
+  add_subdirectory(third_party/flecs)       # target: flecs
+  add_subdirectory(third_party/JoltPhysics) # target: Jolt
+  add_subdirectory(engine)                  # target: engine
+  add_subdirectory(examples)
+  add_subdirectory(tests)
+
+CMake wiring (engine):
+
+  add_library(engine STATIC
+      core/engine.cpp
+      assets/asset_manager.cpp
+      systems/transform_system.cpp systems/camera_system.cpp
+      systems/input_system.cpp     systems/movement_system.cpp
+      physics/physics_bridge.cpp
+      render/renderer.cpp render/render_bridge.cpp
+      scene/scene_manager.cpp scene/scene_serializer.cpp)
+  target_include_directories(engine PUBLIC .)
+  # cgfx PUBLIC so its cglm include dir + CGLM_FORCE_* defines propagate to
+  # every engine TU that uses cglm (components.hpp, the math systems, tests).
+  target_link_libraries(engine PUBLIC  cgfx)
+  target_link_libraries(engine PRIVATE flecs Jolt)
+
+
+-------------------------------------------------------------------------------
+2. THE cglm LANDMINE  (single most dangerous foundation issue)
+-------------------------------------------------------------------------------
+
+cgfx does NOT compile cglm as a library. It adds cglm's include dir to its
+PUBLIC includes and sets two PUBLIC compile definitions (cgfx/CMakeLists.txt):
+
+      CGLM_FORCE_LEFT_HANDED
+      CGLM_FORCE_DEPTH_ZERO_TO_ONE
+
+Because they are PUBLIC, ANY target that links cgfx PUBLIC inherits both the
+cglm headers and these two defines automatically. That is exactly what we want.
+
+  RULE: The engine never vendors cglm, never add_subdirectory's it, and never
+        sets CGLM_FORCE_* itself. cglm is consumed EXCLUSIVELY and TRANSITIVELY
+        through cgfx. Any TU that includes <cglm/cglm.h> must be in a target
+        that links cgfx PUBLIC (this includes the tests target).
+
+Why this matters: the two defines select CGLM_CLIP_CONTROL_LH_ZO, which changes
+ONLY the clip-control family (glm_perspective, glm_ortho, glm_lookat, glm_frustum,
+euler->matrix). Quaternion storage, glm_quat_mat4, glm_translate/scale/mat4_mul,
+and all vector math are handedness-agnostic.
+
+If a second cglm copy is introduced WITHOUT these defines, the failure is SILENT:
+no compile error, but cameras compute right-handed [-1,1]-depth matrices while
+cgfx's pipelines and depth buffer expect left-handed [0,1]. Symptom: inverted
+culling, broken depth test, an "inside-out" camera.
+
+  [M] GUARD: a unit test asserts handedness is active in the test TU, e.g. that
+      glm_perspective maps near->0 and far->1 (depth zero-to-one). A future cglm
+      bump cannot silently regress the convention without failing this test.
+
+
+-------------------------------------------------------------------------------
+3. THE C23 <-> C++20 BOUNDARY  (mandatory Phase 0 work)
+-------------------------------------------------------------------------------
+
+cgfx is C23. The engine is C++20. Including cgfx headers from C++ has three
+concrete hazards. All are solved by confining cgfx to the render/ layer and
+following the discipline below.
+
+(a) NO extern "C" in cgfx headers  ->  LINK ERRORS.
+    cgfx symbols are unmangled C; a C++ TU that #includes cgfx.h mangles the
+    prototypes and fails to link. Fix in exactly ONE engine header:
+
+        // engine/render/cgfx_c.hpp   (the only place cgfx is included)
+        extern "C" {
+          #include "cgfx.h"
+        }
+
+    Do not patch cgfx's headers (separate repo). The wrapper header is the clean,
+    reversible fix. Nothing outside render/ includes cgfx, directly or via this.
+
+(b) C compound literals DO NOT COMPILE in C++  ->  COMPILE ERRORS.
+    cgfx's documented ergonomics use C compound literals everywhere:
+
+        cgfx_ctx_init(&ctx, &(CgfxCtxDesc){ .width = 1280, .depth_buffer = true });
+        cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){
+            .color_target_count = 2,
+            .color_targets = (CgfxColorTarget[]){ {.format=F}, {.format=F} } });
+
+    In C++:
+      - (T){...} compound literals are not valid C++ (gcc/clang accept as a
+        non-portable extension; breaks on MSVC and under -pedantic).
+      - The nested unnamed-array idiom (CgfxGroupDesc[]){{...}} has NO C++ form.
+      - C++20 designated initializers must be in DECLARATION ORDER and cannot mix
+        with positional; cgfx examples do not always follow declaration order.
+
+    DISCIPLINE: in C++, build every cgfx descriptor as a NAMED zero-initialized
+    local and assign fields, then pass its address. Zero-init gives cgfx's
+    documented defaults, so this is faithful:
+
+        CgfxCtxDesc d{};                       // all defaults
+        d.width = 1280; d.height = 720;
+        d.depth_buffer = true;
+        d.limits = cgfx_default_limits();
+        cgfx_ctx_init(&ctx, &d);
+
+        CgfxColorTarget targets[2]{};
+        targets[0].format = WGPUTextureFormat_RGBA16Float;
+        targets[1].format = WGPUTextureFormat_RGBA8Unorm;
+        CgfxPipelineDesc pd{};
+        pd.shader = &shader;
+        pd.color_target_count = 2;
+        pd.color_targets = targets;
+
+(c) bool / nullptr  ->  low risk.
+    cgfx headers include <stdbool.h>; bool is native in C++ and ABI-compatible.
+    nullptr is a C++ keyword. cgfx's Win32 `#define nullptr (void*)0` is guarded
+    by #ifndef and inert in C++. Wrapping the include in extern "C" changes
+    LINKAGE only, not the language, so these remain fine.
+
+  POLICY: cgfx is wrapped behind a thin C++ rendering layer in render/. C-isms
+  (compound literals, raw WGPU handles, cglm arrays passed to C) never leak past
+  render/. The wrapper owns: the single extern "C" include, all descriptor
+  construction, RAII lifetime around cgfx_*_destroy, and translation of engine
+  draw data into cgfx calls. Everywhere else, cgfx is invisible.
+
+
+-------------------------------------------------------------------------------
+4. LAYERING & DEPENDENCY RULES
+-------------------------------------------------------------------------------
+
+  core/     -> no includes from other engine/ dirs (foundational)
+              components.hpp MAY include <cglm/cglm.h> (component math types)
+  assets/   -> core/ ; cgltf + stb_image (in .cpp only) ; render/ (CgfxCtx, cgfx types)
+  systems/  -> core/ ; cglm
+  physics/  -> core/ ; Jolt (in physics/ only)
+  render/   -> core/, assets/ ; cgfx (via cgfx_c.hpp, in render/ only)
+  scene/    -> core/, assets/, render/ (to spawn renderables)
+  engine    -> wires all of the above
+
+  Third-party confinement:
+    cgfx.h   -> ONLY through render/cgfx_c.hpp, included ONLY by render/*.cpp
+                (and assets/*.cpp for texture/mesh creation). NEVER in a header
+                visible to core/, systems/, physics/, scene/, examples/.
+    Jolt/*   -> physics/*.cpp only.
+    flecs.h  -> systems/, bridges, scene/ (.cpp). NOT in the PUBLIC engine surface.
+    cglm     -> core/components.hpp and the math systems. Always via cgfx PUBLIC.
+
+  Using cglm types in components is the RIGHT call here: they are the renderer's
+  native types (float[3], float[4][4]) with no methods and no ABI surprises, so
+  the ECS->render seam is zero-conversion. The only cost is the transitive-cgfx
+  link requirement above. Public API does not expose components.hpp.
+
+
+-------------------------------------------------------------------------------
+5. PUBLIC API SURFACE  (engine_api.hpp)
+-------------------------------------------------------------------------------
+
+Consumers (sandbox, future editor) include ONLY engine/engine_api.hpp, which
+pulls in:
+
+    core/engine.hpp        Engine, EngineConfig
+    core/entity_id.hpp     EntityID (opaque uint64 handle)
+    core/scene_id.hpp      SceneID (opaque uint64 handle)
+    systems/input_keys.hpp Key, MouseButton enums (no GLFW, no flecs)
+
+  HARD REQUIREMENT (Milestone "clean boundary"): including engine_api.hpp must
+  drag in ZERO of flecs.h, cglm.h, Jolt, cgfx, WebGPU, GLFW. Today engine.hpp
+  leaks flecs through ecs(), m_world, and m_player_entity. To make the boundary
+  real:
+    - Hold the flecs world by std::unique_ptr<flecs::world> and FORWARD-DECLARE
+      flecs::world in engine.hpp (PIMPL); the include moves to engine.cpp.
+    - Store m_player_entity as EntityID, rehydrate via to_entity() internally.
+    - ecs() returns an opaque handle (or is gated behind ENGINE_INTERNAL) for the
+      future editor; the sandbox never calls it.
+
+
+-------------------------------------------------------------------------------
+6. TESTING / HEADLESS
+-------------------------------------------------------------------------------
+
+  - Pure-logic tests (transform math, asset dedup, input edge detection,
+    coordinate conversion) need NO window and NO GPU. But camera_system and
+    components.hpp need cglm, so the tests target must link cgfx PUBLIC for the
+    headers + defines, WITHOUT ever calling cgfx_ctx_init. If linking the pure
+    tests drags in GLFW symbols, ask the cgfx repo for a small INTERFACE target
+    (cgfx_math) that carries just the cglm include + the two defines.
+
+  - Headless executable: cgfx_ctx_init creates a real window + device, so the
+    headless path must SKIP renderer init. Make render_bridge own a nullable
+    Renderer; submit_frame() early-returns when the Renderer is null. Add this
+    guard from the start. Headless then runs input(no-op)+physics+transform and
+    asserts on simulation results (e.g. a dropped box ends up below its start).
+
+  - Mandatory tests from day one:
+      * handedness/clip-control assertion (section 2)
+      * coordinate LH<->RH round-trip (RENDER_INTEGRATION section on coords)
+      * transform parent-before-child (multi-level)
+      * input edge detection (pressed/held/released across synthetic frames)
+
+
+-------------------------------------------------------------------------------
+7. GLOBAL GAPS — build these into the right phase, do not defer
+-------------------------------------------------------------------------------
+
+  HIGH
+    - Time/clock + fixed-timestep accumulator. tick(dt) consumes dt but nobody
+      produces it. Physics needs fixed substeps decoupled from render rate. Design
+      the accumulator in Phase 1 (used hard in Phase 7/9):
+          acc += frame_dt;
+          while (acc >= H) { physics.step(H); acc -= H; }   // H = 1/60
+    - Logging / assert layer. cgfx signals failure via `bool ok` and NULL returns;
+      ignoring them is how you get a null-pipeline crash three frames later. A
+      single ENGINE_CHECK / ENGINE_LOG, used at every cgfx_*_create call in the
+      render layer, turns silent failures into one clear message. Phase 0.
+
+  MEDIUM
+    - Device-lost / error callbacks. CgfxCtxDesc exposes on_device_lost /
+      on_device_error. Route them into the engine log in the Renderer wrapper, or
+      a laptop sleep silently corrupts the frame. Phase 0, nearly free.
+    - Resize handling. cgfx_ctx_resize exists and does NOT update camera
+      projection. The framebuffer-resize callback feeds a new aspect into
+      tick(dt, aspect) (CameraSystem reprojects from ViewportInfo) and calls
+      cgfx_ctx_resize. Phase 5.
+
+  LOW (defer, but know where they go)
+    - Custom allocators (Jolt already brings its own TempAllocator). Phase 8
+      unique_ptr audit is enough for v1.
+    - Animation, collision events, render passes/shadows, hot-reload, prefab
+      tooling: see ARCHITECTURE "WHAT COMES AFTER". Note cgfx ALREADY has MRT,
+      MSAA, offscreen targets, and multi-pass frames, so a shadow pass is much
+      closer than a from-scratch renderer would be.

@@ -1,0 +1,173 @@
+===============================================================================
+PHASE 7 — PHYSICS BRIDGE (JOLT)
+Goal: dynamic bodies fall, collide, and stack; results written back to the ECS
+Prereqs: Phase 6.5 (scenes own entities; on_remove cleanup matters), Phase 0
+         (the fixed-timestep accumulator). Read RENDER_INTEGRATION sec 2 (coords).
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  Until now nothing moves on its own. This phase adds Jolt, a rigid-body physics
+  engine, behind a PhysicsBridge: you register a collision body for an entity, Jolt
+  simulates gravity and collisions, and the bridge writes the results back into the
+  entity's Position/Rotation so the renderer shows them. The single hardest detail
+  is the COORDINATE SYSTEM: Jolt is right-handed, our engine/renderer is
+  left-handed, so transforms must be flipped at this boundary and ONLY here. Get the
+  flip right and everything else is plumbing.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - Rigid body. A physics object with a shape (box/sphere/capsule), a transform, and
+    a motion type: STATIC (never moves: floors, walls) or DYNAMIC (moved by gravity
+    and collisions: crates). Jolt simulates dynamic bodies and resolves collisions
+    against everything.
+
+  - Jolt's setup ritual (it has global state you must stand up once). Jolt needs,
+    in order: a default allocator, a Factory singleton, its type registry, a temp
+    allocator (scratch memory for a step), a job system (threads), collision-layer
+    interfaces, then the PhysicsSystem itself. All of this lives INSIDE
+    PhysicsBridge::init; none of it leaks into Engine. On shutdown you reverse it and
+    NULL the Factory singleton, or a second init (the Phase 8 "double init" test)
+    crashes.
+
+  - Collision layers + filters (which things can collide). Jolt uses two notions:
+    OBJECT layers (yours: STATIC, DYNAMIC) and BROADPHASE layers (a coarse bucket).
+    You provide three small filter objects:
+      * broadphase-layer interface: maps object layer -> broadphase layer.
+      * object-vs-broadphase filter: can object layer X collide with bp layer Y?
+      * object-layer-pair filter: can object layer X collide with object layer Y?
+    Rule of thumb to start: STATIC does not collide with STATIC; everything else
+    collides. Two layers is enough for a long time.
+
+  - Fixed timestep (why physics must not use the render dt directly). Physics is
+    stable only at a FIXED step (e.g. 1/60s). Frame times vary, so you accumulate
+    real time and run as many fixed steps as fit, carrying the remainder:
+        acc += frame_dt;
+        while (acc >= H) { physics.Update(H); acc -= H; }   // H = 1/60
+    This is the Phase 0 accumulator. Phase 9's character controller MUST use the
+    same H, so build it correctly now.
+
+  - THE COORDINATE FLIP (the make-or-break detail; full math in RENDER_INTEGRATION 2).
+    Engine space is left-handed Y-up; Jolt is right-handed Y-up. They agree on X and
+    Y and differ only in Z. The conversion is its own inverse (do the same thing both
+    directions):
+        position : negate Z.         engine (x,y,z) <-> jolt (x,y,-z)
+        quaternion (versor {x,y,z,w}): negate x and y, keep z,w.
+                   engine {x,y,z,w} <-> jolt {-x,-y,z,w}
+        box/sphere/capsule sizes : NO flip (a size is not a coordinate).
+      Worked litmus (your Milestone-7 acceptance test): drop a box at engine
+      Z = +5 toward a wall at engine Z = +10.
+        - WITH the flip: it collides at the wall (~Z = +10). Correct.
+        - WITHOUT the flip: it appears to collide at Z = -10, i.e. the physics world
+          is mirrored across the XY plane relative to what you see. That is the
+          "mirrored collisions" symptom.
+    Because the flip lives only here (never on vertex data or the projection), cgfx
+    pipeline winding/cull do NOT change.
+
+  - Body <-> entity mapping. Jolt identifies bodies by BodyID, not by your entity.
+    Keep two maps (entity->BodyID and BodyID->entity) so you can push entity data in
+    and write Jolt results back. ALSO set a PhysicsBodyID component on the entity so
+    the cleanup observer (7.4) can fire.
+
+  ---- 7.1  PhysicsBridge::init / shutdown (the Jolt ritual) ---------------
+    [ ] 7.1.a  init, in order: JPH::RegisterDefaultAllocator();
+               JPH::Factory::sInstance = new JPH::Factory(); JPH::RegisterTypes();
+               create TempAllocatorImpl(10*1024*1024); create
+               JobSystemThreadPool(cMaxPhysicsJobs, cMaxPhysicsBarriers, num_threads).
+    [ ] 7.1.b  Build the three layer/filter objects (define them in physics_layers.hpp
+               / the .cpp): 2 object layers (STATIC=0, DYNAMIC=1) + 2 broadphase
+               layers. STATIC-vs-STATIC = false; otherwise true.
+    [ ] 7.1.c  m_physics = new PhysicsSystem(); m_physics->Init(max_bodies=1024, 0,
+               max_pairs, max_contacts, bpLayerIface, objVsBpFilter, objPairFilter);
+               m_physics->SetGravity(Vec3(0, gravity_y, 0)).
+    [ ] 7.1.d  shutdown REVERSES it: destroy bodies, delete PhysicsSystem, delete job
+               system + temp allocator, JPH::UnregisterTypes(), delete Factory and set
+               JPH::Factory::sInstance = nullptr.
+  How to know it works: init logs "Jolt initialized"; init -> shutdown -> init again
+  (the Phase 8 double-init habit) does NOT crash.
+  WHAT FAILURE LOOKS LIKE:
+    - crash on the SECOND init: Factory::sInstance not nulled in shutdown (7.1.d).
+
+  ---- 7.2  register_body (with the coordinate flip) -----------------------
+    [ ] 7.2.a  A small shape descriptor instead of three overloads:
+                   enum class ShapeKind { Box, Sphere, Capsule };
+                   struct ShapeDesc { ShapeKind kind=ShapeKind::Box;
+                       float hx=.5f,hy=.5f,hz=.5f;   // box half-extents
+                       float radius=.5f; float half_height=.5f; };  // sphere/capsule
+    [ ] 7.2.b  register_body(world, entity, ShapeDesc, bool dynamic, float mass=1):
+               build the Jolt shape (BoxShape(hx,hy,hz) / SphereShape(radius) /
+               CapsuleShape(half_height,radius)) -- NO flip on sizes.
+    [ ] 7.2.c  Read the entity's Position/Rotation, APPLY THE LH->RH FLIP (negate Z
+               on position; negate x,y on the quaternion), and create the body via
+               BodyCreationSettings(shape, RVec3(flipped pos), Quat(flipped rot),
+               dynamic?Dynamic:Static, dynamic?DYNAMIC:STATIC). For dynamic set mass.
+               CreateAndAddBody(..., dynamic?Activate:DontActivate).
+    [ ] 7.2.d  Store entity<->BodyID in BOTH maps AND set the PhysicsBodyID component
+               on the entity (set<PhysicsBodyID>({id})). Assert the entity is a
+               transform ROOT if dynamic (a dynamic body that is ChildOf would be
+               double-transformed; SCENE.txt 6).
+  How to know it works: a registered static ground and a dynamic box appear at the
+  right places before stepping.
+  WHAT FAILURE LOOKS LIKE:
+    - body appears mirrored / on the wrong side: the flip is missing or applied with
+      the wrong sign (re-check against RENDER_INTEGRATION 2).
+    - the cleanup observer (7.4) never fires later: you forgot set<PhysicsBodyID>.
+
+  ---- 7.3  step_and_writeback (fixed step + flip back) --------------------
+    [ ] 7.3.a  Accumulate and step at fixed H (cap the number of substeps, e.g. 5, so
+               a long stall can't spiral):
+                   m_acc += dt;
+                   for (int i=0; m_acc>=H && i<5; ++i) {
+                       m_physics->Update(H, 1, m_temp_alloc, m_job_system);
+                       m_acc -= H;
+                   }
+    [ ] 7.3.b  For each (BodyID -> entity), skip IsStatic; read Jolt position/rotation
+               via the BodyInterface, APPLY THE RH->LH FLIP, and write back:
+                   e.set<Position>({{ p.x, p.y, -p.z }});
+                   e.set<Rotation>({{ -q.x, -q.y, q.z, q.w }});
+    [ ] 7.3.c  Engine::tick already calls step_and_writeback BEFORE world.progress, so
+               the transform/camera systems see fresh Position/Rotation.
+    [ ] 7.3.d  Sandbox: a static ground plane + a dynamic box above it; the box falls
+               and lands. Then the litmus test (box toward a +Z wall).
+  How to know it works: the box falls under gravity and rests on the ground; the
+  litmus box collides at +Z, not -Z.
+  WHAT FAILURE LOOKS LIKE:
+    - jitter / explosion: you passed the variable frame dt to Update instead of fixed
+      H, or stepped multiple times with the wrong remainder.
+    - everything frozen: step runs but writeback is missing, or you wrote into a
+      child's LOCAL transform that a parent overrides (dynamic bodies must be roots).
+
+  ---- 7.4  Cleanup via on_remove observer --------------------------------
+    [ ] 7.4.a  Register once in init:
+                   world.observer<PhysicsBodyID>().event(flecs::OnRemove)
+                        .each([this](flecs::entity e, PhysicsBodyID& b){
+                            unregister_body(e); });
+    [ ] 7.4.b  unregister_body removes the body from both maps and calls
+               BodyInterface RemoveBody + DestroyBody.
+  How to know it works: despawn a physics entity, or unload its scene -> no crash on
+  shutdown, and Jolt's body count drops. The observer fires for despawn AND scene
+  unload (flecs strips components on delete).
+  WHAT FAILURE LOOKS LIKE:
+    - crash/leak when an entity dies: the observer isn't firing because
+      PhysicsBodyID was never set (7.2.d), or unregister_body doesn't DestroyBody.
+
+  ---- 7.5  Public API + the stacking demo --------------------------------
+    [ ] 7.5.a  Engine::add_physics_box(EntityID, hx,hy,hz, mass) -> register_body
+               (dynamic). Keep register_static_body / register_dynamic_body as thin
+               wrappers for clarity.
+    [ ] 7.5.b  Sandbox: a static floor + 10 dynamic boxes dropped from various
+               heights; they fall, collide with each other and the floor, and stack.
+  How to know it works: 10 boxes settle into a stable stack, not interpenetrating.
+
+  [M] MILESTONE 7 — Physics simulated scene
+      10 dynamic boxes fall, collide, and stack on a static floor. Destroying an
+      entity or unloading its scene removes the Jolt body (no crash on shutdown).
+      Physics runs at fixed substeps while rendering runs at display rate. The
+      coordinate litmus passes (collision on the correct side).
+
+  [!] The LH<->RH flip (position Z; quaternion x,y) is the make-or-break detail.
+      Skipping or mis-signing it mirrors the physics world. Unit-test the round-trip
+      (flip then flip == identity) in Phase 8.
+  [!] Box/sphere/capsule only. No character controller yet (Phase 9), no collision
+      events/contact callbacks yet, no velocity getters/setters beyond what Phase 9
+      needs. Keep it to simulation + writeback.

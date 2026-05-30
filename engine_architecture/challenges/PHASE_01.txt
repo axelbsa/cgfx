@@ -1,0 +1,180 @@
+===============================================================================
+PHASE 1 — THE SKELETON BOOTS
+Goal: one cube on screen, driven by Engine::tick, not raw cgfx calls
+Prereqs: Phase 0 (cgfx callable from C++, Renderer wrapper, ENGINE_LOG, accumulator)
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  Phase 0 proved you can talk to cgfx from C++. This phase proves the SHAPE of the
+  engine: one Engine object owns the program's lifetime and calls its subsystems
+  in a fixed order every frame ("the tick"), and the ONLY code that touches cgfx
+  is the render layer. Nothing here is visually interesting; one cube is enough.
+  If a cube can travel from Engine::tick, down through RenderBridge, into cgfx, and
+  onto the screen, the skeleton is correct and every later phase just adds meat to
+  these bones. The win is structural ("the wiring is alive"), not visual.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - The tick / game loop. A real-time app repeats the same work every frame: read
+    input, advance the simulation, draw. We centralize that in Engine::tick(dt).
+    `dt` ("delta time") = seconds the previous frame took; simulation code
+    multiplies motion by dt so things move at the same real-world speed regardless
+    of frame rate. In Phase 1 a fixed dt = 1/60 is fine; real timing arrives in 1.2.
+
+  - Immediate-mode rendering (how cgfx works). cgfx draws nothing on its own. Each
+    frame YOU: begin the frame, set the active pipeline, bind the data the shader
+    reads, issue a draw call, end the frame. Stop issuing draws and the screen is
+    blank. This is why our "submit_frame" RE-RECORDS the draws every single frame.
+
+  - The three GPU objects a draw needs (hardcode all three this phase; AssetManager
+    builds them for real in Phase 4):
+      * Shader   — a compiled WGSL program: a vertex stage that positions vertices
+                   and a fragment stage that colors pixels. cgfx type: CgfxShader.
+      * Pipeline — the shader PLUS fixed render state (vertex layout, depth on/off,
+                   blend mode, output format). "A fully configured way to draw."
+                   cgfx: a WGPURenderPipeline from cgfx_pipeline_create.
+      * Mesh     — the vertex + index buffers holding geometry (a cube's 8 corners
+                   and the triangles between them). cgfx: CgfxMesh from cgfx_mesh_create.
+
+  - PIMPL ("pointer to implementation"). We hold the flecs world behind a
+    forward-declared pointer so including the engine's PUBLIC header does not drag
+    flecs into a consumer's build (FOUNDATIONS sec 5). Set this up now so it never
+    has to be retrofitted.
+
+  ---- 1.1  Stub every subsystem so the skeleton compiles -------------------
+  What & why: define the subsystem classes from ARCHITECTURE (Renderer,
+  RenderBridge, AssetManager, InputSystem, PhysicsBridge, SceneManager) with EMPTY
+  bodies, so Engine can own and call them and the whole program links before any
+  real logic exists. You are building the frame of the house, not the rooms.
+
+    [ ] 1.1.a  For each subsystem: a header + .cpp with init() and shutdown(), plus
+               its per-frame method where ARCHITECTURE shows one (RenderBridge:
+               submit_frame; InputSystem: poll_and_write; PhysicsBridge:
+               step_and_writeback). Each body is just ENGINE_LOG("Renderer::init")
+               etc. for now.
+    [ ] 1.1.b  Engine holds each subsystem as a member (ARCHITECTURE "ownership").
+               Engine::init() calls each subsystem init() in the documented order.
+               Engine::shutdown() calls each shutdown() in REVERSE order.
+    [ ] 1.1.c  Engine::tick(dt, aspect) calls the per-frame methods in tick order
+               (input -> physics -> world.progress placeholder -> render), each
+               preceded by an ENGINE_LOG so you can watch the tick fire.
+  How to know it works: compiles clean under -Wall -Wextra -Werror and links.
+  [!] Reverse-order shutdown matters: the Renderer must outlive anything holding GPU
+      handles. Build the habit now while it costs nothing.
+
+  ---- 1.2  Drive it from a real loop in the sandbox ------------------------
+  What & why: prove Engine runs under a real platform loop and a real clock.
+
+    [ ] 1.2.a  examples/sandbox/main.cpp: construct Engine, call init(cfg).
+    [ ] 1.2.b  Loop while the window is open. cgfx is caller-polled, so the loop
+               body is: glfwPollEvents() on the Renderer's window(), compute frame
+               dt with the Phase 0 accumulator, call engine.tick(dt, aspect).
+    [ ] 1.2.c  On exit, call engine.shutdown().
+               The loop, concretely:
+                   engine.init(cfg);
+                   double last = now_seconds();
+                   while (!glfwWindowShouldClose(engine.window())) {
+                       glfwPollEvents();
+                       double t = now_seconds();
+                       float  dt = float(t - last); last = t;
+                       int w,h; glfwGetFramebufferSize(engine.window(), &w, &h);
+                       engine.tick(dt, float(w) / float(h));
+                   }
+                   engine.shutdown();
+  How to know it works: run it; you see the per-step ENGINE_LOG lines repeating
+  once per frame, and a clean shutdown with no errors.
+  [!] Do not hand-roll timing with sleeps. Use the Phase 0 accumulator: it is the
+      same clock physics will depend on in Phase 7, so exercise it now.
+
+  ---- 1.3  Bring in flecs and create the world (behind PIMPL) --------------
+  What & why: flecs is the ECS library (Phase 2 explains ECS). Here you only stand
+  it up and confirm it constructs/destructs cleanly, and you wire the PIMPL so the
+  public boundary stays clean from day one.
+
+    [ ] 1.3.a  Vendor flecs as the single-file build (third_party/flecs/flecs.h +
+               flecs.c). Add flecs.c to the engine target; link it PRIVATE.
+    [ ] 1.3.b  In engine.hpp, forward-declare `namespace flecs { struct world; }`
+               and hold it as `std::unique_ptr<flecs::world> m_world;`. The
+               `#include <flecs.h>` goes in engine.cpp ONLY.
+    [ ] 1.3.c  Engine::init creates the world (m_world = std::make_unique<...>());
+               Engine::shutdown resets it. No components, no systems yet.
+  How to know it works: init/shutdown twice in a row (the "double init" habit) with
+  no crash or leak.
+  [!] If <flecs.h> ends up included by engine.hpp, the PIMPL is not done. A consumer
+      including the engine header must not see flecs. Verify by grep later (Phase 6).
+
+  ---- 1.4  Hardcode one cube in the Renderer wrapper ----------------------
+  What & why: give the renderer something to draw, with zero asset machinery. All
+  three GPU objects are created ONCE at init and lived on the Renderer.
+
+    [ ] 1.4.a  Write a tiny WGSL shader: vertex stage outputs clip position from a
+               position attribute; fragment stage returns a flat color. (You can
+               start from examples/triangle or examples/depth_texture in cgfx.)
+    [ ] 1.4.b  In Renderer::init, after the CgfxCtx exists: create the CgfxShader
+               (cgfx_shader_create), the pipeline (cgfx_pipeline_create with
+               cgfx_mesh_vertex_layout()), and a cube CgfxMesh (cgfx_mesh_create
+               from a hardcoded array of 8 CgfxVertex corners + 36 indices).
+    [ ] 1.4.c  ENGINE_CHECK every result (.ok on shader/mesh, non-NULL on pipeline).
+               Store all three as Renderer members; destroy them in Renderer::shutdown
+               with the cgfx_*_destroy wrappers.
+               Descriptor-as-named-local (the C++ idiom, NOT a compound literal):
+                   CgfxShaderDesc sd{};                  // cube needs no bind groups
+                   CgfxShader sh = cgfx_shader_create(ctx, "cube", wgsl, &sd);
+                   ENGINE_CHECK(sh.ok);
+                   WGPUVertexBufferLayout vl = cgfx_mesh_vertex_layout();
+                   CgfxPipelineDesc pd{};
+                   pd.shader = &sh;
+                   pd.vertex_buffer_count = 1; pd.vertex_layouts = &vl;
+                   WGPURenderPipeline pipe = cgfx_pipeline_create(ctx, &pd);
+                   ENGINE_CHECK(pipe);
+  How to know it works: init logs success for all three; shutdown frees them with no
+  validation errors on stderr.
+  [!] Build the cgfx descriptors as NAMED zero-init locals, never C compound
+      literals (FOUNDATIONS 3b). This is the #1 thing that will not compile if you
+      copy cgfx examples verbatim into C++.
+
+  ---- 1.5  Draw the cube through RenderBridge ------------------------------
+  What & why: connect the tick's render step to cgfx. No ECS query yet; just draw
+  the one cube so the path Engine -> RenderBridge -> cgfx -> screen is proven.
+
+    [ ] 1.5.a  RenderBridge::init receives the Renderer (a reference/pointer), not a
+               bare window handle. Store it.
+    [ ] 1.5.b  RenderBridge::submit_frame: if the Renderer is null, return
+               immediately (this is the headless guard Phase 8 relies on). Otherwise:
+               cgfx_frame_begin(clear color) -> SetPipeline(cube pipeline) ->
+               cgfx_mesh_draw(cube) -> cgfx_frame_end.
+    [ ] 1.5.c  Engine::tick step [6] calls render.submit_frame.
+               submit_frame, concretely:
+                   if (!m_renderer) return;             // headless guard (Phase 8)
+                   CgfxFrame f;
+                   WGPUColor clear = {0.1, 0.1, 0.15, 1.0};
+                   if (!cgfx_frame_begin(ctx, &f, clear)) return;  // surface lost: skip
+                   wgpuRenderPassEncoderSetPipeline(f.render_pass, cube_pipeline);
+                   cgfx_mesh_draw(f.render_pass, &cube_mesh);
+                   cgfx_frame_end(ctx, &f);
+  How to know it works: a cube (or its silhouette) is on screen, steady, and the
+  window responds to close. Resize may distort it; that is fine until Phase 3.
+  [!] There is no renderer_submit_mesh(id, ...). cgfx is immediate-mode: set a
+      pipeline, then record a draw on frame.render_pass (RENDER_INTEGRATION 1, 7).
+
+  WHAT FAILURE LOOKS LIKE:
+    - link errors "undefined reference to cgfx_*": the cgfx include is not wrapped in
+      extern "C" (FOUNDATIONS 3a / Phase 0.2).
+    - a descriptor line won't compile: you used a C compound literal
+      (&(CgfxPipelineDesc){...}); use a named zero-init local (1.4.c).
+    - blank window: submit_frame isn't called, or you begin/end the frame but never
+      SetPipeline + draw, or m_renderer is null.
+    - crash on shutdown: GPU objects freed in the wrong order, or the cube outlives
+      the CgfxCtx (destroy cube objects in Renderer::shutdown, before the ctx).
+
+  [M] MILESTONE 1 — Cube on screen, driven by Engine::tick
+      The sandbox runs an init + tick loop on a real clock; RenderBridge records
+      cgfx draws; the Renderer draws one cube. No ECS data, no assets, no input.
+      The full vertical slice of the architecture is alive and shuts down cleanly.
+
+  [!] Don't implement AssetManager yet — the cube lives on the Renderer.
+  [!] Don't add real input/camera yet. A fixed view matrix baked into the shader or
+      a constant is fine; the camera becomes an ECS entity in Phase 3.
+
+

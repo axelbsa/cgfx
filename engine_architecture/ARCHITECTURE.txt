@@ -1,271 +1,237 @@
 
 ENGINE ARCHITECTURE — CLASS CONNECTIONS & DATA FLOW
 =====================================================
+The map of the engine: what owns what, the per-frame data flow, the component
+contract, and the project structure. Detail lives in three companion docs:
 
+  FOUNDATIONS.txt        repo/build topology, the C23<->C++20 boundary, the cglm
+                         landmine, layering rules, public API, testing/headless.
+  RENDER_INTEGRATION.txt how the render layer drives cgfx, the material model,
+                         per-object uniforms, the WGSL binding contract, and the
+                         coordinate convention (LH/ZO engine space, Jolt flip).
+  SCENE.txt              the scene/world system, prefabs, serialization, entity
+                         lifecycle, and the (corrected) transform system.
+
+THE RENDERER IS cgfx, a standalone C23 WebGPU library consumed as a submodule.
+The engine is C++20. There is no engine-owned C renderer; the render/ layer is a
+thin C++ wrapper that drives cgfx directly. (Earlier drafts assumed a fictional
+renderer_*() C API — it does not exist and is not created. See RENDER_INTEGRATION.)
+
+
+-------------------------------------------------------------------------------
 OWNERSHIP (Engine owns these as members)
-─────────────────────────────────────────────────────────────────────────────
+-------------------------------------------------------------------------------
 
   Engine
-  ├── flecs::world          (ECS — entity/component storage)
-  ├── AssetManager          (mesh + material GPU handles)
-  ├── InputSystem           (platform events → ECS)
-  ├── PhysicsBridge         (Jolt simulation ↔ ECS)
-  └── RenderBridge          (ECS → C renderer)
+  ├── flecs::world (PIMPL)   ECS — entity/component storage  (held by unique_ptr,
+  │                          forward-declared in the public header; see FOUNDATIONS)
+  ├── SceneManager           active scene + SceneID <-> scene-entity map
+  ├── AssetManager           meshes/materials/templates/textures (cgfx-backed)
+  ├── InputSystem            GLFW (via ctx.window) events -> ECS
+  ├── PhysicsBridge          Jolt simulation <-> ECS (only RH island)
+  └── Renderer + RenderBridge  CgfxCtx + ECS -> cgfx draw recording
+
+  Renderer owns the CgfxCtx (window/device/queue/surface/depth) and is nullable
+  for headless runs. RenderBridge owns the camera GPU backing, the per-object
+  dynamic uniform buffer, and the @group(0) bind group.
 
 
+-------------------------------------------------------------------------------
 FRAME TICK — Engine::tick(dt, aspect)
-─────────────────────────────────────────────────────────────────────────────
+-------------------------------------------------------------------------------
 
-  Platform loop
+  Platform loop:  glfwPollEvents()  (caller-owned; cgfx never polls)  THEN tick.
+
+  Engine::tick(dt, aspect)
        │
-       ▼
-  Engine::tick()
+       ├─[1]─► InputSystem::poll_and_write(world, player)
+       │           reads GLFW immediate state on ctx.window (it does NOT call
+       │           glfwPollEvents); writes InputState onto the player entity.
        │
-       ├─[1]─► InputSystem::poll_and_write(world, player_entity)
-       │             │
-       │        reads OS events (keyboard, mouse)
-       │             │
-       │        world.entity(player).set<InputState>({ move, look, jump... })
-       │                                        │
-       │                              written to ECS ──────────────────────┐
-       │                                                                   │
-       ├─[2]─► PhysicsBridge::step_and_writeback(world, dt)               │
-       │             │                                                     │
-       │        reads <InputState> from ECS ◄──────────────────────────── ┘
-       │             │
-       │        push velocity/forces into Jolt bodies
-       │             │
-       │        JoltPhysicsSystem::Update(dt)    ← pure simulation
-       │             │
-       │        for each (BodyID → entity) mapping:
-       │             world.entity(e).set<Position>(jolt_pos)
-       │                            .set<Rotation>(jolt_rot)
-       │                                        │
-       │                              written to ECS ──────────────────────┐
-       │                                                                   │
-       ├─[3]─► world.progress(dt)   (Flecs runs registered systems)       │
-       │             │                                                     │
-       │        ┌────┴────────────────────────────────────────────────┐    │
-       │        │  Flecs system scheduler                              │    │
-       │        │                                                      │    │
-       │        │  [3a] Transform_Roots  (no parent)                  │    │
-       │        │         reads  <Position, Rotation, Scale> ◄──────── ┘   │
-       │        │         writes <WorldTransform>                     │    │
-       │        │                      │                              │    │
-       │        │  [3b] Transform_Children  (.after 3a)              │    │
-       │        │         reads  <Position, Rotation, Scale>          │    │
-       │        │         reads  parent<WorldTransform>               │    │
-       │        │         writes <WorldTransform>  (parent * local)   │    │
-       │        │                      │                              │    │
-       │        │  [3c] CameraSystem   (.after 3b)                   │    │
-       │        │         reads  <WorldTransform>  (IsCamera entity)  │    │
-       │        │         writes <CameraData> { view, proj, pos }     │    │
-       │        │                                                      │    │
-       │        └──────────────────────────────────────────────────── ┘    │
-       │                                                                   │
-       │                         all WorldTransforms now fresh ────────── ┐│
-       │                         CameraData now fresh ─────────────────── ┤│
-       │                                                                  ││
-       └─[4]─► RenderBridge::submit_frame(world, aspect)                 ││
-                     │                                                    ││
-                reads <CameraData>    from ECS ◄──────────────────────── ┘│
-                reads <WorldTransform>                                      │
-                reads <MeshHandle>    } per renderable entity ◄──────────── ┘
-                reads <MaterialHandle>}
-                reads <CastsShadow>   tag (optional)
-                     │
-                resolves handles via AssetManager
-                     │
-                builds FrameDrawList { DrawCall[], view[], proj[] }
-                     │
-                ─────┼──── ECS boundary — renderer never crosses this ────
-                     │
-                renderer_begin_frame()
-                renderer_set_camera(view, proj, pos)
-                for each DrawCall:
-                    renderer_submit_mesh(mesh_id, mat_id, world_matrix)
-                renderer_end_frame()
+       ├─[2]─► world.set<ViewportInfo>({ aspect })
+       │           singleton so CameraSystem can reproject (fixes resize stretch).
+       │
+       ├─[3]─► (Phase 9) MovementSystem  reads InputState + CharacterState ->
+       │           PhysicsBridge::set_character_velocity (before the step).
+       │
+       ├─[4]─► PhysicsBridge::step_and_writeback(world, dt)
+       │           fixed-timestep accumulator (H = 1/60): while(acc>=H){Update(H)}.
+       │           reads body transforms from Jolt, applies the RH->LH flip
+       │           (RENDER_INTEGRATION sec 2), writes Position/Rotation onto
+       │           transform-ROOT entities (dynamic bodies must be roots).
+       │
+       ├─[5]─► world.progress(dt)   (flecs systems, in dependency order)
+       │           [5a] Transform_Roots     reads P/R/S      -> WorldTransform
+       │           [5b] Transform_Children  .parent().cascade()  (parent-before-
+       │                child for deep trees) -> parent.World * local
+       │           [5c] CameraSystem (.after 5b) reads WorldTransform on the
+       │                IsCamera entity + ViewportInfo -> CameraData{view,proj,pos}
+       │                (view = inverse(World); proj = glm_perspective LH-ZO)
+       │
+       └─[6]─► RenderBridge::submit_frame(world)
+                   reads CameraData -> feeds the owned CgfxCamera (cgfx_camera_write)
+                   reads WorldTransform + MeshHandle + MaterialHandle (one query,
+                        CastsShadow as an optional term)
+                   packs all model matrices -> one buffer write (dynamic offsets)
+                   cgfx_frame_begin -> bind @group(0); per draw set pipeline
+                        (batched by material template) + @group(2) + @group(1)
+                        dynamic offset + cgfx_mesh_draw -> cgfx_frame_end
+                   ─── ECS boundary: cgfx is touched only here and in assets ───
 
 
+-------------------------------------------------------------------------------
 COMPONENT DATA FLOW (who writes, who reads)
-─────────────────────────────────────────────────────────────────────────────
+-------------------------------------------------------------------------------
 
-  Component          Written by              Read by
-  ─────────────────  ──────────────────────  ─────────────────────────────
-  Position           PhysicsBridge           TransformSystem (both passes)
-  Rotation           PhysicsBridge           TransformSystem (both passes)
-  Scale              (user / scene setup)    TransformSystem (both passes)
-  WorldTransform     TransformSystem         CameraSystem, RenderBridge
-  InputState         InputSystem             PhysicsBridge, gameplay systems
-  CameraData         CameraSystem            RenderBridge
-  MeshHandle         (scene setup)           RenderBridge
-  MaterialHandle     (scene setup)           RenderBridge
-  PhysicsBodyID      PhysicsBridge (init)    PhysicsBridge (internal map)
+  Component        Written by              Read by
+  ───────────────  ──────────────────────  ──────────────────────────────
+  Position         PhysicsBridge / user    TransformSystem (both passes)
+  Rotation         PhysicsBridge / user    TransformSystem (both passes)
+  Scale            user / scene setup      TransformSystem (both passes)
+  WorldTransform   TransformSystem         CameraSystem, RenderBridge   [init=identity]
+  InputState       InputSystem             MovementSystem, gameplay
+  ViewportInfo     Engine::tick (singleton) CameraSystem
+  CameraData       CameraSystem            RenderBridge
+  CharacterState   PhysicsBridge (Ph.9)    MovementSystem
+  MeshHandle       scene setup             RenderBridge
+  MaterialHandle   scene setup             RenderBridge
+  PhysicsBodyID    PhysicsBridge (on register; MUST be set) on_remove observer
 
-  Tag components: IsCamera, IsStatic, CastsShadow
-    — written at entity creation, used as query filters only
+  Relationships / tags:
+    ChildOf (built-in)     transform hierarchy; (OnDeleteTarget, Delete)
+    SceneMember            scene ownership; Exclusive + (OnDeleteTarget, Delete)
+    IsCamera, IsStatic, CastsShadow   query filters, set at creation
+
+  Components are PLAIN DATA (no methods). cglm types (vec3/versor/mat4) are used
+  deliberately (renderer-native, zero-conversion). They are never exposed through
+  the public API. WorldTransform.matrix MUST be initialized to identity (the
+  original sketch left it uninitialized -> garbage).
 
 
+-------------------------------------------------------------------------------
 CLASS DECISION RATIONALE
-─────────────────────────────────────────────────────────────────────────────
+-------------------------------------------------------------------------------
 
-  CLASS (owns resources, has init/shutdown lifecycle)
-  ├── Engine          — owns all subsystems
-  ├── AssetManager   — owns GPU resource arrays + cache maps
-  ├── InputSystem    — owns bitset state across frames
-  ├── PhysicsBridge  — owns Jolt PhysicsSystem, allocators, body map
-  └── RenderBridge   — owns draw list buffer, pointer to C renderer state
+  CLASS (owns resources, init/shutdown lifecycle)
+  ├── Engine           owns all subsystems + the flecs world (PIMPL)
+  ├── SceneManager     active scene, SceneID mapping
+  ├── AssetManager     CgfxMesh / ShaderTemplate / MaterialAsset / CgfxTexture + caches
+  ├── InputSystem      bitset state across frames (GLFW isolated in its .cpp)
+  ├── PhysicsBridge    Jolt PhysicsSystem, allocators, body maps
+  ├── Renderer         CgfxCtx + swapchain/depth (nullable: headless)
+  └── RenderBridge     draw list, camera GPU backing, per-object dynamic buffer
 
   NAMESPACE of FREE FUNCTIONS (pure logic, no persistent state)
-  ├── TransformSystem::build_trs()         — pure math
-  ├── TransformSystem::register_systems()  — one-time setup, no state
-  └── CameraSystem::compute_view/proj()    — pure math
-      CameraSystem::register_systems()     — one-time setup, no state
+  ├── TransformSystem::build_trs / register_systems
+  └── CameraSystem::compute_view / compute_proj / register_systems
 
-  STRUCTS (plain data, no methods, Flecs owns them)
-  └── All components in components.hpp
+  STRUCTS (plain data; flecs owns them)
+  └── all components in components.hpp
 
 
+-------------------------------------------------------------------------------
 STATIC LIBRARY PUBLIC SURFACE (what game/editor code sees)
-─────────────────────────────────────────────────────────────────────────────
+-------------------------------------------------------------------------------
 
-  engine/core/engine.hpp       — Engine, EngineConfig
-  engine/core/entity_id.hpp    — EntityID (opaque handle)
-  engine/systems/input_system.hpp  — Key, MouseButton (for input queries)
+  engine/engine_api.hpp  includes ONLY:
+      core/engine.hpp        Engine, EngineConfig
+      core/entity_id.hpp     EntityID
+      core/scene_id.hpp      SceneID
+      systems/input_keys.hpp Key, MouseButton
 
-  Everything else is an implementation detail.
-  Consumers never include: flecs.h, cglm.h, Jolt/*.h
-
-
-SCENE GRAPH (Flecs ChildOf relationship)
-─────────────────────────────────────────────────────────────────────────────
-
-  world                          (flecs::world)
-  └── vehicle  (root entity)
-        ├── body   (ChildOf vehicle)
-        │     ├── wheel_fl  (ChildOf body)
-        │     └── wheel_fr  (ChildOf body)
-        └── turret (ChildOf vehicle)
-              └── barrel  (ChildOf turret)
-
-  Transform_Roots  processes: vehicle
-  Transform_Children processes: body, turret, wheel_fl, wheel_fr, barrel
-  (Flecs guarantees parents before children within pass 2)
+  Including engine_api.hpp must drag in ZERO of flecs/cglm/Jolt/cgfx/WebGPU/GLFW.
+  This requires the flecs PIMPL and keeping cgfx/Jolt out of public headers (see
+  FOUNDATIONS sec 5). Consumers never include flecs.h, cglm.h, Jolt/*.h, cgfx.h.
 
 
-DIRECTORY LAYOUT
-─────────────────────────────────────────────────────────────────────────────
+-------------------------------------------------------------------------------
+TRANSFORM HIERARCHY vs SCENE MEMBERSHIP (two orthogonal relationships)
+-------------------------------------------------------------------------------
+
+  ChildOf (transform):                 SceneMember (ownership):
+    vehicle                              level_scene
+      ├── body                             ├── vehicle, body, wheel_fl, ...
+      │     ├── wheel_fl                    └── ground
+      │     └── wheel_fr                  hud_scene
+      └── turret                            └── crosshair, healthbar
+            └── barrel
+
+  Transform_Children processes the ChildOf tree (parent-before-child via
+  .parent().cascade()). Unloading hud_scene destroys its members via the
+  SceneMember delete trait without touching level_scene. See SCENE.txt.
+
+
+-------------------------------------------------------------------------------
+DIRECTORY LAYOUT  (engine is the outer project; cgfx is a submodule)
+-------------------------------------------------------------------------------
 
   myengine/
+  ├── CMakeLists.txt                 root (LANGUAGES C CXX)
+  ├── third_party/
+  │   ├── cgfx/                      submodule (brings glfw/webgpu/cglm + LH/ZO defines)
+  │   ├── flecs/                     flecs.h + flecs.c
+  │   ├── JoltPhysics/               submodule
+  │   ├── cgltf/                     glTF importer (assets only)
+  │   └── stb/                       stb_image.h (assets only)
   │
-  ├── CMakeLists.txt                 ← root: defines the static lib target
+  ├── engine/                        add_library(engine STATIC ...)
+  │   ├── core/      components.hpp, entity_id.hpp, scene_id.hpp, engine.{hpp,cpp},
+  │   │              engine_api.hpp
+  │   ├── assets/    asset_manager.{hpp,cpp}   (cgltf + stb_image here)
+  │   ├── systems/   transform_, camera_, input_, movement_system.{hpp,cpp},
+  │   │              input_keys.hpp
+  │   ├── physics/   physics_bridge.{hpp,cpp}, physics_layers.hpp, physics_listeners.hpp
+  │   ├── render/    cgfx_c.hpp, renderer.{hpp,cpp}, render_bridge.{hpp,cpp}
+  │   └── scene/     scene_manager.{hpp,cpp}, scene_serializer.{hpp,cpp}
   │
-  ├── engine/                        ← the static library (all source here)
-  │   │
-  │   ├── CMakeLists.txt             ← add_library(engine STATIC ...)
-  │   │
-  │   ├── core/                      ← foundational types, no dependencies
-  │   │   ├── components.hpp         ← ALL ECS component structs (data only)
-  │   │   ├── entity_id.hpp          ← opaque EntityID handle
-  │   │   ├── engine.hpp             ← Engine class (the wiring)
-  │   │   └── engine.cpp
-  │   │
-  │   ├── assets/
-  │   │   ├── asset_manager.hpp
-  │   │   └── asset_manager.cpp
-  │   │
-  │   ├── systems/                   ← ECS systems (read/write components)
-  │   │   ├── transform_system.hpp
-  │   │   ├── transform_system.cpp
-  │   │   ├── camera_system.hpp
-  │   │   ├── camera_system.cpp
-  │   │   ├── input_system.hpp
-  │   │   └── input_system.cpp
-  │   │
-  │   ├── physics/                   ← Jolt bridge (isolated, no ECS leakage)
-  │   │   ├── physics_bridge.hpp
-  │   │   ├── physics_bridge.cpp
-  │   │   ├── physics_layers.hpp     ← Jolt collision layer constants
-  │   │   └── physics_listeners.hpp  ← Jolt contact/activation listeners
-  │   │
-  │   └── render/                    ← ECS → C renderer bridge
-  │       ├── render_bridge.hpp
-  │       └── render_bridge.cpp
-  │
-  ├── renderer/                      ← your existing C renderer (unchanged)
-  │   ├── CMakeLists.txt             ← add_library(renderer STATIC ...)
-  │   ├── renderer.h                 ← C API (renderer_begin_frame, etc.)
-  │   ├── renderer.c
-  │   └── ...
-  │
-  ├── third_party/                   ← vendored dependencies
-  │   ├── flecs/
-  │   │   ├── flecs.h
-  │   │   └── flecs.c                ← single-file build
-  │   ├── JoltPhysics/               ← git submodule recommended
-  │   │   └── ...
-  │   └── cglm/                      ← already used by renderer
-  │       └── ...
-  │
-  ├── tests/                         ← unit tests (no window, no GPU)
-  │   ├── CMakeLists.txt
-  │   ├── test_transform.cpp         ← test TransformSystem math in isolation
-  │   ├── test_asset_manager.cpp
-  │   └── test_entity_id.cpp
-  │
-  └── examples/                      ← consuming executables (game, sandbox)
-      ├── CMakeLists.txt
-      ├── sandbox/
-      │   ├── main.cpp               ← example_game.cpp lives here
-      │   └── CMakeLists.txt         ← links engine + renderer static libs
-      └── headless/
-          └── main.cpp               ← physics/logic test with no window
+  ├── examples/  sandbox/ (windowed) + headless/ (no window, CI)
+  └── tests/     pure-logic unit tests
 
+  There is NO engine-owned renderer/ dir and NO third_party/cglm/ (cgfx supplies
+  both). See FOUNDATIONS for the full rationale.
 
   INCLUDE DEPENDENCY RULES (enforced by directory structure)
-  ───────────────────────────────────────────────────────────
+    core/    -> no engine deps; components.hpp may include <cglm/cglm.h>
+    assets/  -> core/, render/ ; cgltf + stb_image in .cpp only
+    systems/ -> core/ ; cglm
+    physics/ -> core/ ; Jolt in physics/ only
+    render/  -> core/, assets/ ; cgfx via render/cgfx_c.hpp, in render/*.cpp only
+    scene/   -> core/, assets/, render/
+    engine   -> wires all of the above
 
-  core/        → no includes from other engine/ dirs (foundational)
-  assets/      → may include core/
-  systems/     → may include core/  (reads/writes components)
-  physics/     → may include core/  (reads/writes components)
-  render/      → may include core/, assets/
-  engine.hpp   → includes all of the above (it's the wiring layer)
-
-  third_party/ headers stay INSIDE their subsystem:
-    Jolt/*.h   → only in physics/
-    flecs.h    → only in core/engine.hpp and systems/ (never in components.hpp)
-    cglm/      → in core/components.hpp (vec3/mat4 are component types)
-                 and renderer/ (already there)
-
-  The goal: nothing in examples/ or a future editor/ needs to know
-  what physics library or ECS you use. They include engine.hpp and stop.
+    cgfx.h   -> only via render/cgfx_c.hpp (the single extern "C" include)
+    Jolt/*.h -> only in physics/
+    flecs.h  -> systems/, bridges, scene/ (.cpp); NOT in the public surface
+    cglm     -> components.hpp + math systems; ALWAYS transitively via cgfx PUBLIC
 
 
-  CMAKE SKETCH
-  ───────────────────────────────────────────────────────────
+-------------------------------------------------------------------------------
+CMAKE SKETCH
+-------------------------------------------------------------------------------
 
-  # root CMakeLists.txt
+  # root
   cmake_minimum_required(VERSION 3.22)
-  project(myengine)
+  project(myengine LANGUAGES C CXX)
   set(CMAKE_CXX_STANDARD 20)
-
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  add_subdirectory(third_party/cgfx)        # target: cgfx
   add_subdirectory(third_party/flecs)
   add_subdirectory(third_party/JoltPhysics)
-  add_subdirectory(renderer)      # → target: renderer
-  add_subdirectory(engine)        # → target: engine  (links renderer, flecs, Jolt)
-  add_subdirectory(examples)      # → target: sandbox (links engine)
-  add_subdirectory(tests)         # → target: engine_tests
+  add_subdirectory(engine)
+  add_subdirectory(examples)
+  add_subdirectory(tests)
 
-  # engine/CMakeLists.txt
+  # engine
   add_library(engine STATIC
-      core/engine.cpp
-      assets/asset_manager.cpp
-      systems/transform_system.cpp
-      systems/camera_system.cpp
-      systems/input_system.cpp
+      core/engine.cpp assets/asset_manager.cpp
+      systems/transform_system.cpp systems/camera_system.cpp
+      systems/input_system.cpp     systems/movement_system.cpp
       physics/physics_bridge.cpp
-      render/render_bridge.cpp
-  )
-  target_include_directories(engine PUBLIC .)   # consumers: #include "engine/core/engine.hpp"
-  target_link_libraries(engine PRIVATE renderer flecs Jolt)
+      render/renderer.cpp render/render_bridge.cpp
+      scene/scene_manager.cpp scene/scene_serializer.cpp)
+  target_include_directories(engine PUBLIC .)
+  target_link_libraries(engine PUBLIC  cgfx)        # PUBLIC: propagates cglm + LH/ZO
+  target_link_libraries(engine PRIVATE flecs Jolt)
+
+  The goal: nothing in examples/ or a future editor/ needs to know which physics
+  library, ECS, or renderer is underneath. They include engine_api.hpp and stop.

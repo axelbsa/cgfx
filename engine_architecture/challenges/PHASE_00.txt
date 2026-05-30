@@ -1,0 +1,41 @@
+===============================================================================
+PHASE 0 — WRAP cgfx / ESTABLISH THE C++ BOUNDARY  (NEW, do first)
+Goal: cgfx is callable from C++ and confined to render/; logging + time exist
+Prereqs: cgfx builds standalone; FOUNDATIONS.txt read
+===============================================================================
+
+  Without this phase, Phase 1 cannot even link: cgfx headers have no extern "C"
+  and the engine is C++. This phase builds the seam everything else sits on.
+
+  [ ] 0.1  Repo + CMake skeleton from ARCHITECTURE.txt: engine outer, cgfx as
+           third_party/cgfx submodule, project(LANGUAGES C CXX). engine links
+           cgfx PUBLIC (inherits cglm + CGLM_FORCE_LEFT_HANDED + _DEPTH_ZERO_TO_ONE).
+           Do NOT vendor a second cglm.
+
+  [ ] 0.2  render/cgfx_c.hpp: the ONE place cgfx is included.
+               extern "C" { #include "cgfx.h" }
+           Nothing outside render/ (and assets/*.cpp) includes cgfx.
+
+  [ ] 0.3  Logging/assert layer (ENGINE_LOG / ENGINE_CHECK). Every cgfx_*_create
+           returns a checkable status (.ok flag or NULL); ENGINE_CHECK them at the
+           wrapper boundary so a null pipeline fails loudly here, not 3 frames later.
+
+  [ ] 0.4  Time: a fixed-timestep accumulator helper (H = 1/60). The sandbox feeds
+           real frame dt; physics consumes fixed substeps (Phase 7 needs this).
+
+  [ ] 0.5  Renderer RAII wrapper (render/renderer.{hpp,cpp}). Owns CgfxCtx; build
+           all cgfx descriptors as NAMED zero-init locals (no C compound literals
+           in C++ — see FOUNDATIONS 3b). Route on_device_lost/on_device_error to
+           ENGINE_LOG. Expose window() (GLFWwindow*). Make it NULLABLE (headless).
+
+  [M] MILESTONE 0 — cgfx callable from C++, cleanly
+      A C++ TU creates a CgfxCtx through the Renderer wrapper, clears the screen to
+      a color via cgfx_frame_begin/end, and shuts down with no leaks and zero
+      warnings (-Wall -Wextra -Werror). No ECS yet.
+
+  [!] Do NOT copy cgfx example code into C++ verbatim — (T){...} compound literals
+      and (T[]){{...}} array literals do not compile in C++. Named locals only.
+  [!] Do NOT add CGLM_FORCE_* yourself or vendor cglm — you inherit both from cgfx.
+      Anything that includes <cglm/cglm.h> must link cgfx PUBLIC.
+
+

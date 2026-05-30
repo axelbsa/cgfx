@@ -1,55 +1,57 @@
 #pragma once
 #include <cstdint>
-#include <string>
-#include <vector>
-#include <unordered_map>
+#include <memory>
 
 // =============================================================================
-// AssetManager
+// AssetManager  (cgfx-FREE public-ish header)
 //
-// Owns all loaded GPU resources. Systems never load assets themselves —
-// they ask the manager for a handle, and the manager returns a uint32_t
-// that both ECS components and the renderer understand.
+// Loads meshes/materials/textures by path, deduplicates them, and hands back
+// small uint32 HANDLES. The handle (a vector index) is the renderer-agnostic
+// seam the ECS components (MeshHandle/MaterialHandle) use — nothing outside the
+// render/assets layer needs to know what a CgfxMesh is.
 //
-// Thread safety: NOT thread safe. Load assets on the main thread, or
-// add a job-queue in front if you want async loading later.
+// The GPU-backed asset structs hold cgfx objects by value, so they live in the
+// internal, cgfx-aware asset_gpu.hpp (included only by asset_manager.cpp and
+// render_bridge.cpp). cgfx therefore never leaks through THIS header
+// (FOUNDATIONS sec 4). Storage lives behind a PIMPL.
+//
+// Implementation (cgltf meshes, stb_image textures, the ShaderTemplate +
+// MaterialAsset split, dedup, the dynamic-offset object buffer) is spelled out in
+// PHASE_04.txt and RENDER_INTEGRATION sec 4/8. Load synchronously, on the main
+// thread, up front (no async/streaming/refcounting yet).
 // =============================================================================
 
-struct MeshAsset {
-    uint32_t    renderer_id;    // handle your C renderer understands
-    std::string path;
-};
-
-struct MaterialAsset {
-    uint32_t    renderer_id;
-    std::string path;
-};
+struct CgfxCtx;          // cgfx; used only by pointer here (forward decl, no include)
+struct MeshAsset;        // defined in asset_gpu.hpp (cgfx-aware; .cpp only)
+struct MaterialAsset;
+struct ShaderTemplate;
+struct TextureAsset;
 
 class AssetManager {
 public:
-    // Lifecycle — called by Engine
-    void init();
-    void shutdown();
+    AssetManager();
+    ~AssetManager();                              // defined in .cpp (PIMPL needs complete Impl)
+    AssetManager(const AssetManager&)            = delete;
+    AssetManager& operator=(const AssetManager&) = delete;
 
-    // --- Mesh ---
-    // Returns existing handle if already loaded (path-keyed cache).
+    void init(CgfxCtx* ctx);   // borrows the context from the Renderer (may be null: headless)
+    void shutdown();           // cgfx_*_destroy everything it owns; clears caches
+
+    // Load-or-get-cached. Returns a uint32 handle (vector index), path-deduplicated.
     uint32_t load_mesh(const char* path);
-    const MeshAsset* get_mesh(uint32_t id) const;
-
-    // --- Material ---
     uint32_t load_material(const char* path);
-    const MaterialAsset* get_material(uint32_t id) const;
+    uint32_t load_texture(const char* path);
 
-    // --- Unload ---
-    // Usually not called per-frame. Use for scene transitions.
-    void unload_mesh(uint32_t id);
-    void unload_material(uint32_t id);
+    // Resolve a handle to the owned GPU asset. Called by RenderBridge, which is in
+    // the cgfx-aware layer and includes asset_gpu.hpp. Returns nullptr on bad id.
+    const MeshAsset*      get_mesh(uint32_t id)     const;
+    const MaterialAsset*  get_material(uint32_t id) const;
+    const ShaderTemplate* get_template(uint32_t id) const;
+    const TextureAsset*   get_texture(uint32_t id)  const;
 
     void unload_all();
 
 private:
-    std::vector<MeshAsset>                   m_meshes;
-    std::vector<MaterialAsset>               m_materials;
-    std::unordered_map<std::string, uint32_t> m_mesh_cache;
-    std::unordered_map<std::string, uint32_t> m_material_cache;
+    struct Impl;                       // owns the vectors + path caches (cgfx-typed)
+    std::unique_ptr<Impl> m_impl;      // defined in asset_manager.cpp
 };

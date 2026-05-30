@@ -1,0 +1,104 @@
+===============================================================================
+PHASE 6 — PUBLIC API + ENTITY ID  (seal the library boundary)
+Goal: a consumer includes engine_api.hpp and sees ZERO of flecs/cglm/Jolt/cgfx
+Prereqs: Phases 2-5 (the things the API exposes exist)
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  Until now the sandbox can reach into flecs directly. That is fine for you, but a
+  library other people (or a future editor, or you in a year) consume must hide its
+  guts: which ECS, which math, which renderer are IMPLEMENTATION details. This phase
+  draws the wall. After it, the only thing a consumer includes is engine_api.hpp,
+  and that header drags in none of the third-party libraries. Doing this now, before
+  physics and the editor, means you never have to unpick leaked includes later.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - Why leaking is bad. If engine.hpp does #include <flecs.h>, then EVERY consumer
+    compiles flecs's headers, must have them on the include path, and is coupled to
+    flecs's types and version. The same goes for cglm and cgfx. The goal
+    ("Milestone 6") is: delete flecs.h and cglm.h from the examples and they still
+    compile, because they never needed them.
+
+  - Opaque handle. EntityID is a struct wrapping a uint64. The consumer passes it
+    around but cannot inspect the flecs entity inside. Internally Engine converts:
+        flecs::entity to_entity(EntityID id);   // id.value -> world.entity(...)
+        EntityID      from_entity(flecs::entity e);
+    Same idea for SceneID.
+
+  - PIMPL with unique_ptr, and the destructor gotcha (this WILL bite you). To keep
+    flecs out of engine.hpp, hold the world by pointer to an incomplete type:
+        // engine.hpp
+        namespace flecs { struct world; }          // forward declaration only
+        class Engine {
+            ...
+            std::unique_ptr<flecs::world> m_world;  // OK with incomplete type...
+        };
+    BUT std::unique_ptr's destructor needs the COMPLETE type to delete it. If the
+    Engine destructor is implicit (generated in the consumer's TU where flecs is
+    incomplete), you get a confusing error: "invalid application of sizeof to an
+    incomplete type 'flecs::world'". The fix: DECLARE ~Engine() in the header and
+    DEFINE it (even as `Engine::~Engine() = default;`) in engine.cpp, where flecs.h
+    IS included and the type is complete. Same for any other forward-declared member.
+
+  ---- 6.1  Move flecs behind PIMPL ----------------------------------------
+    [ ] 6.1.a  In engine.hpp: forward-declare flecs::world; hold it as
+               std::unique_ptr<flecs::world> m_world; remove the #include <flecs.h>.
+    [ ] 6.1.b  DECLARE ~Engine(); (and, if you delete copies, the move ops) in the
+               header; DEFINE them in engine.cpp where flecs.h is included. This is
+               the destructor gotcha above.
+    [ ] 6.1.c  Store m_player_entity as EntityID, not flecs::entity. Add private
+               to_entity/from_entity helpers (defined in the .cpp).
+    [ ] 6.1.d  ecs(): keep it as an escape hatch for a future editor, but make it
+               NOT leak flecs through the public header. Either return an opaque
+               wrapper, or gate it behind #ifdef ENGINE_INTERNAL so the public
+               surface doesn't declare a flecs return type. The sandbox never calls it.
+  How to know it works: engine.hpp has no #include <flecs.h>; the engine library
+  still builds.
+  WHAT FAILURE LOOKS LIKE:
+    - "sizeof incomplete type flecs::world": you didn't declare+define ~Engine in
+      the .cpp (the gotcha above).
+
+  ---- 6.2  Entity-construction API returns EntityID ------------------------
+    [ ] 6.2.a  spawn_mesh / spawn_camera build the entity (transform components +
+               handles from the real AssetManager) and return from_entity(e).
+    [ ] 6.2.b  Debug accessors as needed, e.g. vec3 get_position(EntityID) so the
+               sandbox can inspect without flecs. Keep these minimal.
+  How to know it works: the sandbox creates and queries entities through EntityID only.
+
+  ---- 6.3  Single-camera rule -------------------------------------------
+    [ ] 6.3.a  create_camera removes IsCamera from any existing camera before adding
+               it to the new entity (query IsCamera, strip it, then tag the new one).
+  How to know it works: calling create_camera twice leaves exactly one IsCamera entity.
+
+  ---- 6.4  Parenting + cascade delete ------------------------------------
+    [ ] 6.4.a  set_parent(child, parent): to_entity(child).child_of(to_entity(parent)).
+    [ ] 6.4.b  Ensure the ChildOf relationship is registered with
+               (OnDeleteTarget, Delete) so destroying a parent destroys its subtree
+               (SCENE.txt 5). Register this once in Engine::init.
+  How to know it works: destroying a parent EntityID removes its children too (count
+  entities before/after).
+
+  ---- 6.5  Make the sandbox API-only ------------------------------------
+    [ ] 6.5.a  Refactor examples/sandbox/main.cpp to use ONLY Engine + EntityID +
+               SceneID + Key. Remove every #include of flecs.h and cglm.h and every
+               flecs::entity.
+  How to know it works: the sandbox compiles with flecs/cglm OFF its include path.
+
+  ---- 6.6  Define engine_api.hpp ----------------------------------------
+    [ ] 6.6.a  engine_api.hpp includes exactly: engine.hpp, entity_id.hpp,
+               scene_id.hpp, input_keys.hpp. Consumers include only this.
+  How to know it works: a fresh TU that includes ONLY engine_api.hpp and links the
+  engine static lib compiles and runs.
+
+  [M] MILESTONE 6 — Clean library boundary
+      Delete all flecs.h AND cglm.h includes from examples/ and it still compiles. A
+      colleague consumes the static lib + engine_api.hpp with zero knowledge of
+      flecs, Jolt, cglm, or cgfx. (Verify by building the sandbox with those
+      third-party include dirs removed from its target.)
+
+  [!] ecs() stays as a power-user/editor escape hatch, but it must not make the
+      PUBLIC header include flecs. The sandbox never calls it.
+
+

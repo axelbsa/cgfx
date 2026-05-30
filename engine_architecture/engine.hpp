@@ -1,43 +1,47 @@
 #pragma once
-#include <flecs.h>
-#include "../assets/asset_manager.hpp"
-#include "../systems/input_system.hpp"
-#include "../physics/physics_bridge.hpp"
-#include "../render/render_bridge.hpp"
+#include <cstdint>
+#include <memory>
 #include "../core/entity_id.hpp"
-#include "../core/components.hpp"
+#include "../core/scene_id.hpp"           // SceneID, PrefabID
+#include "../systems/input_keys.hpp"      // Key, MouseButton (GLFW-free)
 
 // =============================================================================
-// Engine
+// Engine — the public face of the static library.
 //
-// Owns all subsystems. Defines the frame tick order. Exposes a narrow
-// scene-building API so consumers (game, editor) never touch Flecs directly.
+// FULL PIMPL: this header pulls in NONE of flecs / cgfx / cglm / Jolt / GLFW.
+// All subsystems (the flecs world, AssetManager, InputSystem, PhysicsBridge,
+// Renderer, RenderBridge, SceneManager) live in Engine::Impl, defined in
+// engine.cpp. A consumer that includes engine_api.hpp sees only opaque handles
+// and POD config (FOUNDATIONS sec 5). Positions are plain floats here so the
+// public API stays cglm-free.
 //
-// Owns:
-//   flecs::world    — entity/component storage and system scheduler
-//   AssetManager    — mesh + material GPU resources
-//   InputSystem     — platform input → ECS InputState
-//   PhysicsBridge   — Jolt simulation → ECS Position/Rotation
-//   RenderBridge    — ECS WorldTransform → C renderer draw calls
-//
-// Does NOT own:
-//   The platform window (created by the game/editor executable)
-//   The game loop (also the executable's responsibility)
+// Frame order and ownership: ARCHITECTURE.txt. Scenes: SCENE.txt.
 // =============================================================================
 
 struct EngineConfig {
-    void*  window_handle  = nullptr;   // platform window (HWND / GLFWwindow*)
-    float  gravity_y      = -9.81f;
-    int    physics_threads = 2;
-    bool   enable_physics  = true;
+    // Windowed (GLFW) path — cgfx CREATES the window from these:
+    int         width        = 1280;
+    int         height       = 720;
+    const char* title        = "engine";
+    bool        depth_buffer = true;
+
+    // Editor/embedded path — if non-null, render into this native window (HWND)
+    // via cgfx_ctx_init_external instead of creating one.
+    void*       external_window = nullptr;
+
+    // Subsystems
+    float       gravity_y       = -9.81f;
+    int         physics_threads = 2;
+    bool        enable_physics  = true;
+
+    // CI / tests: no window, no Renderer (RenderBridge no-ops). See PHASE_08.
+    bool        headless = false;
 };
 
 class Engine {
 public:
-    Engine() = default;
-    ~Engine() = default;
-
-    // Non-copyable, non-moveable — owns too many resources
+    Engine();
+    ~Engine();                          // defined in engine.cpp (PIMPL needs complete Impl)
     Engine(const Engine&)            = delete;
     Engine& operator=(const Engine&) = delete;
 
@@ -45,49 +49,54 @@ public:
     void init(const EngineConfig& cfg);
     void shutdown();
 
-    // --- Main tick — call this from your game loop ---
-    // dt = seconds since last frame
+    // --- Main tick (call once per frame; the platform loop does glfwPollEvents first) ---
     void tick(float dt, float viewport_aspect);
 
-    // --- Scene building API ---
-    // Returns opaque EntityID handles. Callers never see flecs::entity.
+    // GLFWwindow* as void* (no GLFW in this header). null in headless/external cases.
+    void* window() const;
 
-    // Create a visible, moveable object in the world
-    EntityID create_mesh_entity(const char* mesh_path,
-                                const char* material_path,
+    // --- Scenes (SCENE.txt) ---
+    SceneID create_scene(const char* name);
+    void    unload_scene(SceneID);          // destroys exactly the scene's members
+    void    clear_scene(SceneID);           // destroys members, keeps the scene
+    SceneID active_scene() const;
+    void    set_active_scene(SceneID);
+
+    // --- Spawning (added to the given scene; default = active scene) ---
+    EntityID spawn(SceneID, const char* name = nullptr);
+    EntityID spawn_mesh(SceneID, const char* name,
+                        const char* mesh_path, const char* material_path,
+                        float x, float y, float z);
+    EntityID spawn_camera(SceneID, const char* name,
+                          float fov_deg, float near_p, float far_p,
+                          float x, float y, float z);
+    void     despawn(EntityID);
+
+    // Convenience wrappers over the active scene (kept for the early phases).
+    EntityID create_mesh_entity(const char* mesh_path, const char* material_path,
                                 float x, float y, float z);
-
-    // Create the active camera (only one IsCamera at a time)
-    EntityID create_camera(float fov, float near_plane, float far_plane,
+    EntityID create_camera(float fov_deg, float near_p, float far_p,
                            float x, float y, float z);
 
-    // Parent/child scene graph
-    void set_parent(EntityID child, EntityID parent);
+    // --- Hierarchy (transform parenting; distinct from scene membership) ---
+    void     set_parent(EntityID child, EntityID parent);
+    EntityID find(SceneID, const char* name);
 
-    // Physics registration
-    void add_physics_box(EntityID entity,
-                         float hx, float hy, float hz,
-                         float mass = 1.f);
+    // --- Physics ---
+    void add_physics_box(EntityID, float hx, float hy, float hz, float mass = 1.f);
 
-    // --- Subsystem accessors ---
-    // Expose subsystems for advanced use (e.g. editor querying raw input)
-    InputSystem&   input()  { return m_input; }
-    AssetManager&  assets() { return m_assets; }
-    flecs::world&  ecs()    { return m_world; }  // escape hatch for power users
+    // --- Prefabs & serialization (Phase 6.5 / Phase 10) ---
+    PrefabID load_prefab(const char* path);
+    EntityID instantiate_prefab(SceneID, PrefabID, float x, float y, float z);
+    SceneID  load_scene_file(const char* path);
+    void     save_scene_file(SceneID, const char* path);
+
+    // --- Input queries (GLFW-free enums; thin forwarders to InputSystem) ---
+    bool key_held(Key) const;
+    bool key_pressed(Key) const;
+    bool key_released(Key) const;
 
 private:
-    // The tick order is defined by the ORDER of calls in tick(), not by
-    // subsystem declaration order here.
-
-    flecs::world   m_world;
-    AssetManager   m_assets;
-    InputSystem    m_input;
-    PhysicsBridge  m_physics;
-    RenderBridge   m_render;
-
-    flecs::entity  m_player_entity;  // InputSystem writes here
-
-    // Helpers
-    flecs::entity  to_entity(EntityID id);
-    EntityID       from_entity(flecs::entity e);
+    struct Impl;                        // owns the world + all subsystems (engine.cpp)
+    std::unique_ptr<Impl> m_impl;
 };

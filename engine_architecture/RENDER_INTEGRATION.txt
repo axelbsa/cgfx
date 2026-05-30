@@ -1,0 +1,306 @@
+
+RENDER INTEGRATION — THE ENGINE ON TOP OF cgfx
+==============================================
+How the ECS->renderer bridge actually drives cgfx, what a "material" is in cgfx
+terms, how per-object data is uploaded, the WGSL binding contract, and the
+coordinate convention that keeps rendering and physics agreeing.
+
+The earlier draft assumed a fictional retained C renderer:
+    renderer_begin_frame(); renderer_set_camera(view,proj,pos);
+    renderer_submit_mesh(mesh_id, mat_id, world_matrix, cast_shadow);
+None of these exist and none should be created. cgfx is IMMEDIATE-MODE: the
+caller owns every pipeline, bind group and buffer, and records raw
+wgpuRenderPassEncoder* draws between cgfx_frame_begin and cgfx_frame_end.
+
+
+-------------------------------------------------------------------------------
+1. CORE DECISION — the render layer drives cgfx directly (no C facade)
+-------------------------------------------------------------------------------
+
+A thin C++ layer in engine/render/ owns the cgfx objects and records draws. We
+do NOT build a renderer_*() C shim.
+
+  Why not a C facade: a submit-by-id facade would have to re-introduce exactly
+  the retained state cgfx omits (id->CgfxMesh tables, an internal frame/encoder,
+  a per-object uniform allocator, a sort/batch step) and would hide the
+  WGPURenderPassEncoder the engine needs for shadow passes, MSAA resolve and
+  instancing. The renderer-agnostic boundary belongs at the COMPONENT/AssetManager
+  seam (opaque uint32 handles), not at a C ABI seam in the middle of one C++ TU.
+
+Two pieces:
+
+  render/renderer.{hpp,cpp}     RAII wrapper. Owns CgfxCtx (created via
+                                cgfx_ctx_init or _external), the swapchain/depth,
+                                routes on_device_lost/on_device_error to the log,
+                                exposes window() (GLFWwindow*) for input, and the
+                                frame begin/end helpers. Nullable for headless.
+
+  render/render_bridge.{hpp,cpp} ECS -> draw list -> cgfx recording. Owns the
+                                camera GPU backing, the per-object dynamic buffer,
+                                and @group(0). Reads components, never mutates them.
+
+  render/cgfx_c.hpp             the single  extern "C" { #include "cgfx.h" }.
+
+
+-------------------------------------------------------------------------------
+2. COORDINATE CONVENTION  (decide once; everything depends on it)
+-------------------------------------------------------------------------------
+
+ENGINE SPACE = cgfx-native: LEFT-HANDED, Y-up, depth [0,1].
+Jolt physics is the ONLY right-handed island. Convert ONLY at the Jolt boundary.
+
+Rationale: the renderer is the hard constraint (WebGPU clip space is Y-up,
+Z in [0,1]; cglm is already configured LH_ZO to match). Jolt is touched in one
+file and all its transforms pass through register_body / step_and_writeback, so
+the conversion is a few lines confined there. Transform, camera and render
+systems then need ZERO conversions.
+
+The conversion is a Z-axis handedness flip (engine and Jolt share +X right,
++Y up; they differ only in Z). It is its own inverse, so the same operation maps
+both directions.
+
+  Position      (engine vec3 p  <->  JPH::RVec3):
+      jolt.z = -p[2]    (x,y unchanged)        p[2] = -jolt.z
+
+  Quaternion    (cglm versor {x,y,z,w} <-> JPH::Quat):
+      flipping the Z basis conjugates by diag(1,1,-1); on a unit quaternion that
+      sends (x,y,z,w) -> (-x,-y,z,w).
+      jolt = Quat(-q[0], -q[1], q[2], q[3])     q = {-jolt.x,-jolt.y,jolt.z,jolt.w}
+
+  Half-extents / radius / height : scalar sizes, NO flip.
+  Linear velocity  : like position (negate Z).      } only when exposed
+  Angular velocity : axial vector  (negate X,Y).    } (Phase 9)
+
+CONSEQUENCE FOR WINDING / CULL: none. Because the flip lives entirely on the
+Jolt side and never touches vertex data or the projection/view matrices, cgfx
+pipelines keep their existing frontFace/cullMode. A LH-ZO glm_perspective is a
+proper projection for an LH view space; it does not mirror geometry.
+
+  [!] If you SKIP the flip and push RH Jolt positions straight into LH render
+      transforms, the physics world appears mirrored across the XY plane: a box
+      dropped toward a wall at engine-Z=+10 collides at Z=-10 (visibly wrong
+      side). That is the "mirrored collisions" warning made concrete. The flip
+      in step_and_writeback is the fix. Make this a unit test.
+
+
+-------------------------------------------------------------------------------
+3. WGSL BINDING CONTRACT  (every engine shader honors this)
+-------------------------------------------------------------------------------
+
+  @group(0)  Frame globals : camera view/proj (+ camera_pos, time, lights)
+             Owner: RenderBridge. Bound ONCE per frame.
+             binding(0) is the camera UBO laid out as cgfx expects (projection
+             then view, contiguous 128 bytes) so cgfx_camera_write stays usable;
+             extra frame globals go in binding(1).
+  @group(1)  Per-object : model matrix (+ normal matrix)
+             Owner: RenderBridge, ONE big buffer, has_dynamic_offset = true.
+             Bound per draw with a dynamic OFFSET only (no rebind churn).
+  @group(2)  Material : MaterialParams UBO @binding(0), textures @binding(1..),
+             sampler @binding(N). Owner: MaterialAsset, built once at load.
+  @group(3)  RESERVED : skinning / bone palette for skeletal meshes (future).
+
+All ShaderTemplates must declare identical @group(0) and @group(1) layouts so a
+single camera/object bind group works across every pipeline.
+
+
+-------------------------------------------------------------------------------
+4. MATERIAL MODEL  (cgfx has none; we define it in two layers)
+-------------------------------------------------------------------------------
+
+A material = shared (shader + pipeline) + per-instance (bind group + textures +
+params). Splitting the two lets many materials share one pipeline.
+
+  // SHARED, one per unique (WGSL, vertex layout, render-state) combo
+  struct ShaderTemplate {
+      CgfxShader         shader;          // module + group layouts + pipeline layout
+      WGPURenderPipeline pipeline;        // main (opaque) pass
+      WGPURenderPipeline pipeline_shadow; // optional depth-only variant (or null)
+      uint32_t           param_size;      // sizeof @group(2) MaterialParams UBO
+      uint8_t            texture_slots;
+  };
+
+  // PER-INSTANCE, one per material
+  struct MaterialAsset {
+      uint32_t      template_id;          // -> ShaderTemplate (pipeline sharing)
+      CgfxBuffer    params_ubo;           // @group(2) @binding(0)
+      WGPUBindGroup group2;               // params + textures + sampler (built once)
+      uint32_t      texture_ids[8];       // -> AssetManager textures (dedup/lifetime)
+      WGPUSampler   sampler;              // usually the shared default
+      std::string   path;
+  };
+
+  - MaterialHandle.id indexes the MaterialAsset vector. The asset OWNS its cgfx
+    objects directly. There is no separate "renderer_id" namespace; drop that
+    field from the earlier sketch (same for MeshAsset).
+  - Pipeline batching: sort draws by template_id, set the pipeline once per run.
+    This is the single biggest CPU-side perf lever and is free given the split.
+
+
+-------------------------------------------------------------------------------
+5. PER-OBJECT TRANSFORM UPLOAD  (one dynamic buffer, not N)
+-------------------------------------------------------------------------------
+
+Use ONE large @group(1) uniform buffer + cgfx_shader_bind_dynamic per draw.
+Do NOT use one CgfxUniform per entity (that is N buffers + N bind groups + N
+queue writes per frame).
+
+  Setup (once, grow as needed):
+    stride = align(sizeof(ObjectUniform), minUniformBufferOffsetAlignment) // 256 typical
+    object_ubo = cgfx_buffer_create_uniform(ctx, NULL, N * stride)
+    group1 = bind group over object_ubo with has_dynamic_offset = true
+
+  Per frame:
+    pack every entity's model matrix into a CPU staging array (one per draw)
+    ONE wgpuQueueWriteBuffer for the whole array
+    per draw: cgfx_shader_bind_dynamic(pass, 1, group1, &offset, 1)
+
+  Per-frame cost: 1 buffer write + N cheap offset binds.
+
+  [!] The dynamic-offset stride MUST be a multiple of
+      minUniformBufferOffsetAlignment (query via cgfx limits; 256 on most
+      adapters). Pad ObjectUniform accordingly. Grow the buffer (round N up,
+      reallocate when exceeded).
+
+  Instancing (optimization): for many copies of the SAME mesh+material (foliage,
+  debris), after sorting, promote a run to one cgfx_mesh_draw_instanced with a
+  slot-1 instance vertex buffer (stepMode=Instance). Layered on top of the
+  dynamic-offset path; no redesign.
+
+
+-------------------------------------------------------------------------------
+6. CAMERA INTEGRATION
+-------------------------------------------------------------------------------
+
+CameraData stays a PLAIN-DATA component. RenderBridge owns ONE CgfxCamera.
+
+  Do NOT embed a CgfxCamera in a component: it owns a GPU buffer, and flecs may
+  relocate/duplicate components on archetype changes, which would corrupt the
+  WGPUBuffer handle's ownership. Components must be trivially relocatable POD.
+
+  - CameraData component { mat4 view, proj; vec3 position; float fov, near, far; }
+    CameraSystem writes view/proj/position into it each frame (CPU source of truth).
+  - RenderBridge owns m_cgfx_cam (CgfxCamera) + m_cam_bg (@group(0) bind group),
+    created once. Each frame:
+        glm_mat4_copy(cam.proj, m_cgfx_cam.projection);
+        glm_mat4_copy(cam.view, m_cgfx_cam.view);
+        cgfx_camera_write(ctx, &m_cgfx_cam);                 // 128 bytes -> GPU
+        ... cgfx_camera_bind(frame.render_pass, m_cam_bg, 0);
+
+  CameraSystem (pure math, LH-ZO via cgfx's cglm config):
+        compute_view(out, world):  glm_mat4_inv(world, out)  // NOT glm_lookat:
+                 the camera's orientation comes from its transform/parent chain,
+                 so parenting the camera to a character (Phase 9) "just works".
+        compute_proj(out, fov_deg, aspect, near, far):
+                 glm_perspective(glm_rad(fov_deg), aspect, near, far, out)
+                 // generic macro resolves to glm_perspective_lh_zo here. Correct.
+        position = world[3].xyz
+
+  Aspect ratio (fixes a real bug): tick(dt, aspect) publishes a singleton
+  component  ViewportInfo { float aspect; }  before world.progress; CameraSystem
+  reads it and recomputes proj every tick. The old path threaded aspect to
+  RenderBridge and never used it (image stretched on resize).
+
+  Single camera: create_camera removes IsCamera from any previous camera;
+  CameraSystem/RenderBridge take the first IsCamera entity deterministically.
+
+
+-------------------------------------------------------------------------------
+7. FRAME STRUCTURE  (mapped onto cgfx calls)
+-------------------------------------------------------------------------------
+
+  void RenderBridge::submit_frame(flecs::world& world):
+      build_draw_list(world)               // pure ECS read -> m_frame (CPU only)
+
+      // camera / frame globals (replaces renderer_set_camera)
+      copy CameraData -> m_cgfx_cam; cgfx_camera_write(ctx, &m_cgfx_cam)
+      write FrameGlobals (camera_pos, lights) if any
+
+      pack_and_upload_object_uniforms()    // one wgpuQueueWriteBuffer (section 5)
+
+      CgfxFrame frame
+      if (!cgfx_frame_begin(ctx, &frame, clear)) return        // surface + ctx depth
+      cgfx_shader_bind(frame.render_pass, &m_cam_bg, 1)        // @group(0) once
+
+      cur = INVALID
+      for dc in m_frame.calls (sorted by template_id):
+          mat = assets.material(dc.material_id)
+          if mat.template_id != cur:
+              wgpuRenderPassEncoderSetPipeline(rp, assets.tmpl(mat.template_id).pipeline)
+              cur = mat.template_id
+          cgfx_shader_bind(rp, &mat.group2, /*at group 2*/)    // @group(2)
+          cgfx_shader_bind_dynamic(rp, 1, m_group1, &dc.uniform_offset, 1) // @group(1)
+          cgfx_mesh_draw(rp, &assets.mesh(dc.mesh_id).mesh)
+
+      cgfx_frame_end(ctx, &frame)          // replaces renderer_end_frame
+
+  build_draw_list stays a pure ECS read (good). Only the submit half is cgfx.
+
+  SHADOW PASS (fits with no redesign): cgfx_frame_begin_encoder ->
+  cgfx_frame_begin_render_pass_ex { color_count=0, depth_view=shadowmap.view } to
+  render depth-only (iterate dc.casts_shadow draws, bind pipeline_shadow) ->
+  cgfx_frame_end_render_pass -> main pass -> cgfx_frame_end. The shadow map is a
+  depth CgfxTexture; the lit pass samples it with a Comparison sampler
+  (CgfxBindingDesc.sampler_type = Comparison).
+
+  MSAA (fits with no redesign): create an MSAA color CgfxTexture (sample_count=4),
+  set CgfxRenderPassDesc.color_views={msaa.view}, resolve_views={surface_view};
+  pipelines get sample_count=4. Switch the main pass to begin_encoder +
+  begin_render_pass_ex. No bridge API change.
+
+
+-------------------------------------------------------------------------------
+8. ASSET MANAGER  (real importers, cgfx-backed)
+-------------------------------------------------------------------------------
+
+cgfx loads NOTHING from disk (only a temporary tutorial text mesh, and
+cgfx_texture_write takes raw pixels). AssetManager owns the importers.
+
+  Meshes  : cgltf (single-header) reads .gltf/.glb accessors -> fill CgfxVertex
+            (the fixed 96-byte layout maps near 1:1 to glTF, incl. joints/weights)
+            -> cgfx_mesh_create. Convert u16 indices -> u32.
+  Images  : stb_image (stbi_load) -> RGBA8 -> cgfx_texture_create +
+            cgfx_texture_write. Mips are not auto-generated by cgfx; generate on
+            CPU or via a compute pass later.
+  Material: a material file (engine JSON/TOML) names a WGSL shader, a state preset,
+            texture paths, param values. AssetManager get-or-creates a
+            ShaderTemplate (cgfx_shader_create + cgfx_pipeline_create with
+            cgfx_mesh_vertex_layout() and a CgfxColorTarget), loads+dedups
+            textures, builds @group(2), uploads the params UBO.
+
+  class AssetManager {
+    CgfxCtx* ctx;                              // borrowed from Renderer
+    vector<MeshAsset>      meshes;             // own CgfxMesh
+    vector<MaterialAsset>  materials;          // own group2 + params_ubo
+    vector<ShaderTemplate> templates;          // own CgfxShader + pipeline(s)
+    vector<CgfxTexture>    textures;
+    unordered_map<string,uint32_t> mesh_cache, material_cache, template_cache, texture_cache;
+    uint32_t load_mesh(const char*); uint32_t load_material(const char*);
+    const MeshAsset* get_mesh(uint32_t) const; ...
+    void unload_all();   // cgfx_mesh_destroy / pipeline_destroy / shader_destroy /
+                         // bind_group_destroy / texture_destroy / buffer_destroy
+  };
+
+  Dedup by normalized path through the caches (path -> index). The vector index
+  IS the handle. cgltf and stb_image are confined to asset_manager.cpp.
+
+
+-------------------------------------------------------------------------------
+9. WHAT THE EARLIER SKETCHES GOT WRONG  (correction table)
+-------------------------------------------------------------------------------
+
+  fictional renderer_*()            -> deleted; render layer calls cgfx directly
+  renderer_submit_mesh(id,...)      -> immediate-mode: set pipeline (batched) +
+                                       bind 0/1/2 + cgfx_mesh_draw
+  MeshAsset/MaterialAsset.renderer_id -> dropped; asset owns the cgfx object,
+                                       vector index is the handle
+  load_material() one-liner         -> compile WGSL, share pipeline, load+dedup
+                                       textures, build @group(2), upload params
+  no WGSL group convention          -> the @group(0..3) contract (section 3)
+  shadow query by mesh-id equality  -> O(N*M) bug; fold CastsShadow into the one
+                                       renderables query, flag per entity
+  EngineConfig.window_handle        -> GLFW path: cgfx CREATES the window; handle
+                                       is only for cgfx_ctx_init_external (HWND).
+                                       Renderer owns CgfxCtx, exposes ctx.window
+  tick() with no event poll         -> caller does glfwPollEvents() before tick;
+                                       handle resize -> new aspect + cgfx_ctx_resize
+  generic/RH camera assumptions     -> LH-ZO everywhere on the render side

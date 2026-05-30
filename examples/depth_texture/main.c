@@ -66,6 +66,7 @@ int main(void) {
     }
 
     while (cgfx_ctx_is_running(&ctx)) {
+        glfwPollEvents();
         uniforms.time += 0.016f;
         cgfx_uniform_write(&ctx, &uniform);
 

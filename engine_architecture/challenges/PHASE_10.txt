@@ -1,0 +1,99 @@
+===============================================================================
+PHASE 10 — SCENE SERIALIZATION (SAVE / LOAD)
+Goal: a scene writes to disk and loads back identically
+Prereqs: Phase 6.5 (scenes + the schema idea), Phase 9 (the entity kinds to save).
+         Read SCENE.txt sec 4 (the shared schema).
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  A scene you build in code vanishes when the program exits. This phase writes a
+  scene to a file and reads it back so it is identical, which is what makes levels
+  authorable and unlocks a future editor. Because Phase 6.5 already built scenes out
+  of spawn_* and set_parent, loading is just "call those in the right order from a
+  file", and saving is "walk the scene's members and write them out". No new
+  architecture, just I/O over the structure you already have.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - Serialization = data <-> text. Saving turns each entity's components into a text
+    record; loading parses records back into spawn_* calls. Use a readable format
+    (your own line format, or JSON) first; compact binary is a later optimization and
+    is far harder to debug.
+
+  - Stable identity by NAME. Entities are referenced across the file (a child names
+    its parent) using their scoped name (Phase 6.5), not a pointer or a runtime id
+    (which changes every run). So every serialized entity must have a name.
+
+  - The order problem, solved by TWO PASSES. A child's record may appear before its
+    parent's. If you tried to parent during a single pass you might reference an
+    entity that does not exist yet. So:
+      pass 1: create every entity by name (components, but NOT parenting).
+      pass 2: now that all names exist, resolve parent-by-name (set_parent) and any
+              other cross-references.
+    This makes load order-independent.
+
+  - Save initial conditions, not live physics. Do NOT serialize velocities, contacts,
+    or the solver's internal state. Save the entity's starting transform and its
+    physics SHAPE; on load, physics re-simulates from rest. A saved scene is a
+    starting setup, not a frozen instant.
+
+  ---- 10.1  Define the schema (one schema, shared with prefabs) ----------
+    [ ] 10.1.a  A scene file is a list of entity records. Each record:
+                  name            (scoped, required - it is the identity)
+                  parent          (name reference, optional)        -> set_parent
+                  position / rotation / scale
+                  mesh / material (asset paths, optional)           -> spawn_mesh
+                  physics         (shape kind + dims + mass, optional) -> register_body
+                  tags            (IsCamera, CastsShadow, ...)
+                  prefab          (path, optional)                  -> instantiate then override
+    [ ] 10.1.b  This is the SAME schema prefabs use (SCENE.txt 4); keep them one
+                format so the editor and prefab tooling share code later.
+  How to know it works: you can hand-write a tiny scene file and read it by eye.
+
+  ---- 10.2  save_scene_file(SceneID, path) -------------------------------
+    [ ] 10.2.a  Query the scene's members (entities with (SceneMember, scene)).
+    [ ] 10.2.b  For each, write a record: its scoped name, its parent's name if it has
+                a ChildOf, its P/R/S, its mesh/material paths and physics shape if
+                present, and its tags.
+  How to know it works: open the file; every entity you created appears with correct
+  values.
+  [!] Set names on ALL scene entities at creation (Phase 6.5). An unnamed entity
+      cannot be referenced as a parent and cannot round-trip.
+
+  ---- 10.3  load_scene_file(path) -> SceneID ------------------------------
+    [ ] 10.3.a  Create a fresh scene. PASS 1: parse every record and create the
+                entity by name with its components (spawn_mesh / spawn / register_body
+                / instantiate_prefab), WITHOUT parenting.
+    [ ] 10.3.b  PASS 2: for each record with a parent, look the parent up by name and
+                set_parent. Resolve any other name references here.
+  How to know it works: load a file you saved; the scene matches.
+  WHAT FAILURE LOOKS LIKE:
+    - "parent not found" on load: you parented in pass 1 instead of pass 2, or the
+      parent's name doesn't match (scope mismatch).
+    - everything at the origin / unparented: pass 2 skipped, or names didn't survive
+      the save (10.2 unnamed-entity pitfall).
+
+  ---- 10.4  Round-trip test ----------------------------------------------
+    [ ] 10.4.a  Build a scene in code: 10+ entities, 2 levels of parenting, 3 physics
+                boxes. Save it. clear_scene. Load it.
+    [ ] 10.4.b  Assert the loaded scene has the same entity count and the same
+                positions/parents as the original (compare by name).
+  How to know it works: the assertion holds; saving the loaded scene again produces
+  an identical file (idempotent).
+
+  ---- 10.5  Hook it into the sandbox -------------------------------------
+    [ ] 10.5.a  F5 -> save_scene_file(active, "scene.txt"); F9 -> clear + load it.
+    [ ] 10.5.b  Add save/load to the engine public API surface.
+  How to know it works: arrange the scene, F5, move things, F9 -> it snaps back to
+  the saved state.
+
+  [M] MILESTONE 10 — Persistent scenes
+      Hand-build a scene (10+ entities, 2 levels of parenting, 3 physics boxes), save
+      it, restart the sandbox, load it -> identical to what you saved. This unlocks
+      the path to an editor.
+
+  [!] Text first. Readable beats compact while you are still debugging the format.
+  [!] Do NOT serialize live physics state (velocities, contacts). Save only initial
+      conditions; physics re-simulates from rest on load (Phase 7 bodies are created
+      from the saved transform + shape).

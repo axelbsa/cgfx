@@ -1,0 +1,207 @@
+===============================================================================
+PHASE 4 — ASSET MANAGER  (and: what a "material" actually IS)
+Goal: load real meshes (glTF) and materials by path, dedup them, draw N objects
+      efficiently with one model matrix each
+Prereqs: Phase 2 (entities carry MeshHandle/MaterialHandle), Phase 3 (camera)
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  So far geometry is a hardcoded cube and there is no notion of surface appearance.
+  This phase adds the AssetManager: it loads mesh files and material files from
+  disk, hands back small integer HANDLES, and makes sure loading the same file
+  twice does the work once. It also forces you to DEFINE what a "material" is,
+  because cgfx has no such concept. This is the largest conceptual gap in the whole
+  plan, so the concepts section is long on purpose. Take it slowly.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - Importer vs renderer. cgfx draws GPU data; it does NOT read .gltf/.png files.
+    An importer is third-party code that decodes a file into CPU arrays, which you
+    then hand to cgfx to upload. We use two single-header libraries, confined to
+    asset_manager.cpp: cgltf (meshes) and stb_image (textures).
+
+  - glTF in one paragraph. glTF (.gltf/.glb) is the standard runtime 3D format. A
+    file has meshes made of "primitives"; each primitive has ATTRIBUTES (POSITION,
+    NORMAL, TANGENT, TEXCOORD_0, JOINTS_0, WEIGHTS_0, ...) stored in typed arrays
+    ("accessors") plus an index array. Your job in load_mesh is: for each vertex i,
+    read each attribute's element i and copy it into the matching field of our
+    CgfxVertex. The fixed 96-byte CgfxVertex (pos, normal, tangent, uv0, uv1,
+    color, joints, weights) was chosen to MATCH glTF, so this is mostly straight
+    copies. Missing attributes get sensible defaults (normal up, color white).
+
+  - Handle = index. A "handle" is just a uint32 index into a vector the
+    AssetManager owns. MeshHandle{ id } means "meshes[id]". This keeps the rest of
+    the engine ignorant of cgfx: components hold a number, not a CgfxMesh. Invalid
+    id -> get_mesh returns nullptr (bounds-check it).
+
+  - Deduplication. Two entities asking for "rock.glb" must share ONE GPU upload.
+    Keep a map path -> id; load checks the map first and returns the existing id on
+    a hit. Without this, 100 rocks = 100 uploads.
+
+  - WHAT A MATERIAL IS (cgfx has none; we define it in two layers). Drawing needs:
+    a compiled shader, a configured pipeline, the textures/parameters the shader
+    samples, and the bind groups that connect them. We split that into:
+      * ShaderTemplate (SHARED): the CgfxShader + the WGPURenderPipeline + the
+        layout info. Many materials reuse one template (all "PBR-opaque" surfaces
+        share one pipeline). Sharing pipelines is the biggest CPU perf win.
+      * MaterialAsset (PER-INSTANCE): the @group(2) bind group + its textures + a
+        small uniform buffer of parameters (base color, roughness...). This is what
+        differs between "red plastic" and "rusty metal" that use the same template.
+    So MaterialHandle -> MaterialAsset -> (template_id -> ShaderTemplate). See
+    RENDER_INTEGRATION sec 4 for the structs.
+
+  - The WGSL binding contract (adopt it now in every shader; RENDER_INTEGRATION 3):
+        @group(0)  frame globals: camera (proj then view), lights, time
+        @group(1)  per-object:    model matrix (+ normal matrix)   <- dynamic offset
+        @group(2)  material:      params UBO + textures + sampler
+        @group(3)  reserved:      skinning (Phase: animation, later)
+    Every ShaderTemplate must declare identical @group(0) and @group(1) layouts so
+    one camera bind group and one per-object bind group work across all pipelines.
+
+  - Per-object uniforms WITHOUT a buffer per object (dynamic offsets). Each object
+    needs its own model matrix in @group(1). The naive way is one uniform buffer +
+    one bind group per entity: for 1000 entities that is 1000 of each, created and
+    written every frame. Instead, allocate ONE big buffer holding all objects'
+    uniforms back-to-back, make the @group(1) layout "dynamic" (has_dynamic_offset),
+    and at each draw pass only the BYTE OFFSET of that object's slice. One buffer,
+    one bind group, one big upload per frame, a cheap offset per draw.
+
+      Worked layout (one big @group(1) buffer, stride must be 256-aligned):
+        offset      0 : object 0  { mat4 model; ...; padding to 256 }
+        offset    256 : object 1  { mat4 model; ...; padding to 256 }
+        offset    512 : object 2  ...
+      A mat4 is 64 bytes, but the offset of each slice must be a multiple of the
+      GPU's minUniformBufferOffsetAlignment (256 on almost all adapters), so each
+      object's slice is PADDED up to 256 even though it uses 64. Draw i binds
+      @group(1) with dynamic offset = i * 256.
+
+  - Pipeline batching. Switching pipelines on the GPU is comparatively expensive.
+    If you sort the frame's draws by template_id, you can set each pipeline once and
+    draw every object that uses it before switching. Free once draws are sorted.
+
+  ---- 4.1  AssetManager skeleton ------------------------------------------
+    [ ] 4.1.a  Vendor cgltf and stb_image (single headers) under third_party/;
+               include them ONLY in asset_manager.cpp (with the STB/CGLTF
+               IMPLEMENTATION define in exactly one TU).
+    [ ] 4.1.b  Structure (RENDER_INTEGRATION 8):
+                   class AssetManager {
+                     CgfxCtx* ctx;                         // borrowed from Renderer
+                     std::vector<MeshAsset>      meshes;
+                     std::vector<MaterialAsset>  materials;
+                     std::vector<ShaderTemplate> templates;
+                     std::vector<CgfxTexture>    textures;
+                     std::unordered_map<std::string,uint32_t>
+                         mesh_cache, material_cache, template_cache, texture_cache;
+                   };
+    [ ] 4.1.c  init borrows the CgfxCtx* from the Renderer (AssetManager needs the
+               device to create GPU objects). Headless: ctx may be null -> loads
+               that touch the GPU are skipped/asserted.
+  How to know it works: it compiles and constructs; no loading yet.
+
+  ---- 4.2  load_mesh(path) via cgltf --------------------------------------
+    [ ] 4.2.a  Cache check first:
+                   auto it = mesh_cache.find(path);
+                   if (it != mesh_cache.end()) return it->second;
+    [ ] 4.2.b  Parse with cgltf; for the first primitive, read POSITION/NORMAL/
+               TANGENT/TEXCOORD_0(/_1)/COLOR_0/JOINTS_0/WEIGHTS_0 accessors and fill
+               a std::vector<CgfxVertex>. Default missing attributes (normal=(0,1,0),
+               color=(1,1,1,1), joints=0, weights=(1,0,0,0)).
+    [ ] 4.2.c  Read indices; widen u16 -> u32 (cgfx index buffers are u32).
+    [ ] 4.2.d  Upload: CgfxMesh m = cgfx_mesh_create(ctx, verts.data(), verts.size(),
+               idx.data(), idx.size()); ENGINE_CHECK(m.ok). Push into meshes,
+               record mesh_cache[path] = index, return index.
+  How to know it works: a test loads the same path twice and asserts the SAME id is
+  returned and cgfx_mesh_create ran once (add a load counter to verify).
+  WHAT FAILURE LOOKS LIKE:
+    - garbage/exploded geometry: attribute stride/offset read wrong, or you copied
+      floats where the accessor was u16, or winding flipped (see also Phase 7 coords).
+    - second load uploads again: the cache check is missing or the key isn't
+      normalized (normalize the path before using it as the key).
+
+  ---- 4.3  Materials: ShaderTemplate + MaterialAsset ----------------------
+  What & why: build the two-layer material so pipelines are shared and instances
+  differ only in textures/params.
+
+    [ ] 4.3.a  Define the structs (RENDER_INTEGRATION 4). A ShaderTemplate owns the
+               CgfxShader + WGPURenderPipeline; a MaterialAsset owns its @group(2)
+               bind group + params UBO + texture ids. DROP any "renderer_id" field:
+               the asset owns the cgfx object directly; the vector index is the handle.
+    [ ] 4.3.b  Build the pipeline with NAMED zero-init locals (never C compound
+               literals in C++, FOUNDATIONS 3b):
+                   CgfxColorTarget ct{}; ct.format = ctx->surface_format;  // opaque
+                   WGPUVertexBufferLayout vl = cgfx_mesh_vertex_layout();
+                   CgfxPipelineDesc pd{};
+                   pd.shader = &tmpl.shader;
+                   pd.vertex_buffer_count = 1; pd.vertex_layouts = &vl;
+                   pd.color_target_count = 1; pd.color_targets = &ct;
+                   pd.depth_test = true;
+                   tmpl.pipeline = cgfx_pipeline_create(ctx, &pd);
+                   ENGINE_CHECK(tmpl.pipeline);
+    [ ] 4.3.c  load_material: get-or-create the ShaderTemplate (cache by shader+state
+               key), load+dedup each texture (stb_image -> cgfx_texture_create +
+               cgfx_texture_write), build @group(2) with cgfx_bind_group_create
+               (mixed buffers+textures+sampler), upload the params UBO. Cache by path.
+  How to know it works: two material files that name the same shader share one
+  template (one pipeline created); each gets its own @group(2).
+  WHAT FAILURE LOOKS LIKE:
+    - validation error about bind group not matching layout: your @group(2) WGSL
+      bindings and the CgfxBindGroupEntry list disagree (count/types/order).
+    - texture upside down: glTF/most images are top-left origin; flip V in the
+      shader or at load if it looks inverted.
+
+  ---- 4.4  Per-object model matrices via a dynamic-offset buffer ----------
+    [ ] 4.4.a  Query the alignment once: A = minUniformBufferOffsetAlignment from the
+               cgfx/limits (treat as 256 if unsure). stride = align_up(sizeof(ObjectUniform), A).
+    [ ] 4.4.b  Allocate one uniform buffer for N objects (grow when N exceeds
+               capacity): object_ubo = cgfx_buffer_create_uniform(ctx, NULL, cap*stride).
+               Build a @group(1) bind group over it with has_dynamic_offset = true.
+    [ ] 4.4.c  Each frame, pack: for draw i, write its model matrix at staging byte
+               offset i*stride; one wgpuQueueWriteBuffer of the whole packed range.
+    [ ] 4.4.d  In the draw loop, bind per object by OFFSET only:
+                   uint32_t off = i * stride;
+                   cgfx_shader_bind_dynamic(rp, /*group*/1, m_group1, &off, 1);
+    [ ] 4.4.e  Update all shaders to the @group(0..3) contract; the vertex stage does
+               clip = proj * view * model * vec4(position,1).
+  How to know it works: 10 entities at 10 positions render correctly with ONE
+  per-frame buffer write (not 10).
+  WHAT FAILURE LOOKS LIKE:
+    - validation error "dynamic offset N is not a multiple of 256": stride not
+      aligned (4.4.a).
+    - every object draws at object 0's position, or transforms are swapped: the
+      per-draw offset is wrong, or you wrote matrices in a different order than you
+      draw them.
+
+  ---- 4.5  Wire it in + batch --------------------------------------------
+    [ ] 4.5.a  Engine::spawn_mesh(path_mesh, path_mat, pos) calls
+               assets.load_mesh / load_material and creates an entity with
+               MeshHandle/MaterialHandle + transform components. Replace the Phase 2
+               placeholder ids.
+    [ ] 4.5.b  In build_draw_list, after collecting DrawCalls, sort them by
+               material's template_id. In submit_frame, set the pipeline only when
+               template_id changes (batching).
+    [ ] 4.5.c  Sandbox: load a real glTF + material and place several instances.
+  How to know it works: real models on screen; a frame with many same-material
+  objects sets the pipeline only a few times (log pipeline switches to confirm).
+
+  ---- 4.6  Teardown without leaks ----------------------------------------
+    [ ] 4.6.a  unload_all (called from Engine::shutdown) destroys every owned cgfx
+               object: cgfx_mesh_destroy, cgfx_pipeline_destroy, cgfx_shader_destroy,
+               cgfx_bind_group_destroy, cgfx_texture_destroy, cgfx_buffer_destroy.
+    [ ] 4.6.b  Clear the vectors and caches.
+  How to know it works: run under a GPU validation layer / check cgfx stderr; no
+  "object not released" warnings; the double-init test (Phase 8) still passes.
+
+  [M] MILESTONE 4 — Real assets on screen, dedup + batching working
+      Load one mesh 10x -> 1 GPU upload (load counter proves it). 10 entities share
+      that mesh, each with its own model matrix via a dynamic offset, in one buffer
+      write per frame. Materials that share a template share a pipeline. Shutdown
+      leaks nothing.
+
+  [!] Don't wire GPU cleanup to entity on_remove — assets are path-SHARED; freeing
+      on entity death double-frees and pulls the rug from other users. GPU lifetime
+      is AssetManager's job (SCENE.txt 5).
+  [!] Don't add async loading, streaming, or refcounting yet. Synchronous
+      load-everything-up-front is the correct, debuggable choice at this stage.
+
+

@@ -1,515 +1,99 @@
 
-ENGINE IMPLEMENTATION CHALLENGES
-=================================
-Build order designed so each phase produces something runnable,
-and nothing you build gets thrown away in a later phase.
+ENGINE IMPLEMENTATION CHALLENGES — INDEX
+========================================
+Build order designed so each phase produces something runnable, and nothing you
+build gets thrown away in a later phase. This file is the index; each phase is a
+separate, detailed file under challenges/ (read the whole phase file before
+starting it).
 
-Read the full phase before starting it. The "don't do yet" sections
-exist to stop you gold-plating things that will change shape later.
+The renderer is cgfx (a standalone C23 WebGPU library, consumed as a submodule).
+Read the companion design docs before Phase 0:
+  ARCHITECTURE.txt         the map (ownership, tick, components, layout)
+  FOUNDATIONS.txt          repo/build, the C23<->C++20 boundary, cglm landmine
+  RENDER_INTEGRATION.txt   driving cgfx, materials, WGSL contract, coordinates
+  SCENE.txt                the scene system, lifecycle, transform fixes
 
-Legend:
-  [ ] task to implement
+Legend (used inside each phase file):
+  [ ] task to implement (broken into lettered micro-steps, e.g. 4.2.a)
   [M] milestone — the engine can do this when the phase is done
   [!] common mistake / thing to watch out for
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 1 — THE SKELETON BOOTS
-Goal: one triangle on screen, driven by the engine struct, not raw renderer calls
-Prereqs: your C renderer already works standalone
-═══════════════════════════════════════════════════════════════════════════════
-
-  The point of this phase is NOT to render anything interesting.
-  It is to prove the Engine class owns the loop, and the C renderer
-  is called only through RenderBridge. If you can draw a triangle
-  through that stack, the foundation is correct.
-
-  [ ] 1.1  Create the directory layout from ARCHITECTURE.txt
-           Set up CMakeLists so `cmake --build` produces a sandbox executable.
-           It does not need to do anything yet — just link without errors.
-
-  [ ] 1.2  Stub every class with empty init()/shutdown()/tick() bodies.
-           No implementation, just the signatures compiling cleanly.
-           Goal: zero warnings on a strict build (-Wall -Wextra -Werror).
-
-  [ ] 1.3  Implement Engine::init() and Engine::tick() calling stubs in order.
-           Add a printf/log at each step so you can see the tick firing.
-           Sandbox main.cpp: create Engine, call init, run 3 ticks, shutdown.
-
-  [ ] 1.4  Bring flecs in as a single-file build (flecs.h + flecs.c).
-           In Engine::init(), create the flecs::world and register the
-           component types (world.component<Position>(), etc.).
-           No systems yet. Confirm flecs::world constructs and destructs cleanly.
-
-  [ ] 1.5  Implement RenderBridge::init() to call your C renderer init.
-           Implement submit_frame() with a HARDCODED single DrawCall
-           (a unit cube at the origin — no ECS query yet).
-           Hook it up in Engine::tick() step 4.
-
-  [M] MILESTONE 1 — Triangle/cube on screen, driven by Engine::tick()
-      The sandbox calls engine.init() + engine.tick() in a loop.
-      RenderBridge calls your C renderer. The renderer draws something.
-      No ECS, no assets, no input. Just the wiring alive.
-
-  [!] Don't implement AssetManager yet. Hardcode the mesh in RenderBridge.
-  [!] Don't write a game loop with real timing yet. Fixed dt=0.016f is fine.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 2 — ECS + TRANSFORM PIPELINE
-Goal: entities with components, world matrices computed correctly
-═══════════════════════════════════════════════════════════════════════════════
-
-  [ ] 2.1  Register all component types with Flecs in Engine::init().
-           Create 3 test entities manually in sandbox main.cpp with
-           Position, Rotation, Scale, WorldTransform set directly.
-           Confirm flecs::world stores and retrieves them.
-
-  [ ] 2.2  Implement TransformSystem::build_trs() (pure math, no Flecs).
-           Write a unit test (tests/test_transform.cpp) that calls build_trs()
-           with known inputs and checks the output matrix.
-           Do not proceed until this passes.
-
-  [ ] 2.3  Register TransformSystem pass 1 (root entities) with Flecs.
-           Run world.progress(0.016f) and verify WorldTransform is populated
-           by printing the matrix to stdout.
-
-  [ ] 2.4  Register TransformSystem pass 2 (children, .after pass 1).
-           In sandbox main.cpp, create a parent and a child entity.
-           Set parent at (5,0,0), child at (0,1,0) relative.
-           After world.progress(), child WorldTransform should show (5,1,0)
-           in the translation column. Print and verify.
-
-  [ ] 2.5  Update RenderBridge::submit_frame() to do a real ECS query:
-           world.each<WorldTransform, MeshHandle, MaterialHandle>(...).
-           Replace the hardcoded DrawCall from Phase 1 with query results.
-           Temporarily use a magic mesh_id=1 for all entities (no asset
-           manager yet) so the renderer still has something to draw.
-
-  [M] MILESTONE 2 — Multiple entities, correct world matrices
-      Create 5 entities in sandbox at different positions.
-      Parent two of them. Move the parent — child should follow.
-      All 5 appear on screen at correct positions.
-      Transform hierarchy is computed in ECS, not hardcoded.
-
-  [!] Don't implement camera via ECS yet. Keep using whatever camera
-      your C renderer had. That comes in Phase 3.
-  [!] Don't add the scene graph API (set_parent on EntityID) yet.
-      Use flecs::entity.child_of() directly in the sandbox for now.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 3 — CAMERA SYSTEM
-Goal: camera is an ECS entity, driven by CameraSystem, not C renderer state
-═══════════════════════════════════════════════════════════════════════════════
-
-  [ ] 3.1  Add CameraData component. In sandbox main.cpp, manually create
-           a camera entity with IsCamera tag + CameraData + WorldTransform.
-           Set CameraData.fov = 60, near = 0.1, far = 1000.
-
-  [ ] 3.2  Implement CameraSystem::compute_view() and compute_proj() as
-           pure functions using cglm. Unit test both (no Flecs required).
-           compute_view takes a world matrix, returns view matrix.
-           compute_proj takes fov/aspect/near/far, returns proj matrix.
-
-  [ ] 3.3  Register CameraSystem with Flecs (.after Transform_Children).
-           System reads WorldTransform on IsCamera entity, calls compute_view
-           and compute_proj, writes results into CameraData.
-
-  [ ] 3.4  Update RenderBridge::build_draw_list() to query CameraData
-           from the IsCamera entity and copy view/proj into FrameDrawList.
-           Remove any direct C renderer camera calls — the bridge owns this now.
-
-  [ ] 3.5  Add a simple free-look camera in the sandbox: every tick,
-           manually update the camera entity's Position and Rotation directly
-           (no input system yet — just animate it in a circle over time).
-           Confirm the rendered view follows the camera entity.
-
-  [M] MILESTONE 3 — Camera is an ECS entity
-      The C renderer no longer has any camera state of its own.
-      Moving the camera entity moves the rendered view.
-      Reparenting the camera to another entity makes it follow that entity.
-      compute_view/proj are covered by unit tests.
-
-  [!] There must be exactly one IsCamera entity at a time.
-      Engine::create_camera() should remove IsCamera from any existing
-      camera before adding it to the new one. Enforce this now.
-  [!] Don't add editor camera controls yet. That's Phase 5.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 4 — ASSET MANAGER
-Goal: meshes and materials loaded by path, deduplicated, indexed by handle
-═══════════════════════════════════════════════════════════════════════════════
-
-  [ ] 4.1  Implement AssetManager::init() and shutdown(). Add the
-           m_meshes vector and m_mesh_cache map. No loading yet —
-           just the structure.
-
-  [ ] 4.2  Implement load_mesh(path). It should:
-             a. check m_mesh_cache — return existing id if found
-             b. call your C renderer's mesh load function
-             c. store the returned renderer_id in m_meshes
-             d. cache the path → index mapping
-             e. return the index as uint32_t
-           Write a test: load the same path twice, assert same id returned.
-
-  [ ] 4.3  Implement load_material(path) the same way.
-
-  [ ] 4.4  Implement get_mesh(id) and get_material(id) with bounds checking.
-           Return nullptr for invalid ids — RenderBridge already checks this.
-
-  [ ] 4.5  Wire AssetManager into Engine::create_mesh_entity().
-           Replace the magic mesh_id=1 placeholder from Phase 2.
-           In the sandbox, load a real mesh file and create an entity with it.
-
-  [ ] 4.6  Implement unload_all() called from Engine::shutdown().
-           Make sure the C renderer releases GPU memory.
-
-  [M] MILESTONE 4 — Real assets on screen, deduplication working
-      Load the same mesh file 10 times in a loop. Confirm only 1 GPU upload
-      (check your renderer's allocation count or add a load counter).
-      10 entities sharing the same mesh all render correctly.
-      Engine::shutdown() produces no GPU memory leaks.
-
-  [!] Don't implement async loading, streaming, or reference counting yet.
-      Synchronous load-everything-upfront is correct at this stage.
-  [!] Don't implement a binary asset format or asset pipeline yet.
-      Load OBJ/raw formats directly. Packaging comes much later.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 5 — INPUT SYSTEM
-Goal: keyboard/mouse state written to ECS, readable by any system
-═══════════════════════════════════════════════════════════════════════════════
-
-  [ ] 5.1  Implement InputSystem::init() — zero out all bitsets.
-           Implement poll_and_write() to read from your platform layer
-           (GLFW, SDL, Win32 — whatever your renderer's window uses) and
-           fill m_held, m_pressed, m_released for the Key enum.
-
-  [ ] 5.2  Implement edge detection: m_pressed = current & ~previous.
-           m_released = ~current & previous. Test this logic with a
-           unit test that feeds synthetic key events.
-
-  [ ] 5.3  Implement poll_and_write() writing InputState onto the player
-           entity. Map WASD → move_axis, mouse delta → look_axis,
-           Space → jump_pressed. Print the component values to confirm.
-
-  [ ] 5.4  Implement a free-look camera controller in the sandbox using
-           InputState. Query the camera entity's InputState (or raw
-           InputSystem for the editor path), update Position/Rotation
-           each tick. WASD moves, mouse look rotates.
-
-  [ ] 5.5  Add mouse capture/release toggle (e.g. right-click to capture,
-           Escape to release). This is platform-specific but needs to live
-           somewhere — a thin PlatformWindow helper in the sandbox is fine.
-
-  [M] MILESTONE 5 — Interactive scene
-      WASD + mouse look moves the camera.
-      You can fly around the 5 test entities from Phase 2.
-      pressing a key logs once (pressed), held state continuous,
-      release logs once. All via InputState in ECS — no direct
-      window/event calls in the sandbox's game loop.
-
-  [!] Mouse delta must be zeroed each frame after writing to InputState.
-      If you forget this, look_axis accumulates and the camera spins.
-  [!] Don't add gamepad support yet. One input path first.
-  [!] Don't add an action/binding remapping layer yet. Direct key checks
-      are fine. That abstraction costs more than it saves at this stage.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 6 — PUBLIC API + ENTITY ID
-Goal: sandbox never touches flecs::entity directly
-═══════════════════════════════════════════════════════════════════════════════
-
-  [ ] 6.1  Implement Engine::from_entity() and to_entity() — the two
-           internal helpers that convert between EntityID and flecs::entity.
-
-  [ ] 6.2  Implement Engine::create_mesh_entity() using the real
-           AssetManager (Phase 4) and returning a proper EntityID.
-
-  [ ] 6.3  Implement Engine::create_camera() including the "remove
-           IsCamera from previous camera" logic from Phase 3.
-
-  [ ] 6.4  Implement Engine::set_parent(child, parent) — one line,
-           calls child_entity.child_of(parent_entity).
-
-  [ ] 6.5  Refactor sandbox main.cpp to use ONLY the Engine public API.
-           No flecs.h include. No flecs::entity anywhere in main.cpp.
-           If you need to access a component for debugging, add a thin
-           engine.get_position(EntityID) → vec3 accessor.
-
-  [ ] 6.6  Define the public header surface explicitly:
-           Create engine/engine_api.hpp that includes only:
-             engine/core/engine.hpp
-             engine/core/entity_id.hpp
-             engine/systems/input_system.hpp  (for Key enum)
-           The sandbox includes only engine_api.hpp.
-
-  [M] MILESTONE 6 — Clean library boundary
-      Delete all flecs.h includes from examples/. It still compiles.
-      Delete all cglm.h includes from examples/. It still compiles.
-      A colleague can consume the .lib + engine_api.hpp with zero
-      knowledge of Flecs, Jolt, or cglm.
-
-  [!] engine.ecs() is an escape hatch for power users — keep it,
-      but don't use it from sandbox. It's for a future editor.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 7 — PHYSICS BRIDGE (JOLT)
-Goal: dynamic bodies simulated by Jolt, results written back to ECS
-═══════════════════════════════════════════════════════════════════════════════
-
-  Jolt has its own initialization ritual (RegisterDefaultAllocator,
-  Factory::sInstance, RegisterTypes). Do all of that in
-  PhysicsBridge::init() — none of it leaks into Engine.
-
-  [ ] 7.1  Implement PhysicsBridge::init() with a minimal Jolt setup:
-             - BroadPhaseLayerInterfaceImpl (2 layers: static + dynamic)
-             - PhysicsSystem with basic settings (max 1024 bodies)
-             - TempAllocatorImpl (10 MB is enough to start)
-             - JobSystemThreadPool (2 threads)
-           Log "Jolt initialized" on success. No bodies yet.
-
-  [ ] 7.2  Implement register_static_body() — creates a BoxShape,
-           reads Position/Rotation from the entity, adds a static body.
-           Stores the BodyID in m_entity_to_body.
-
-  [ ] 7.3  Implement register_dynamic_body() the same way but MotionType::Dynamic.
-
-  [ ] 7.4  Implement step_and_writeback():
-             a. PhysicsSystem::Update(dt, ...)
-             b. Iterate m_body_to_entity, read JPH::Vec3/Quat from BodyInterface
-             c. Write back to ECS Position + Rotation
-           In sandbox: create a ground plane (static) and a box (dynamic).
-           The box should fall and land on the ground.
-
-  [ ] 7.5  Implement unregister_body() and call it from a Flecs on_remove
-           observer on the PhysicsBodyID component. This ensures bodies are
-           cleaned up when entities are destroyed.
-
-  [ ] 7.6  Add Engine::add_physics_box() to the public API.
-           In sandbox: drop 10 boxes from different heights. They should
-           stack and collide with each other and the ground.
-
-  [M] MILESTONE 7 — Physics simulated scene
-      10 dynamic boxes fall under gravity, land on a static floor,
-      stack realistically. Boxes collide with each other.
-      Destroying an entity removes its Jolt body (no crash on shutdown).
-      Physics runs at fixed substeps, rendering runs at display rate —
-      these do not need to match yet.
-
-  [!] Jolt's coordinate system is right-handed Y-up. Make sure cglm
-      and your renderer agree. A mismatch shows up as mirrored collisions.
-  [!] Don't implement character controller yet (that's a Jolt
-      CharacterVirtual, a different code path). A dynamic box as a
-      player placeholder is fine for now.
-  [!] Don't implement collision callbacks/events yet. Just simulation.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 8 — HARDENING & HEADLESS TESTS
-Goal: all systems tested in isolation, no crashes on bad input
-═══════════════════════════════════════════════════════════════════════════════
-
-  [ ] 8.1  Write tests/test_transform.cpp:
-             - build_trs with identity inputs → identity matrix
-             - build_trs with known translation → correct column 3
-             - parent-child chain: child world pos = parent pos + child local pos
-             - 3-level chain (grandchild) computes correctly
-
-  [ ] 8.2  Write tests/test_asset_manager.cpp:
-             - load same path twice → same id
-             - load two different paths → different ids
-             - get_mesh with invalid id → returns nullptr, no crash
-             - unload_all then get_mesh → returns nullptr, no crash
-
-  [ ] 8.3  Write tests/test_input_edge_detection.cpp:
-             - simulate key down on frame N → pressed=true, held=true
-             - frame N+1 still down → pressed=false, held=true
-             - frame N+2 up → pressed=false, held=false, released=true
-             - frame N+3 still up → released=false
-
-  [ ] 8.4  Write examples/headless/main.cpp:
-             - creates Engine with no window (cfg.window_handle = nullptr)
-             - RenderBridge::submit_frame() must no-op gracefully when
-               window is null (add the null check)
-             - runs 100 ticks of physics + transform
-             - prints final position of a falling box, asserts it's below start
-           This executable runs in CI with no display.
-
-  [ ] 8.5  Audit every raw pointer in the codebase.
-           Replace owning raw pointers with unique_ptr.
-           Non-owning raw pointers (observers) are fine — document them.
-
-  [ ] 8.6  Run with address sanitizer (-fsanitize=address) and fix everything
-           it reports. Do the same with -fsanitize=undefined.
-
-  [M] MILESTONE 8 — Stable foundation
-      All tests pass. Headless build runs. ASAN/UBSAN clean.
-      Engine::shutdown() followed by Engine::init() works twice in a row
-      (the "double init" test catches most lifecycle bugs).
-      You can now build gameplay systems on top without fear.
-
-  [!] Don't skip this phase to get to gameplay faster. The bugs you
-      find here are 10x cheaper to fix now than after the physics
-      character controller is in.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 9 — CHARACTER + MOVEMENT SYSTEM
-Goal: a controllable character that moves through a physical world
-═══════════════════════════════════════════════════════════════════════════════
-
-  [ ] 9.1  Add Jolt CharacterVirtual to PhysicsBridge.
-           register_character(entity, capsule_height, capsule_radius).
-           CharacterVirtual handles step-up, slope limits, ground detection —
-           do not reinvent these with raw dynamic bodies.
-
-  [ ] 9.2  Add CharacterState component:
-             struct CharacterState {
-                 bool  is_grounded = false;
-                 vec3  velocity    = {};
-             };
-           PhysicsBridge writes is_grounded after each step.
-
-  [ ] 9.3  Implement a MovementSystem as a Flecs system:
-           reads InputState + CharacterState → computes desired velocity →
-           calls PhysicsBridge::set_character_velocity(entity, vel).
-           Runs BEFORE PhysicsBridge::step_and_writeback().
-
-  [ ] 9.4  Wire jump: if jump_pressed && is_grounded → apply upward impulse.
-
-  [ ] 9.5  Parent the camera entity to the character entity.
-           Camera follows character automatically via the transform system.
-           Add a small vertical offset so it's at head height.
-
-  [M] MILESTONE 9 — Playable character
-      WASD moves the character. Space jumps. Camera follows.
-      Character cannot walk through the static boxes from Phase 7.
-      Character lands correctly on sloped surfaces.
-      This is the point where it starts feeling like a game.
-
-  [!] CharacterVirtual's Update() must be called with the same dt as
-      PhysicsSystem::Update(). Keep them in sync inside PhysicsBridge.
-  [!] Don't add animations yet. A capsule or box for the character is fine.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-PHASE 10 — SCENE SERIALIZATION (SAVE / LOAD)
-Goal: a scene can be written to disk and loaded back identically
-═══════════════════════════════════════════════════════════════════════════════
-
-  [ ] 10.1  Design a simple scene file format. Plain text or JSON is fine.
-            Each entity is a record with:
-              - optional name string
-              - optional parent name
-              - Position, Rotation, Scale values
-              - optional MeshHandle path + MaterialHandle path
-              - optional physics shape (box/capsule + dimensions + mass)
-
-  [ ] 10.2  Implement SceneSerializer::save(world, path).
-            Query all entities with Position. Write each to the file.
-            Use the Flecs entity name as the identifier (set names on
-            all scene entities during creation).
-
-  [ ] 10.3  Implement SceneSerializer::load(engine, path).
-            Parse the file. Call engine.create_mesh_entity() and
-            engine.set_parent() in dependency order (parents before children).
-
-  [ ] 10.4  Add Engine::clear_scene() — destroys all non-system entities.
-            Test: save scene, clear, load, verify entity count and positions
-            match the original.
-
-  [ ] 10.5  Add SceneSerializer to the engine public API surface.
-            Sandbox: press F5 to save, F9 to load.
-
-  [M] MILESTONE 10 — Persistent scenes
-      Build a small scene by hand (10+ entities, 2 levels of parenting,
-      3 physics boxes). Save it. Restart the sandbox. Load it.
-      The scene is pixel-identical to what you saved.
-      This unlocks the path to a future editor.
-
-  [!] Don't implement a binary format yet. Readable text is more
-      valuable for debugging than compact bytes at this stage.
-  [!] Don't try to serialize Jolt physics state (velocities, contacts).
-      Save only the initial conditions. Physics re-simulates from rest on load.
-
-
-═══════════════════════════════════════════════════════════════════════════════
-WHAT COMES AFTER (not yet — earn it first)
-═══════════════════════════════════════════════════════════════════════════════
-
-  These are real next steps but each one assumes Phase 10 is solid.
-  Don't start any of them until Milestone 10 is checked off.
-
-  Editor executable
-    A separate CMake target that links the same engine static lib.
-    Displays a scene viewport, entity list, component inspector.
-    Uses engine.ecs() escape hatch to enumerate and modify entities.
-    Phase 10's serialization is what makes the editor able to save scenes.
-
-  Async asset loading
-    Job queue in front of AssetManager.
-    Requires knowing which assets are in-flight (reference counting).
-    Much easier once the synchronous path (Phase 4) is battle-tested.
-
-  Animation system
-    SkeletonComponent + AnimationClipHandle + AnimatorSystem.
-    AnimatorSystem runs after TransformSystem, overrides bone WorldTransforms.
-    New ECS system, new component types — nothing existing needs to change.
-
-  Collision events / triggers
-    Jolt ContactListener writes events into a per-frame event buffer.
-    A new ECS system reads the buffer, fires Flecs observers.
-    PhysicsBridge grows a callback registration API.
-
-  Render passes (shadows, post-processing)
-    RenderBridge grows a pass list. CastsShadow tag already exists.
-    The C renderer gains shadow map and post-process APIs.
-    ECS side doesn't change — this is purely renderer plumbing.
-
-  Prefabs
-    A prefab is a saved sub-tree of entities (a mini scene file).
-    SceneSerializer::instantiate_prefab(engine, path, parent_entity).
-    Built directly on Phase 10's serialization — no new architecture needed.
-
-
-═══════════════════════════════════════════════════════════════════════════════
+  Each phase also has: WHY THIS PHASE, CONCEPTS YOU NEED (plain-language primers
+  with worked examples), "How to know it works" checks, and WHAT FAILURE LOOKS LIKE.
+
+
+-------------------------------------------------------------------------------
+PHASE FILES  (challenges/)
+-------------------------------------------------------------------------------
+
+  PHASE_00.txt    Wrap cgfx / establish the C++ boundary (do first)
+  PHASE_01.txt    The skeleton boots — one cube through Engine::tick
+  PHASE_02.txt    ECS + transform pipeline — entities, world matrices, hierarchy
+  PHASE_03.txt    Camera system — the camera is an ECS entity
+  PHASE_04.txt    Asset manager — glTF meshes, materials, dynamic-offset uniforms
+  PHASE_05.txt    Input system — keyboard/mouse to ECS (GLFW via ctx.window)
+  PHASE_06.txt    Public API + EntityID — seal the library boundary
+  PHASE_06_5.txt  Scene system — named scenes that own their entities; prefabs
+  PHASE_07.txt    Physics bridge (Jolt) — bodies, the LH<->RH coordinate flip
+  PHASE_08.txt    Hardening & headless tests — ASAN, double-init, CI
+  PHASE_09.txt    Character + movement — CharacterVirtual, jump, camera follow
+  PHASE_10.txt    Scene serialization — save/load using the scene schema
+
+
+-------------------------------------------------------------------------------
 PHASE DEPENDENCY MAP
-═══════════════════════════════════════════════════════════════════════════════
+-------------------------------------------------------------------------------
 
-  1 (skeleton)
-  └── 2 (ECS + transform)
-       ├── 3 (camera)
-       │    └── 5 (input)
-       │         └── 6 (public API)  ← clean boundary before adding physics
-       │              └── 7 (physics)
-       │                   └── 9 (character)
-       └── 4 (assets)
-            └── 6 (public API)
+  0 (wrap cgfx / C++ boundary)
+  └── 1 (skeleton)
+       └── 2 (ECS + transform)
+            ├── 3 (camera)
+            │    └── 5 (input)
+            │         └── 6 (public API)        <- clean boundary
+            │              └── 6.5 (scene)
+            │                   └── 7 (physics)
+            │                        └── 9 (character)
+            └── 4 (assets)
+                 └── 6 (public API)
 
-  8 (hardening) — runs after 7, before 9
-  10 (serialization) — runs after 9
+  8 (hardening) — after 7, before 9
+  10 (serialization) — after 6.5 and 9 (uses the scene schema)
 
-  Phases 3 and 4 can be done in parallel if you have the time.
-  Everything else is strictly sequential.
+  3 and 4 can be done in parallel. Everything else is sequential.
 
 
-═══════════════════════════════════════════════════════════════════════════════
+-------------------------------------------------------------------------------
 MILESTONE SUMMARY
-═══════════════════════════════════════════════════════════════════════════════
+-------------------------------------------------------------------------------
 
-  Phase 1  — Something on screen through the engine stack
-  Phase 2  — Multiple ECS entities at correct world positions
-  Phase 3  — Camera is an entity; view follows it
-  Phase 4  — Real asset files loaded, deduplicated
-  Phase 5  — WASD + mouse drives the camera interactively
-  Phase 6  — Consumers see zero Flecs/Jolt/cglm includes
-  Phase 7  — Boxes fall, collide, stack under Jolt simulation
-  Phase 8  — Tests pass, ASAN clean, headless build works
-  Phase 9  — Controllable character walks through the physics world
-  Phase 10 — Scenes save to disk and reload identically
+  Phase 0   — cgfx callable from C++; clear screen through the wrapper
+  Phase 1   — cube on screen through Engine::tick
+  Phase 2   — multiple ECS entities at correct world positions (deep trees)
+  Phase 3   — camera is an entity feeding cgfx's camera buffer (LH-ZO)
+  Phase 4   — real glTF assets, materials = template+instance, dedup + batching
+  Phase 5   — WASD + mouse drives the camera (GLFW via ctx.window)
+  Phase 6   — consumers see zero flecs/cglm/Jolt/cgfx includes
+  Phase 6.5 — named scenes load/unload; prefabs instantiate
+  Phase 7   — boxes fall/collide/stack under Jolt (LH<->RH flip correct)
+  Phase 8   — tests pass, ASAN clean, headless runs, double-init works
+  Phase 9   — controllable character walks the physics world
+  Phase 10  — scenes save and reload identically
+
+
+-------------------------------------------------------------------------------
+WHAT COMES AFTER (not yet — earn it first; each assumes Phase 10 is solid)
+-------------------------------------------------------------------------------
+
+  Editor           separate target linking the same engine lib; uses ecs() to
+                   enumerate/modify; Phase 10 serialization saves scenes.
+  Shadows / passes cgfx ALREADY has MRT, MSAA, offscreen targets, multi-pass
+                   frames (begin_render_pass_ex + Comparison samplers). CastsShadow
+                   exists. A shadow pass is incremental, not a rewrite
+                   (RENDER_INTEGRATION 7).
+  Async assets     job queue + refcounting in front of AssetManager.
+  Animation        Skeleton + AnimationClip + AnimatorSystem after TransformSystem,
+                   overriding bone WorldTransforms. @group(3) is reserved for the
+                   bone palette; CgfxVertex already carries joints/weights.
+  Collision events Jolt ContactListener -> per-frame event buffer -> a flecs system
+                   fires observers.
+  Prefab tooling   authoring/editing prefabs in the editor (runtime instancing
+                   already exists from Phase 6.5).

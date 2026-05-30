@@ -2,64 +2,48 @@
 #include <cstdint>
 #include <bitset>
 #include <flecs.h>
+#include "input_keys.hpp"     // Key, MouseButton, MouseState (GLFW-free, public)
 
 // =============================================================================
 // InputSystem
 //
-// Polls the platform layer each frame, then writes the results into the ECS
-// as an InputState component on the designated "player" entity.
-//
-// Gameplay systems read InputState from ECS — they never call InputSystem
-// directly. This keeps them testable and platform-agnostic.
+// Each frame poll_and_write() READS the platform's immediate input state and
+// writes an InputState component onto the player entity. Gameplay reads InputState
+// from the ECS; it never calls InputSystem. The public Key/MouseButton enums are
+// GLFW-free; ALL GLFW lives in input_system.cpp (PHASE_05). cgfx is caller-polled,
+// so poll_and_write does NOT call glfwPollEvents (the platform loop does that).
 // =============================================================================
-
-// Thin key/button constants so callers don't depend on a windowing library
-enum class Key : uint32_t {
-    W=0, A, S, D,
-    Space, LShift, LCtrl,
-    Escape,
-    COUNT
-};
-
-enum class MouseButton : uint32_t {
-    Left=0, Right, Middle,
-    COUNT
-};
-
-struct MouseState {
-    float x = 0.f, y = 0.f;        // current position (pixels)
-    float dx = 0.f, dy = 0.f;      // delta since last frame
-    float scroll_dy = 0.f;
-};
 
 class InputSystem {
 public:
-    // Lifecycle
     void init();
     void shutdown();
 
-    // Called at the START of Engine::tick(), before ECS progress.
-    // Reads platform events and writes InputState onto player_entity.
+    // Attach to the cgfx window (GLFWwindow* passed as void* so this header stays
+    // GLFW-free). Registers the scroll callback. Call after the Renderer exists.
+    void attach(void* glfw_window);
+
+    // Called at the START of Engine::tick (after the loop's glfwPollEvents).
     void poll_and_write(flecs::world& world, flecs::entity player_entity);
 
-    // --- Direct queries (for systems that need raw state, e.g. editor camera) ---
-    bool key_held(Key k)    const;
-    bool key_pressed(Key k) const;   // true only on the frame it went down
-    bool key_released(Key k) const;
+    // Cursor capture for mouse-look; resets the delta spike on toggle.
+    void set_cursor_captured(bool captured);
 
+    // Direct queries (editor / controllers)
+    bool key_held(Key k)     const;
+    bool key_pressed(Key k)  const;   // edge: down this frame only
+    bool key_released(Key k) const;   // edge: up this frame only
     bool mouse_held(MouseButton b)    const;
     bool mouse_pressed(MouseButton b) const;
-
     const MouseState& mouse() const { return m_mouse; }
 
 private:
-    std::bitset<(size_t)Key::COUNT>         m_held;
-    std::bitset<(size_t)Key::COUNT>         m_pressed;
-    std::bitset<(size_t)Key::COUNT>         m_released;
-    std::bitset<(size_t)MouseButton::COUNT> m_mouse_held;
-    std::bitset<(size_t)MouseButton::COUNT> m_mouse_pressed;
-    MouseState                              m_mouse;
+    void* m_window = nullptr;          // GLFWwindow* (cast in the .cpp)
 
-    // Previous frame state for edge detection
-    std::bitset<(size_t)Key::COUNT> m_held_prev;
+    std::bitset<(size_t)Key::COUNT>         m_held, m_pressed, m_released, m_held_prev;
+    std::bitset<(size_t)MouseButton::COUNT> m_mouse_held, m_mouse_pressed;
+    MouseState m_mouse;
+
+    float m_scroll_accum = 0.f;        // filled by the GLFW scroll callback
+    bool  m_first_frame  = true;       // discard the first (bogus) mouse delta
 };

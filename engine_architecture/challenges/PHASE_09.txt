@@ -1,0 +1,101 @@
+===============================================================================
+PHASE 9 — CHARACTER + MOVEMENT SYSTEM
+Goal: a controllable character that walks, jumps, and is followed by the camera
+Prereqs: Phase 7 (physics + the coordinate flip), Phase 8 (stable foundation),
+         Phase 5 (InputState), Phase 3 (camera entity).
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  A player is not just a dynamic box: a box tips over, slides, and cannot climb a
+  step. Jolt provides a CharacterVirtual for exactly this: an upright capsule with
+  step-up, slope limits, and ground detection built in. This phase wires input ->
+  desired velocity -> the character, adds jumping, and parents the camera to the
+  character so it follows for free through the transform system. After this it
+  starts to feel like a game.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - CharacterVirtual vs a dynamic body. A dynamic rigid body obeys forces and will
+    fall over and slide. A CharacterVirtual is a kinematic capsule you MOVE by
+    setting a velocity each step; Jolt resolves it against the world with character
+    rules (won't tip, steps up small ledges, slides along walls, reports whether it
+    is on the ground). Use it; do not try to recreate it with a constrained box.
+
+  - Desired velocity vs simulated result. You do not teleport the character. Each
+    fixed step you tell it the velocity you WANT (from input), Jolt moves it as far
+    as collisions allow, and you read back where it actually ended up. Gravity is
+    applied to the character's vertical velocity yourself (CharacterVirtual does not
+    auto-fall) or via its built-in helpers, then written back to Position.
+
+  - Ground state. The character reports whether it is standing on ground this step
+    (OnGround / InAir). You need it for jumping (only jump when grounded) and to stop
+    applying downward velocity when resting.
+
+  - System ordering. The MovementSystem reads InputState and the character's state to
+    compute the desired velocity; it must run BEFORE physics steps the character. So
+    it runs as part of the pre-physics work in the tick (before
+    step_and_writeback), not in world.progress (which is post-physics).
+
+  - The flip still applies. Velocity transforms like position: when you hand a
+    desired velocity to Jolt, negate Z (RENDER_INTEGRATION 2). When you read the
+    character's position back, negate Z again, exactly like a dynamic body.
+
+  ---- 9.1  Register a CharacterVirtual -----------------------------------
+    [ ] 9.1.a  PhysicsBridge::register_character(entity, height, radius): build a
+               CapsuleShape(0.5f*height - radius, radius) and a CharacterVirtual with
+               default step-up / slope-limit settings. Store it keyed by entity (a
+               Ref<CharacterVirtual> per character).
+    [ ] 9.1.b  Place it at the entity's Position (apply the LH->RH flip).
+  How to know it works: the character capsule stands on the Phase 7 ground without
+  falling through.
+
+  ---- 9.2  CharacterState component --------------------------------------
+    [ ] 9.2.a  struct CharacterState { bool is_grounded=false; vec3 velocity={}; };
+               Register it; add it to the character entity.
+    [ ] 9.2.b  After each character update, write is_grounded from the character's
+               ground state, and keep the current velocity in the component.
+  How to know it works: is_grounded is true when resting on the floor, false when
+  airborne (log it).
+
+  ---- 9.3  MovementSystem (input -> desired velocity) --------------------
+    [ ] 9.3.a  A system (or a pre-physics step) that reads InputState + CharacterState
+               and computes a desired horizontal velocity from move_axis, oriented by
+               the character's facing (or the camera's yaw). Apply a move speed.
+    [ ] 9.3.b  Maintain vertical velocity yourself: if grounded and not jumping, keep
+               it ~0; otherwise subtract gravity*H each step.
+    [ ] 9.3.c  Call PhysicsBridge::set_character_velocity(entity, v) (flip Z) BEFORE
+               the character's Update in step_and_writeback.
+  How to know it works: WASD moves the capsule along the ground at a steady speed.
+  [!] move_axis is intent (-1..1). Multiply by a speed here; do not bake speed into
+      InputState (Phase 5 note).
+
+  ---- 9.4  Jump ----------------------------------------------------------
+    [ ] 9.4.a  In MovementSystem: if jump_pressed && is_grounded, set the vertical
+               velocity to a jump impulse (e.g. sqrt(2*g*jump_height)). Otherwise let
+               gravity bring it down.
+  How to know it works: Space launches the character once per press (edge), it
+  arcs up and lands; holding Space does not auto-bunny-hop (it is pressed, not held).
+
+  ---- 9.5  Camera follows the character ----------------------------------
+    [ ] 9.5.a  Parent the camera entity to the character (set_parent). The transform
+               system already composes parent*local, so the camera follows for free.
+    [ ] 9.5.b  Give the camera a small +Y local Position (head height) and whatever
+               look offset you want.
+  How to know it works: the view tracks the character as it walks and jumps; reusing
+  the Phase 5 mouse-look rotates the view.
+
+  [M] MILESTONE 9 — Playable character
+      WASD moves the character, Space jumps, the camera follows. The character cannot
+      walk through the Phase 7 static boxes and lands correctly on sloped surfaces.
+      This is the point where it starts to feel like a game.
+
+  [!] CharacterVirtual::Update MUST use the SAME fixed dt (H) as PhysicsSystem::Update
+      -- update the character inside the same accumulator loop, once per substep, or
+      movement desyncs from collisions.
+  WHAT FAILURE LOOKS LIKE:
+    - character sinks through the floor or vibrates: character updated with a
+      different dt than the physics step, or gravity applied twice.
+    - jump fires repeatedly while holding Space: you used held instead of pressed
+      (edge) for jump, or didn't gate on is_grounded.
+  [!] No animation yet; a capsule or box mesh for the character is fine.

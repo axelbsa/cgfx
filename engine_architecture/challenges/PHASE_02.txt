@@ -1,0 +1,196 @@
+===============================================================================
+PHASE 2 — ECS + TRANSFORM PIPELINE
+Goal: entities with components, world matrices computed correctly
+Prereqs: Phase 1 (the tick draws; flecs world exists)
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  Until now there is one hardcoded cube. Real scenes have many objects, each with
+  its own position, and objects that are attached to other objects (a turret on a
+  tank, a wheel on the turret). This phase introduces the ECS as the place all that
+  object data lives, and the TRANSFORM PIPELINE that turns each object's
+  position/rotation/scale into the single matrix the renderer needs. By the end you
+  can place many objects and parent them, and the math is correct for deep chains.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - ECS = Entity Component System. A data-oriented way to model game objects:
+      * Entity    — just an ID (a number). It has no data and no behavior by itself.
+      * Component — a plain struct of DATA attached to an entity (Position, Rotation).
+                    An entity "is" the set of components it has.
+      * System    — a function that runs over every entity having a given set of
+                    components and reads/writes them. Behavior lives here, not on
+                    the objects.
+    Why this instead of classes: you compose objects by adding/removing components,
+    and systems process them in tight, cache-friendly loops. flecs is our ECS.
+
+  - flecs specifics you will touch:
+      * world           — the container holding all entities/components/systems.
+      * register a component — world.component<Position>() tells flecs the type
+                          exists (do this once before using it).
+      * a system        — world.system<const Position, WorldTransform>("Name")
+                          .each([](const Position& p, WorldTransform& w){ ... });
+                          flecs calls the lambda for every matching entity.
+      * world.progress(dt) — runs all registered systems once, in dependency order.
+      * .after(other)   — declares this system must run after `other` (ordering).
+      * ChildOf         — a built-in relationship: child.child_of(parent) records
+                          that one entity is parented to another. We use it for
+                          transform hierarchy (SCENE.txt keeps this separate from
+                          scene ownership).
+
+  - The transform math (this trips up most newcomers):
+      * Position/Rotation/Scale are LOCAL: relative to the parent (or to the world
+        if there is no parent).
+      * A 4x4 matrix can encode translate+rotate+scale together. We build the
+        local matrix as  M_local = T * R * S  (apply scale first, then rotate, then
+        translate). Order matters; T*R*S is the standard.
+      * Rotation is stored as a QUATERNION (cglm `versor`, four floats {x,y,z,w}),
+        not Euler angles, because quaternions compose cleanly and don't gimbal-lock.
+        Treat it as an opaque "rotation"; cglm converts it to a matrix for you.
+      * WorldTransform is the object's matrix in WORLD space: for a root it equals
+        M_local; for a child it is  parent.WorldTransform * M_local. That single
+        matrix is what the renderer multiplies vertices by to place the object.
+      * Matrices here are COLUMN-MAJOR (cglm/cgfx convention); the translation lives
+        in the last column. Don't transpose unless you know why.
+
+      Worked example (column-major mat4 in memory, and the identity quaternion):
+        A cglm mat4 is float m[4][4] stored COLUMN-major: m[col][row]. The
+        translation (tx,ty,tz) lives at m[3][0], m[3][1], m[3][2]. A pure
+        translation to (5,0,0):
+            m[0] = {1,0,0,0}   // column 0
+            m[1] = {0,1,0,0}   // column 1
+            m[2] = {0,0,1,0}   // column 2
+            m[3] = {5,0,0,1}   // column 3  <- translation here
+        The identity rotation quaternion is {x=0, y=0, z=0, w=1}, NOT all zeros.
+        A zero quaternion is invalid and glm_quat_mat4 produces garbage from it.
+
+  - Why TWO transform passes. Roots have no parent, so their world matrix is just
+    their local matrix. Children need their PARENT's world matrix first. So we run
+    roots first, then children, and the child pass must process a parent before its
+    own children (a grandchild needs its parent's world, which needed the root's).
+    flecs gives us that ordering with `.parent().cascade()`.
+
+  ---- 2.1  Register components and prove storage --------------------------
+    [ ] 2.1.a  In Engine::init, register every component from components.hpp
+               (Position, Rotation, Scale, WorldTransform, MeshHandle,
+               MaterialHandle, ...). One world.component<T>() per type.
+    [ ] 2.1.b  Give WorldTransform an IDENTITY initializer in the struct
+               (mat4 matrix = GLM_MAT4_IDENTITY_INIT). The original sketch left it
+               uninitialized, which is garbage memory until a system writes it.
+    [ ] 2.1.c  In the sandbox, create 3 entities and set Position/Rotation/Scale/
+               WorldTransform directly; read them back and ENGINE_LOG the values.
+  How to know it works: the values you set come back unchanged.
+  [!] Components are PLAIN DATA only (no methods, no constructors that allocate).
+      flecs may move them in memory; a component that owns a resource will break.
+
+  ---- 2.2  Write and unit-test the TRS math (no flecs) --------------------
+  What & why: get the matrix math correct in isolation before any system uses it,
+  so when something looks wrong later you know it is NOT the math.
+
+    [ ] 2.2.a  Implement TransformSystem::build_trs(out, pos, rot, scale):
+                   void build_trs(mat4 out, const vec3 pos, const versor rot,
+                                  const vec3 scale) {
+                       mat4 T, R, S, TR;
+                       glm_translate_make(T, (float*)pos);
+                       glm_quat_mat4((float*)rot, R);
+                       glm_scale_make(S, (float*)scale);
+                       glm_mat4_mul(T, R, TR);     // TR  = T * R
+                       glm_mat4_mul(TR, S, out);   // out = T * R * S
+                   }
+    [ ] 2.2.b  Unit test (tests/test_transform.cpp): identity inputs -> identity
+               matrix; a known translation (3,4,5) -> appears in the last column;
+               a 90-degree rotation about Y sends +Z to +X (within epsilon).
+    [ ] 2.2.c  Do not proceed until these pass.
+  How to know it works: the test binary prints PASS for every case.
+  [!] Floating point: compare with an epsilon (e.g. 1e-5), never ==.
+
+  ---- 2.3  Roots pass: local -> world for parentless entities -------------
+    [ ] 2.3.a  Register a system "Transform_Roots" over const Position, const
+               Rotation, const Scale, WorldTransform, filtered to entities WITHOUT a
+               parent: .without(flecs::ChildOf, flecs::Wildcard).
+    [ ] 2.3.b  Its body calls build_trs into WorldTransform.matrix.
+    [ ] 2.3.c  Call world.progress(dt) once; read back a root entity's WorldTransform
+               and confirm it equals its local TRS.
+  How to know it works: a root placed at (5,0,0) has 5 in the translation column of
+  its WorldTransform after progress().
+
+  ---- 2.4  Children pass: compose with the parent (deep-tree correct) -----
+    [ ] 2.4.a  Register "Transform_Children" over the same components, filtered to
+               entities WITH a parent: .with(flecs::ChildOf, flecs::Wildcard), and
+               declare ordering with .parent().cascade() AND .after(roots).
+    [ ] 2.4.b  Body: build the local matrix, fetch the parent's WorldTransform, and
+               write WorldTransform = parent.world * local. Registration sketch
+               (have register_systems RETURN the children handle so CameraSystem can
+               .after() it in Phase 3):
+                   auto roots = world.system<const Position,const Rotation,
+                                 const Scale, WorldTransform>("Transform_Roots")
+                       .without(flecs::ChildOf, flecs::Wildcard)
+                       .each([](const Position& p, const Rotation& r,
+                                const Scale& s, WorldTransform& w){
+                           build_trs(w.matrix, p.value, r.value, s.value);
+                       });
+                   world.system<const Position,const Rotation,
+                                const Scale, WorldTransform>("Transform_Children")
+                       .with(flecs::ChildOf, flecs::Wildcard)
+                       .parent().cascade()        // depth order: parent before child
+                       .after(roots)
+                       .each([](flecs::entity e, const Position& p, const Rotation& r,
+                                const Scale& s, WorldTransform& w){
+                           mat4 local; build_trs(local, p.value, r.value, s.value);
+                           const WorldTransform* pw = e.parent().get<WorldTransform>();
+                           if (pw) glm_mat4_mul((vec4*)pw->matrix, local, w.matrix);
+                           else    glm_mat4_copy(local, w.matrix);  // defensive
+                       });
+    [ ] 2.4.c  Test a 2-level case: parent at (5,0,0), child local (0,1,0) ->
+               child world translation = (5,1,0). Then a 3-level case (grandchild)
+               and verify it composes through both ancestors.
+  How to know it works: moving the parent moves child and grandchild together; the
+  printed translations match the hand-computed sums.
+  [!] A FLAT .with(ChildOf, Wildcard) does NOT guarantee parent-before-child for
+      MULTI-LEVEL trees; a grandchild can run before its parent and read a stale
+      matrix. .parent().cascade() is what orders by depth. This is not optional
+      (SCENE.txt sec 6).
+  [!] Do not put physics on a child this phase; a dynamic body must be a transform
+      root (you will see why in Phase 7).
+
+  ---- 2.5  Feed the transform results into the renderer -------------------
+  What & why: replace Phase 1's single hardcoded cube with one drawn PER entity,
+  using each entity's WorldTransform. Assets are still placeholders.
+
+    [ ] 2.5.a  RenderBridge::build_draw_list queries WorldTransform + MeshHandle +
+               MaterialHandle in ONE query (add CastsShadow as an OPTIONAL term in
+               the same query, not a second query). For each match, copy the world
+               matrix and the handle ids into a DrawCall in the frame's draw list.
+    [ ] 2.5.b  For now use a placeholder mesh/material that resolve to the Phase 1
+               hardcoded cube + pipeline (AssetManager arrives in Phase 4).
+    [ ] 2.5.c  submit_frame draws each DrawCall. Per-object transform upload is not
+               optimized yet; a simple per-draw uniform write is acceptable until
+               Phase 4 introduces the dynamic-offset buffer.
+  How to know it works: 5 entities at 5 positions show 5 cubes; moving a parent in
+  code moves its child cube on screen.
+  [!] Fold CastsShadow into the single renderables query. A separate query that
+      matches by mesh-id is the O(N*M) bug from the original sketch
+      (RENDER_INTEGRATION 9).
+
+  WHAT FAILURE LOOKS LIKE:
+    - objects render at the origin or with garbage transforms: WorldTransform left
+      uninitialized (2.1.b), or a zero (invalid) rotation quaternion instead of
+      {0,0,0,1}.
+    - sheared / orbiting-the-wrong-point transforms: the T*R*S multiply order is
+      swapped.
+    - a grandchild lags or snaps one frame behind its parent: a flat ChildOf query
+      without .parent().cascade() (2.4 pitfall).
+    - a child ignores its parent entirely: you read the parent's LOCAL components
+      instead of its WorldTransform, or used the wrong relationship.
+
+  [M] MILESTONE 2 — Multiple entities, correct world matrices (incl. 3 levels)
+      5 entities at different positions, two of them parented (and one grandchild).
+      Move the parent in code: child and grandchild follow. The hierarchy is
+      computed in the ECS, deep trees are correct, and the renderer draws one cube
+      per entity from its WorldTransform.
+
+  [!] Don't do camera-via-ECS yet (Phase 3). Don't add the scene API yet (Phase
+      6.5) — call flecs child_of directly in the sandbox for now.
+
+

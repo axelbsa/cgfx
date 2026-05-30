@@ -1,0 +1,174 @@
+===============================================================================
+PHASE 3 — CAMERA SYSTEM
+Goal: the camera is an ECS entity; moving it moves the view
+Prereqs: Phase 2 (WorldTransform is computed for every entity)
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  In Phase 1 the view was hardcoded; objects appeared at fixed screen spots. A
+  real camera is just another entity with a transform: where it is and where it
+  looks. This phase makes the camera an ECS entity, computes the two matrices the
+  GPU needs from that entity's WorldTransform, and feeds them to cgfx. The payoff
+  is huge for almost no code: because the camera is a normal entity, in Phase 9 you
+  will PARENT it to the player and it follows for free through the transform system
+  you already built.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - Spaces, and the two matrices. A vertex starts in MODEL space (relative to its
+    own object), becomes WORLD space via the model matrix (your WorldTransform),
+    then the GPU needs two more transforms:
+      * VIEW matrix: world space -> camera space (as if the camera sat at the
+        origin looking down an axis). The view matrix is simply the INVERSE of the
+        camera's world transform. Intuition: if the camera moved 5 right, every
+        other object should appear 5 left; "move the world opposite the camera" is
+        exactly what inverting the camera's transform does.
+      * PROJECTION matrix: camera space -> clip space, applying perspective (distant
+        things shrink) and mapping depth into the range the GPU keeps. After the GPU
+        divides by w you get Normalized Device Coordinates (NDC).
+
+  - Clip space conventions, and why ours are non-default. WebGPU's NDC is Y-up with
+    depth Z in [0,1]. cgfx builds cglm with CGLM_FORCE_LEFT_HANDED +
+    CGLM_FORCE_DEPTH_ZERO_TO_ONE, so the generic glm_perspective / glm_lookat you
+    call already produce LEFT-HANDED, [0,1]-depth matrices that match WebGPU. You do
+    not pick a handedness; you inherit cgfx's. (FOUNDATIONS sec 2 explains the
+    define plumbing. The coordinate system as a whole is in RENDER_INTEGRATION 2.)
+
+  - Aspect ratio. The projection must know the window's width/height ratio or the
+    image stretches. aspect = framebuffer_width / framebuffer_height. It changes on
+    every resize, so the projection must be recomputed when it changes, not once.
+
+  - Singleton component (flecs). Some data is per-WORLD, not per-entity (the current
+    aspect ratio, time, etc.). flecs models this as a "singleton": world.set<T>(v)
+    stores one instance; world.get<T>() reads it; a system can request it with
+    .term<T>().singleton(). We use a ViewportInfo singleton to hand the aspect from
+    tick() to CameraSystem.
+
+  - cgfx's camera is just a buffer. CgfxCamera holds { mat4 projection; mat4 view;
+    CgfxBuffer buffer; }. cgfx_camera_write uploads the two matrices (128 bytes) to
+    the GPU. The caller owns the bind group. So our ECS camera computes the
+    matrices; the RenderBridge copies them into one CgfxCamera and uploads. We do
+    NOT store a CgfxCamera in a component (it owns a GPU buffer, and flecs may
+    relocate components in memory, which would corrupt that handle).
+
+  ---- 3.1  CameraData component + ViewportInfo singleton -------------------
+    [ ] 3.1.a  Confirm the CameraData component (components.hpp) and add the
+               singleton type:
+                   struct CameraData {
+                       mat4  view = GLM_MAT4_IDENTITY_INIT;
+                       mat4  proj = GLM_MAT4_IDENTITY_INIT;
+                       vec3  position   = {0,0,0};
+                       float fov_deg    = 60.f;   // vertical field of view
+                       float near_plane = 0.1f;
+                       float far_plane  = 1000.f;
+                   };
+                   struct ViewportInfo { float aspect = 16.f/9.f; };  // singleton
+    [ ] 3.1.b  Register both with flecs in Engine::init.
+    [ ] 3.1.c  In the sandbox, create one camera entity:
+               world.entity("camera").add<IsCamera>().set<CameraData>({})
+                    .set<Position>({{0,2,-8}}).set<Rotation>({}).set<Scale>({{1,1,1}})
+                    .set<WorldTransform>({});
+  How to know it works: the entity exists with the components; nothing renders
+  differently yet.
+  [!] fov is the VERTICAL field of view in degrees here (cglm wants radians; convert
+      with glm_rad). 60 is a comfortable default; 90+ looks fish-eyed.
+
+  ---- 3.2  The pure camera math (unit-tested before any system) ------------
+  What & why: compute_view and compute_proj are pure functions. Get them right in
+  isolation so a wrong image later is never "is it the math?".
+
+    [ ] 3.2.a  compute_view: the view is the inverse of the camera's world matrix.
+                   void compute_view(mat4 out, const mat4 world) {
+                       glm_mat4_inv((vec4*)world, out);
+                   }
+               Do NOT use glm_lookat here: the camera's orientation comes from its
+               Rotation / parent chain (so parenting it to the player in Phase 9
+               works). glm_lookat is only for an explicit eye/target, e.g. an editor.
+    [ ] 3.2.b  compute_proj: a perspective frustum, LH-ZO via cgfx's defines.
+                   void compute_proj(mat4 out, float fov_deg, float aspect,
+                                     float near_p, float far_p) {
+                       glm_perspective(glm_rad(fov_deg), aspect, near_p, far_p, out);
+                   }
+    [ ] 3.2.c  position: pull the camera world position from the world matrix's last
+               column: out_pos = { world[3][0], world[3][1], world[3][2] }.
+    [ ] 3.2.d  Unit tests (tests/test_camera.cpp):
+                 - a camera world-translated to (0,0,-8): its view matrix maps the
+                   world origin to (0,0,+8) in camera space (in front of an
+                   LH camera looking down +Z). Print and assert.
+                 - compute_proj maps a point at z=near to NDC depth ~0 and z=far to
+                   ~1 (proves DEPTH_ZERO_TO_ONE is active). This doubles as the
+                   handedness guard from FOUNDATIONS 2.
+  How to know it works: tests print PASS. The near->0 / far->1 test is the canary
+  for the whole coordinate setup.
+  WHAT FAILURE LOOKS LIKE:
+    - near maps to -1 (not 0): a stray cglm without the FORCE defines is in the
+      build (FOUNDATIONS 2). Everything will depth-test wrong later.
+    - the view "moves the wrong way" (camera goes right, world also goes right):
+      you forgot the inverse, or transposed a column-major matrix.
+
+  ---- 3.3  CameraSystem: write matrices into CameraData every tick --------
+    [ ] 3.3.a  Engine::tick publishes the aspect BEFORE world.progress:
+                   m_world->set<ViewportInfo>({ aspect });
+    [ ] 3.3.b  Register the system AFTER Transform_Children so WorldTransform is
+               fresh (return the children-pass handle from TransformSystem::
+               register_systems and pass it to CameraSystem::register_systems for
+               .after(children)):
+                   world.system<CameraData, const WorldTransform>("CameraSystem")
+                        .with<IsCamera>()
+                        .term<const ViewportInfo>().singleton()
+                        .each([](flecs::iter& it, size_t, CameraData& cam,
+                                 const WorldTransform& wt){
+                            const ViewportInfo& vp = *it.field<const ViewportInfo>(2);
+                            compute_view(cam.view, wt.matrix);
+                            compute_proj(cam.proj, cam.fov_deg, vp.aspect,
+                                         cam.near_plane, cam.far_plane);
+                            cam.position[0]=wt.matrix[3][0];
+                            cam.position[1]=wt.matrix[3][1];
+                            cam.position[2]=wt.matrix[3][2];
+                        });
+  How to know it works: after a tick, the camera entity's CameraData.view/proj are
+  populated (print them once).
+  [!] The exact .field index / singleton-access syntax depends on your flecs
+      version; the point is: read ViewportInfo as a singleton, not per-entity.
+
+  ---- 3.4  Feed CameraData into cgfx (RenderBridge owns one CgfxCamera) ---
+    [ ] 3.4.a  RenderBridge::init creates one CgfxCamera (cgfx_camera_create) and the
+               @group(0) bind group over its buffer (cgfx_bind_group_create_buffers
+               using a ShaderTemplate's group-0 layout; in Phase 1/3 use the cube
+               shader's layout). Store both.
+    [ ] 3.4.b  In submit_frame, before drawing: read the IsCamera entity's CameraData,
+               copy into the owned camera, upload:
+                   glm_mat4_copy(cam.proj, m_cgfx_cam.projection);
+                   glm_mat4_copy(cam.view, m_cgfx_cam.view);
+                   cgfx_camera_write(ctx, &m_cgfx_cam);
+    [ ] 3.4.c  Inside the frame, bind @group(0) once:
+                   cgfx_camera_bind(frame.render_pass, m_cam_bg, 0);
+               and make the cube shader read camera from @group(0) (projection then
+               view) and multiply: clip = proj * view * model * position.
+  How to know it works: the cube now sits in a perspective world; moving the camera
+  entity's Position in code visibly changes the viewpoint.
+
+  ---- 3.5  Prove it: animate the camera ----------------------------------
+    [ ] 3.5.a  In the sandbox tick, before engine.tick, orbit the camera by writing
+               its Position/Rotation in a circle over time (no input yet).
+    [ ] 3.5.b  Watch the Phase 2 entities from a moving viewpoint.
+  How to know it works: the scene appears to rotate as the camera orbits, with
+  correct perspective and depth ordering.
+
+  [M] MILESTONE 3 — Camera is an ECS entity
+      cgfx holds only a camera buffer the bridge feeds. Moving the camera entity
+      moves the view; later, reparenting it to another entity makes it follow.
+      compute_view/proj are unit-tested, including the near->0/far->1 depth canary.
+
+  [!] Exactly one IsCamera at a time. Engine::create_camera (Phase 6) removes
+      IsCamera from any previous camera; until then keep just one in the sandbox.
+      CameraSystem/RenderBridge take the FIRST IsCamera deterministically.
+  [!] proj MUST be recomputed from ViewportInfo each tick. If you compute it once,
+      the image stretches the moment the window is resized.
+  WHAT FAILURE LOOKS LIKE:
+    - black screen: near/far or handedness wrong (3.2 canary), or the cube shader
+      isn't actually multiplying by proj*view, or the object is behind the camera.
+    - stretched image on resize: aspect not refreshed (3.3.a) or proj cached.
+
+

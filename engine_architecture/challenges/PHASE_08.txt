@@ -1,0 +1,103 @@
+===============================================================================
+PHASE 8 — HARDENING & HEADLESS TESTS
+Goal: every system tested in isolation; clean under sanitizers; runs without a GPU
+Prereqs: Phase 7 (the systems worth testing exist). Runs BEFORE Phase 9.
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  You now have transform, camera, assets, input, scene, and physics. Before adding a
+  character (Phase 9), lock the foundation down: unit-test the pure logic, make the
+  engine run with NO window for CI, and clear the memory sanitizers. The bugs you
+  catch here are an order of magnitude cheaper than the same bugs found after
+  gameplay sits on top. Do not skip this to "get to the fun part" faster; this IS
+  what lets the fun part not collapse.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - Pure-logic unit tests. The math and bookkeeping (build_trs, the LH<->RH flip,
+    asset dedup, input edge detection) take inputs and return outputs with no GPU and
+    no window. They are fast, deterministic, and the first thing to test. Keep that
+    logic in free functions so a test can call it without standing up the engine.
+
+  - Headless run. A no-window build for continuous integration: it runs the
+    simulation (physics + transform) and asserts on numbers, never drawing. cgfx's
+    cgfx_ctx_init creates a real window, so headless means the Renderer is NULL and
+    RenderBridge::submit_frame early-returns (the guard you added in Phase 1.5).
+
+  - Sanitizers. AddressSanitizer (-fsanitize=address) catches use-after-free, leaks,
+    and out-of-bounds; UndefinedBehaviorSanitizer (-fsanitize=undefined) catches UB
+    like signed overflow or misaligned loads. They instrument the build and report at
+    runtime. Run your tests and headless app under them and fix everything.
+
+  - The "double init" test. init -> shutdown -> init -> shutdown must work. It is a
+    cheap test that catches the most common lifecycle bugs: a global not reset (Jolt
+    Factory, Phase 7), a destructor that frees twice, an owning pointer left dangling.
+
+  ---- 8.1  test_transform ------------------------------------------------
+    [ ] 8.1.a  identity P/R/S -> identity matrix; a known translation -> last column.
+    [ ] 8.1.b  parent-child: child world = parent world * child local (the (5,1,0)
+               case from Phase 2).
+    [ ] 8.1.c  3-level chain (grandchild) composes through both ancestors.
+  How to know it works: all cases PASS with an epsilon compare.
+
+  ---- 8.2  test_asset_manager (no GPU) -----------------------------------
+    [ ] 8.2.a  load the same path twice -> same id, one underlying create (load
+               counter). Two different paths -> different ids.
+    [ ] 8.2.b  get_mesh / get_material with an out-of-range id -> nullptr, no crash.
+    [ ] 8.2.c  unload_all then get -> nullptr, no crash.
+  How to know it works: PASS. (Factor the cache/dedup logic so it can be tested
+  without a device; the actual GPU upload is exercised by the running app, not here.)
+
+  ---- 8.3  test_input_edge_detection -------------------------------------
+    [ ] 8.3.a  Feed the pure edge-detection helper a synthetic key sequence (the
+               down/held/up table from Phase 5) and assert held/pressed/released per
+               frame. No window needed.
+  How to know it works: the truth table reproduces exactly.
+
+  ---- 8.4  test_coords + test_handedness  (guards the silent bugs) -------
+    [ ] 8.4.a  LH<->RH round-trip: flip(flip(p)) == p for position and quaternion
+               (the Phase 7 conversion is its own inverse). Assert identity.
+    [ ] 8.4.b  Handedness/clip canary: glm_perspective maps z=near -> NDC depth ~0 and
+               z=far -> ~1 (proves CGLM_FORCE_DEPTH_ZERO_TO_ONE is active in the test
+               TU). FOUNDATIONS sec 2. This test failing means a stray cglm without
+               the FORCE defines leaked in.
+  How to know it works: PASS. These two are your insurance against the most
+  expensive, hardest-to-see rendering/physics bugs.
+
+  ---- 8.5  Headless executable -------------------------------------------
+    [ ] 8.5.a  examples/headless/main.cpp: construct Engine with a NULL Renderer
+               (cfg requests no window). Confirm RenderBridge::submit_frame returns
+               immediately when the Renderer is null (the Phase 1.5 guard).
+    [ ] 8.5.b  Run ~100 fixed ticks of physics + transform on a dropped box; assert
+               its final Y is below its start Y (it fell).
+    [ ] 8.5.c  This binary runs in CI with no display.
+  How to know it works: it runs to completion headless and the assertion holds.
+  WHAT FAILURE LOOKS LIKE:
+    - it tries to open a window / crashes with no display: the null-Renderer guard is
+      missing somewhere on the render path (search for cgfx calls not behind the guard).
+
+  ---- 8.6  Ownership audit -----------------------------------------------
+    [ ] 8.6.a  Replace owning raw pointers with std::unique_ptr (especially the three
+               Jolt pointers in PhysicsBridge). Non-owning pointers (observers into
+               flecs/cgfx you do not own) stay raw but get a comment saying so.
+  How to know it works: builds; ASAN reports no leaks (8.7).
+
+  ---- 8.7  Sanitizers + double init -------------------------------------
+    [ ] 8.7.a  Build tests + headless with -fsanitize=address and again with
+               -fsanitize=undefined; fix every report.
+    [ ] 8.7.b  Add a test that does Engine init -> shutdown -> init -> shutdown and
+               passes (catches the Jolt Factory reset and other lifecycle bugs).
+  How to know it works: sanitizer runs are clean; double-init passes.
+  WHAT FAILURE LOOKS LIKE:
+    - second init crashes: a global wasn't reset on shutdown (Jolt Factory, Phase 7.1.d).
+    - ASAN "heap-use-after-free" on shutdown: destruction order wrong, or an observer
+      fired into an already-freed subsystem (reverse-order shutdown, Phase 1.1.b).
+
+  [M] MILESTONE 8 — Stable foundation
+      All unit tests pass; the headless build runs in CI; ASAN and UBSAN are clean;
+      init->shutdown->init works twice in a row. You can now build gameplay on top
+      without fear of the floor giving way.
+
+  [!] Don't skip this phase to reach gameplay faster. These bugs are ~10x cheaper to
+      fix now than after the character controller and gameplay systems are layered on.

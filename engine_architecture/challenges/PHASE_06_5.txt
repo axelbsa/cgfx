@@ -1,0 +1,130 @@
+===============================================================================
+PHASE 6.5 — SCENE SYSTEM  (the previously-missing layer)
+Goal: named scenes that OWN their entities; load/unload exactly; prefabs
+Prereqs: Phase 6 (spawn/set_parent + EntityID exist). Read SCENE.txt alongside this.
+===============================================================================
+
+  WHY THIS PHASE
+  --------------
+  So far entities float in the world with no notion of "which level am I part of."
+  A real game loads a level (a bunch of entities), maybe keeps a HUD on top, then
+  unloads the level and loads another, destroying EXACTLY the level's entities and
+  nothing else. That grouping is a SCENE. This phase adds scenes as a thin layer on
+  top of flecs, plus PREFABS (a reusable sub-tree you can stamp out many times). It
+  adds no per-frame work to the tick. Done well, Phase 10 (save/load) becomes
+  trivial because it just serializes a scene.
+
+  CONCEPTS YOU NEED (only the new ones)
+  -------------------------------------
+  - flecs relationships (pairs). flecs can attach a RELATIONSHIP between two
+    entities, written as a pair (Relationship, Target). You already used the
+    built-in ChildOf: child.child_of(parent) stores the pair (ChildOf, parent) on
+    the child. You can define your OWN relationship the same way. We define
+    SceneMember so (SceneMember, level_scene) on an entity means "belongs to
+    level_scene."
+
+  - Relationship "traits" (the magic that makes unload one call). flecs lets you
+    annotate a relationship with cleanup rules:
+      * Exclusive              — an entity can target only ONE scene at a time.
+      * (OnDeleteTarget, Delete) — when the TARGET (the scene) is deleted, delete
+                                 everything that targets it.
+    With both, "unload scene" is literally scene_entity.destruct(): flecs destroys
+    exactly the members. No tracking vector, no leak, no over-delete.
+
+      Worked example (what destruct cascades):
+        level = create_scene("level")
+        spawn_mesh(level, "rock", ...)     // gets (SceneMember, level)
+        spawn_mesh(level, "tree", ...)     // gets (SceneMember, level)
+        hud   = create_scene("hud")
+        spawn(hud, "crosshair")            // gets (SceneMember, hud)
+        unload_scene(level)  ==>  level.destruct()
+          -> rock and tree are destroyed (they target level); crosshair survives
+             (it targets hud). Additive scenes "just work".
+
+  - Name scopes. flecs entities can have names, and an entity can act as a SCOPE so
+    names inside it don't collide. The scene entity is the scope for its members, so
+    two scenes can both contain "player", and serialized refs use scoped names
+    ("level.player").
+
+  - ChildOf vs SceneMember are DIFFERENT axes (do not conflate):
+      ChildOf      = TRANSFORM parenting (a turret moves with its tank). Drives the
+                     transform system.
+      SceneMember  = OWNERSHIP (which level an entity belongs to). Drives load/unload.
+    A turret is ChildOf the tank AND SceneMember of the level. Keeping them separate
+    is the whole reason additive scenes and cross-scene parenting stay sane.
+
+  - Prefabs (flecs Prefab + IsA). A PREFAB is a template entity (and sub-tree) that
+    is not "in the world" but can be INSTANCED. flecs marks it with the built-in
+    Prefab tag; instance.is_a(prefab) creates an entity that INHERITS the prefab's
+    components (copy-on-write: an instance only stores a component once it OVERRIDES
+    it, e.g. its own Position). Instancing a prefab sub-tree clones the whole tree.
+    This is how you stamp 100 crates cheaply, each with its own position.
+
+  ---- 6.5.1  Register the relationships + SceneManager --------------------
+    [ ] 6.5.1.a  Define and register the relationship ONCE in Engine::init, BEFORE
+                 any scene/entity is created:
+                     struct SceneMember {};   // a relationship tag
+                     world.component<SceneMember>()
+                          .add(flecs::Exclusive)
+                          .add(flecs::OnDeleteTarget, flecs::Delete);
+    [ ] 6.5.1.b  Make ChildOf cascade on delete too (Phase 6.4):
+                     world.component(flecs::ChildOf)
+                          .add(flecs::OnDeleteTarget, flecs::Delete);
+    [ ] 6.5.1.c  Add a SceneManager (scene/scene_manager.{hpp,cpp}) owned by Engine.
+                 It holds the active SceneID and maps SceneID <-> scene entity.
+                 SceneID is an opaque uint64 wrapper, exactly like EntityID.
+  How to know it works: compiles; the relationship is registered before the default
+  player entity is created in Engine::init.
+  [!] Register the traits BEFORE creating entities that use them, or the cleanup
+      behavior won't apply to early entities.
+
+  ---- 6.5.2  Scene lifecycle API ------------------------------------------
+    [ ] 6.5.2.a  SceneID create_scene(const char* name): create a named entity, mark
+                 it as a name scope, record it in SceneManager, return its SceneID.
+    [ ] 6.5.2.b  Every spawn_* takes a SceneID (or defaults to the active scene) and,
+                 on the new entity, adds the pair + a scoped name:
+                     // set the scope so the name is scene-local, then:
+                     flecs::entity e = world.entity(name);
+                     e.add<SceneMember>(scene_entity);   // pair (SceneMember, scene)
+    [ ] 6.5.2.c  unload_scene(SceneID): to_scene(id).destruct(); drop it from the
+                 SceneManager. clear_scene: destruct members but keep the scene.
+                 active_scene()/set_active_scene().
+  How to know it works: create a scene, spawn into it, read its members back.
+
+  ---- 6.5.3  Prove ownership + additive unload ----------------------------
+    [ ] 6.5.3.a  EntityID find(SceneID, const char* name) by scoped name.
+    [ ] 6.5.3.b  Move the sandbox's entity creation into a "level" scene; create a
+                 second "hud" scene with one entity.
+    [ ] 6.5.3.c  Count entities, unload_scene(level), count again: exactly the
+                 level's entities are gone; the hud entity remains.
+  How to know it works: the before/after counts match; the hud entity is still
+  queryable after the level unloads.
+  WHAT FAILURE LOOKS LIKE:
+    - unloading a scene takes the HUD with it: you parented HUD content with ChildOf
+      to a level entity, or used one relationship for both axes.
+    - members survive unload: the relationship lacks (OnDeleteTarget, Delete), or
+      spawn forgot to add (SceneMember, scene).
+
+  ---- 6.5.4  Prefabs ------------------------------------------------------
+    [ ] 6.5.4.a  PrefabID load_prefab(path) (or build one in code for now): create a
+                 flecs prefab (world.prefab()) with template components; for a
+                 sub-tree, create child prefabs child_of the prefab root.
+    [ ] 6.5.4.b  EntityID instantiate_prefab(SceneID, PrefabID, vec3 pos): create an
+                 entity with .is_a(prefab), add it to the scene (SceneMember), set its
+                 own Position (the override).
+    [ ] 6.5.4.c  Test: instantiate one prefab 5x at 5 positions; 5 independent
+                 entities that share the prefab's components but have their own Position.
+  How to know it works: 5 instances render at 5 spots; moving one does not move others.
+  WHAT FAILURE LOOKS LIKE:
+    - moving one instance moves all: you mutated the PREFAB, not the instance, or
+      shared a component that should be a per-instance override.
+
+  [M] MILESTONE 6.5 — Scenes load and unload cleanly
+      Two additive scenes coexist; unloading one leaves the other intact. A prefab
+      instantiates multiple times with per-instance overrides. No leaks, no dangling
+      parents (destroying a transform parent removes its children).
+
+  [!] ChildOf (transform) and SceneMember (ownership) are ORTHOGONAL — never use one
+      for the other (SCENE.txt sec 1).
+  [!] Don't build the file format yet (Phase 10). Build scenes in code here; Phase 10
+      only adds reading/writing the same structure to disk.

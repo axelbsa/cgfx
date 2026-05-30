@@ -49,6 +49,7 @@ int main(void) {
     CgfxUniform uniform = cgfx_uniform_create(&ctx, &shader, 0, &uniforms, sizeof(Uniforms));
 
     while (cgfx_ctx_is_running(&ctx)) {
+        glfwPollEvents();
         uniforms.time += 0.016f;
         cgfx_uniform_write(&ctx, &uniform);
 
