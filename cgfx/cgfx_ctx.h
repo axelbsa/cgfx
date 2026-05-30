@@ -26,6 +26,22 @@
 #endif
 
 /**
+ * Callback invoked when the WebGPU device is lost (GPU reset, driver TDR, etc.).
+ * Signature matches WGPUDeviceLostCallback.
+ */
+typedef void (*CgfxDeviceLostCallback)(WGPUDeviceLostReason reason,
+                                       const char *message,
+                                       void *user_data);
+
+/**
+ * Callback invoked on uncaptured WebGPU validation/OOM/internal errors.
+ * Signature matches WGPUErrorCallback.
+ */
+typedef void (*CgfxDeviceErrorCallback)(WGPUErrorType type,
+                                        const char *message,
+                                        void *user_data);
+
+/**
  * Configuration for creating a cgfx context.
  *
  * Zero-initialize this struct to get sensible defaults:
@@ -45,6 +61,11 @@ typedef struct CgfxCtxDesc {
     bool                depth_buffer;  /**< Create a depth buffer at surface dimensions.  */
     WGPUPresentMode     present_mode;  /**< Surface present mode.    0 = Fifo (VSync).    */
     WGPURequiredLimits  limits;        /**< User defined limits.                          */
+    uint32_t                  feature_count;      /**< Required device features. 0 = none.    */
+    const WGPUFeatureName    *features;           /**< Feature array. NULL = none.             */
+    CgfxDeviceLostCallback    on_device_lost;     /**< Device-lost callback. NULL = stderr.    */
+    CgfxDeviceErrorCallback   on_device_error;    /**< Error callback. NULL = stderr.          */
+    void                     *callback_user_data; /**< Passed to both callbacks.               */
 } CgfxCtxDesc;
 
 /**
@@ -85,6 +106,8 @@ typedef struct CgfxCtx {
  * @param desc  Configuration. Pass a zero-initialized struct for defaults.
  * @return      true on success, false on failure (errors printed to stderr).
  */
+CGFX_API bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc);
+
 /**
  * Return a WGPURequiredLimits with every limit set to "undefined" (no preference).
  *
@@ -94,8 +117,6 @@ typedef struct CgfxCtx {
  *   limits.limits.maxVertexAttributes = 2;
  */
 CGFX_API WGPURequiredLimits cgfx_default_limits(void);
-
-CGFX_API bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc);
 
 /**
  * Configuration for creating a context from an externally-owned window.
@@ -110,6 +131,11 @@ typedef struct CgfxCtxExternalDesc {
     bool                depth_buffer;   /**< Create a depth buffer at surface dimensions. */
     WGPUPresentMode     present_mode;   /**< Surface present mode. 0 = Fifo (VSync).   */
     WGPURequiredLimits  limits;         /**< User defined limits.                       */
+    uint32_t                  feature_count;      /**< Required device features. 0 = none.    */
+    const WGPUFeatureName    *features;           /**< Feature array. NULL = none.             */
+    CgfxDeviceLostCallback    on_device_lost;     /**< Device-lost callback. NULL = stderr.    */
+    CgfxDeviceErrorCallback   on_device_error;    /**< Error callback. NULL = stderr.          */
+    void                     *callback_user_data; /**< Passed to both callbacks.               */
 } CgfxCtxExternalDesc;
 
 /**

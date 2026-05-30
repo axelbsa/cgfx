@@ -11,15 +11,14 @@ cgfx is organized into focused modules, each in its own header/source pair. The 
 | **Export** | `cgfx_export.h` | `CGFX_API` macro for shared library export/import |
 | **Context** | `cgfx_ctx.h` | Window, WebGPU instance, device, queue, surface |
 | **Shader** | `cgfx_shader.h` | WGSL compilation, bind group layouts, pipeline layout |
-| **Pipeline** | `cgfx_pipeline.h` | Render pipeline with zero-init defaults |
-| **Frame** | `cgfx_frame.h` | Per-frame begin/end cycle (acquire, encode, submit, present) |
-| **Buffer** | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, mapping) |
+| **Pipeline** | `cgfx_pipeline.h` | Render pipeline with zero-init defaults. Color targets, depth compare/write, MSAA, blend presets |
+| **Frame** | `cgfx_frame.h` | Per-frame begin/end cycle (acquire, encode, submit, present). Offscreen/MRT passes, MSAA resolve |
+| **Buffer** | `cgfx_buffer.h` | GPU buffer creation (vertex, index, uniform, storage, mapping). Synchronous readback via `cgfx_buffer_read` |
 | **Uniform** | `cgfx_uniform.h` | Uniform buffer + bind group + data pointer bundle |
 | **Mesh** | `cgfx_mesh.h` | Vertex format, mesh creation, vertex layout, draw helper |
 | **Texture** | `cgfx_texture.h` | GPU texture + view, sampler. Sampled, storage, render-target, depth, cube maps |
 | **Compute** | `cgfx_compute.h` | Compute pipeline, compute pass, buffer copy |
 | **Camera** | `cgfx_camera.h` | Projection/view matrices with GPU uniform management |
-| **Primitives** | `cgfx_primitives.h` | Plane, triangle, sphere, cube generators |
 | **Loader** | `cgfx_loader.h` | Load geometry from LearnWebGPU text format (temporary) |
 
 ## Module Dependency Diagram
@@ -45,16 +44,14 @@ cgfx.h  (umbrella — includes everything)
   |     |
   +-- cgfx_mesh.h           [ctx, buffer]
   |     |
-  +-- cgfx_camera.h         [cglm, ctx, buffer, shader]
-  |     |
-  +-- cgfx_primitives.h     [ctx, mesh]
+  +-- cgfx_camera.h         [cglm, ctx, buffer]
   |     |
   +-- cgfx_loader.h         [mesh]
 ```
 
 All modules depend on `cgfx_export.h` for the `CGFX_API` macro, omitted above for clarity.
 
-The context (`cgfx_ctx.h`) is the foundation -- every other module takes a `const CgfxCtx *` as its first parameter. The buffer module sits above the context, and the shader module depends on both context and buffer (because `cgfx_shader_create_bind_group` takes `CgfxBuffer` pointers). The pipeline depends on the shader for layout information.
+The context (`cgfx_ctx.h`) is the foundation -- every other module takes a `const CgfxCtx *` as its first parameter. The buffer module sits above the context, and the shader module depends on both context and buffer (because `cgfx_bind_group_create_buffers` takes `CgfxBuffer` pointers). The pipeline depends on the shader for layout information.
 
 ## Initialization Flow
 
@@ -78,9 +75,14 @@ cgfx_ctx_init(ctx, &desc)
 |      - Selects the best available GPU
 |      - Power preference, surface compatibility
 |
+|   4b. Feature check
+|      - Warns on stderr for any requested feature
+|        the adapter does not support
+|
 |   5. wgpuAdapterRequestDevice() [sync wrapper]
-|      - Creates logical device with requested limits
-|      - Registers error and device-lost callbacks
+|      - Creates logical device with requested limits and features
+|      - Registers device-lost and error callbacks
+|        (user-provided via desc, or default stderr)
 |
 |   6. wgpuDeviceGetQueue()
 |      - Obtains the default command queue
@@ -163,6 +165,36 @@ v
 !!! note "Two-Phase Frame Begin"
     `cgfx_frame_begin` is equivalent to `cgfx_frame_begin_encoder` + `cgfx_frame_begin_render_pass`. Use the split functions when you need to run compute passes before the render pass on the same command encoder. See the [Frame API reference](api/frame.md) for details.
 
+## Frame and Compute Lifecycle Patterns
+
+cgfx uses two lifecycle patterns for multi-pass work. Both express the same concept - "standalone vs. borrow an encoder" - but with different shapes:
+
+**Frame module** uses separate functions:
+
+- `cgfx_frame_begin` - all-in-one (encoder + render pass)
+- `cgfx_frame_begin_encoder` + `cgfx_frame_begin_render_pass` - split for compute-before-render
+- `cgfx_frame_begin_render_pass_ex` - generalized (offscreen, MRT)
+- `cgfx_frame_end_render_pass` - close a pass without ending the frame (multi-pass)
+- `cgfx_frame_end` - submit + present
+
+**Compute module** uses an ownership flag:
+
+- `cgfx_compute_begin`/`cgfx_compute_end` - standalone, creates and submits its own encoder
+- `cgfx_compute_pass_begin`/`cgfx_compute_pass_end` - borrows a caller-supplied encoder (e.g., `frame.encoder`)
+
+The common pattern for mixed compute+render in one frame:
+
+```c
+cgfx_frame_begin_encoder(&ctx, &frame);    // acquire surface, create encoder
+CgfxComputePass cp;
+cgfx_compute_pass_begin(frame.encoder, &cp); // borrow the frame's encoder
+// ... dispatch ...
+cgfx_compute_pass_end(&cp);
+cgfx_frame_begin_render_pass(&ctx, &frame, clear_color);
+// ... draw ...
+cgfx_frame_end(&ctx, &frame);
+```
+
 ## Cleanup Flow
 
 Resources are destroyed in reverse creation order:
@@ -171,8 +203,10 @@ Resources are destroyed in reverse creation order:
 Application cleanup (reverse order of creation):
 
     1. cgfx_uniform_destroy(&uniform)          -- releases bind group + buffer
-    2. wgpuRenderPipelineRelease(pipeline)      -- raw WebGPU handle
-    2b. wgpuComputePipelineRelease(pipeline)    -- raw WebGPU handle (if used)
+    2. cgfx_pipeline_destroy(pipeline)          -- releases render pipeline
+    2b. cgfx_compute_pipeline_destroy(pipeline) -- releases compute pipeline (if used)
+    2c. cgfx_bind_group_destroy(bg)             -- releases bind group (if created separately)
+    2d. cgfx_sampler_destroy(sampler)           -- releases sampler (if created)
     3. cgfx_shader_destroy(&shader)             -- releases module + layouts
     4. cgfx_ctx_destroy(&ctx)                   -- releases everything below
 
@@ -195,7 +229,7 @@ cgfx_ctx_destroy(&ctx):
 
 ### Pure C23
 
-cgfx is written in C23 with no C++ dependencies. It compiles with `-std=c23` (GCC/Clang) or `/std:c23` (MSVC). C23 features used include compound literals with designated initializers, `nullptr`, and `= {}` zero-initialization.
+cgfx is written in C23 and compiles with `-std=c23` (GCC/Clang) or `/std:c23` (MSVC). C23 features used include compound literals with designated initializers, `nullptr`, and `= {}` zero-initialization.
 
 ### Transparent Structs
 
@@ -221,7 +255,7 @@ Every descriptor struct is designed so that `= {}` (all zeros) produces sensible
 // All defaults: 1280x720 window titled "cgfx", VSync, no depth buffer
 cgfx_ctx_init(&ctx, &(CgfxCtxDesc){});
 
-// All defaults: triangle list, no culling, alpha blending, vs_main/fs_main
+// All defaults: triangle list, no culling, opaque (no blend), vs_main/fs_main
 cgfx_pipeline_create(&ctx, &(CgfxPipelineDesc){ .shader = &shader });
 ```
 

@@ -84,7 +84,7 @@ int main(void) {
         }
     }
 
-    wgpuRenderPipelineRelease(pipeline);
+    cgfx_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 
@@ -169,7 +169,7 @@ A render pipeline defines how vertices are processed and pixels are drawn. In ra
 - **Topology**: Triangle list
 - **Culling**: None (both faces visible)
 - **Front face**: Counter-clockwise
-- **Blending**: Standard alpha blending
+- **Blending**: Opaque (no blending) -- opt in via `CgfxColorTarget`
 - **Entry points**: `"vs_main"` / `"fs_main"`
 - **Layout**: Taken from `shader->pipeline_layout` (automatic for this example)
 
@@ -205,12 +205,12 @@ The render loop has four parts:
 ### Step 5: Cleanup
 
 ```c
-wgpuRenderPipelineRelease(pipeline);
+cgfx_pipeline_destroy(pipeline);
 cgfx_shader_destroy(&shader);
 cgfx_ctx_destroy(&ctx);
 ```
 
-Resources are destroyed in reverse creation order. The pipeline is a raw WebGPU handle, so you release it with `wgpuRenderPipelineRelease`. The shader and context use cgfx destroy functions that handle their internal resources.
+Resources are destroyed in reverse creation order. All cgfx-created resources use `cgfx_*_destroy()` for cleanup.
 
 !!! warning "Destruction Order"
     Always destroy resources in reverse creation order. Destroying the context first would invalidate the device, making it impossible to properly release the pipeline and shader.

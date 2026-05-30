@@ -47,7 +47,7 @@ CGFX_API WGPUComputePipeline cgfx_compute_pipeline_create(
 | `ctx` | `const CgfxCtx*` | Initialized context. |
 | `desc` | `const CgfxComputeDesc*` | Compute pipeline configuration. `shader` is required. |
 
-**Returns:** A `WGPUComputePipeline` handle, or `NULL` on failure. Caller must release with `wgpuComputePipelineRelease()`.
+**Returns:** A `WGPUComputePipeline` handle, or `NULL` on failure. Caller must release with `cgfx_compute_pipeline_destroy()`.
 
 **Example:**
 
@@ -56,8 +56,22 @@ WGPUComputePipeline pipeline = cgfx_compute_pipeline_create(&ctx,
     &(CgfxComputeDesc){ .shader = &shader });
 
 // ... use pipeline ...
-wgpuComputePipelineRelease(pipeline);
+cgfx_compute_pipeline_destroy(pipeline);
 ```
+
+---
+
+### cgfx_compute_pipeline_destroy
+
+Release a compute pipeline.
+
+```c
+CGFX_API void cgfx_compute_pipeline_destroy(WGPUComputePipeline pipeline);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pipeline` | `WGPUComputePipeline` | Compute pipeline to release. |
 
 ---
 
@@ -167,7 +181,7 @@ CgfxBuffer input  = cgfx_buffer_create_storage(&ctx, data, sizeof(data));
 CgfxBuffer output = cgfx_buffer_create_storage(&ctx, NULL, sizeof(data));
 
 // 4. Create bind group (reuse existing shader API)
-WGPUBindGroup bg = cgfx_shader_create_bind_group(&ctx, &shader, 0,
+WGPUBindGroup bg = cgfx_bind_group_create_buffers(&ctx, &shader, 0,
     (CgfxBuffer[]){ input, output }, 2);
 
 // 5. Dispatch
@@ -179,9 +193,10 @@ wgpuComputePassEncoderDispatchWorkgroups(cp.pass, 64, 1, 1);
 cgfx_compute_end(&ctx, &cp);
 
 // 6. Read back results
-CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, output.size, 0);
 cgfx_buffer_copy(&ctx, &output, &readback, 0);
-// ... map and read readback.buffer ...
+float result[256];
+cgfx_buffer_read(&ctx, &readback, result, sizeof(result));
 ```
 
 !!! note "Visibility must be explicit"
@@ -218,16 +233,12 @@ if (cgfx_frame_begin_encoder(&ctx, &frame)) {
 After compute dispatch, copy results to a mapping buffer and read them on the CPU:
 
 ```c
-// Copy storage buffer to mapping buffer
-CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, NULL, output.size, 0);
+// Copy storage buffer to mapping buffer, then read to CPU
+CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, output.size, 0);
 cgfx_buffer_copy(&ctx, &output, &readback, 0);
 
-// Map and read
-wgpuBufferMapAsync(readback.buffer, WGPUMapMode_Read, 0, readback.size,
-                    &on_mapped, &readback);
-// ... poll until readback.ready ...
-const float *result = wgpuBufferGetConstMappedRange(readback.buffer, 0, readback.size);
+float result[256];
+cgfx_buffer_read(&ctx, &readback, result, sizeof(result));
 // ... use result ...
-wgpuBufferUnmap(readback.buffer);
 cgfx_buffer_destroy(&readback);
 ```

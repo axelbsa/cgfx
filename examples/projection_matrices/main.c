@@ -4,6 +4,7 @@
  *        testing so back faces are properly occluded.
  */
 #include "cgfx.h"
+#include "cgfx_loader.h"
 
 typedef struct {
     float time;
@@ -62,7 +63,7 @@ int main(void) {
 
     cgfx_uniform_destroy(&uniform);
     cgfx_mesh_destroy(&mesh);
-    wgpuRenderPipelineRelease(pipeline);
+    cgfx_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 

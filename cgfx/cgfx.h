@@ -31,7 +31,6 @@
 #include "cgfx_texture.h"
 #include "cgfx_compute.h"
 
-#include "cgfx_loader.h"
 #include "cgfx_camera.h"
 
 #endif /* CGFX_H */

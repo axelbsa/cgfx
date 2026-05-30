@@ -8,7 +8,7 @@ Built on top of [wgpu-native](https://github.com/gfx-rs/wgpu-native) (with optio
 
 ## At a Glance
 
-- **Pure C23** -- no C++ required
+- **Pure C23**
 - **Transparent structs** -- access raw WebGPU handles (`ctx.device`, `shader.group_layouts[0]`) for anything cgfx doesn't wrap
 - **Zero-init defaults** -- `CgfxPipelineDesc desc = { .shader = &s };` gives you working defaults
 - **No global state** -- context passed by pointer
@@ -54,7 +54,7 @@ int main(void) {
         }
     }
 
-    wgpuRenderPipelineRelease(pipeline);
+    cgfx_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 }

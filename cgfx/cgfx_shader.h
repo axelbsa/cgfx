@@ -52,14 +52,21 @@ typedef enum CgfxBindingKind {
  */
 typedef struct CgfxBindingDesc {
     uint32_t               binding;           /**< @binding(N) index.                    */
-    WGPUShaderStageFlags   visibility;        /**< Shader stage visibility. 0 = auto.    */
+    WGPUShaderStageFlags   visibility;        /**< Shader stage visibility. 0 = auto:
+                                                    Buffer→Vertex|Fragment, Texture/Sampler→Fragment,
+                                                    Storage→Compute. Set explicitly for vertex-stage
+                                                    textures or compute-only buffers.              */
     CgfxBindingKind        kind;              /**< Binding kind. 0 = Buffer.             */
 
     WGPUBufferBindingType  type;              /**< Buffer binding type. 0 = Uniform.     */
     uint64_t               min_binding_size;  /**< Minimum buffer size. 0 = none.        */
+    bool                   has_dynamic_offset; /**< Buffer uses dynamic offset at bind time. */
 
     WGPUTextureSampleType    sample_type;     /**< Texture sample type. 0 = Float.       */
     WGPUTextureViewDimension view_dimension;  /**< Texture view dimension. 0 = 2D.       */
+
+    WGPUSamplerBindingType   sampler_type;    /**< Sampler binding type. 0 = Filtering.
+                                                   Use Comparison for shadow mapping.     */
 
     WGPUStorageTextureAccess storage_access;  /**< Storage texture access. 0 = WriteOnly.*/
     WGPUTextureFormat        storage_format;  /**< Storage texture format. Required.      */
@@ -94,6 +101,7 @@ typedef struct CgfxShader {
     WGPUPipelineLayout    pipeline_layout; /**< Pipeline layout (NULL = automatic). */
     WGPUBindGroupLayout  *group_layouts;   /**< Array of bind group layouts.        */
     uint32_t              group_count;     /**< Number of bind group layouts.       */
+    bool                  ok;              /**< True if creation fully succeeded — check before use. */
 } CgfxShader;
 
 /**
@@ -148,20 +156,20 @@ CGFX_API CgfxShader cgfx_shader_create_from_file(const CgfxCtx *ctx,
                                          const CgfxShaderDesc *desc);
 
 /**
- * Create a bind group for a specific @group index using the shader's layout.
+ * Create a buffer-only bind group for a specific @group index.
  *
  * Each buffer maps to consecutive binding indices: buffers[0] → @binding(0),
  * buffers[1] → @binding(1), etc. For non-consecutive bindings or non-buffer
- * resources, use shader->group_layouts[group_index] with raw WebGPU.
+ * resources, use cgfx_bind_group_create() with CgfxBindGroupEntry[].
  *
  * @param ctx           Initialized context.
  * @param shader        Shader with bind group layouts.
  * @param group_index   The @group(N) index.
  * @param buffers       Array of CgfxBuffer (one per binding).
  * @param buffer_count  Number of buffers.
- * @return              Bind group handle. Caller releases with wgpuBindGroupRelease().
+ * @return              Bind group handle. Caller releases with cgfx_bind_group_destroy().
  */
-CGFX_API WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
+CGFX_API WGPUBindGroup cgfx_bind_group_create_buffers(const CgfxCtx *ctx,
                                             const CgfxShader *shader,
                                             uint32_t group_index,
                                             const CgfxBuffer *buffers,
@@ -176,12 +184,14 @@ typedef struct CgfxBindGroupEntry {
     const CgfxBuffer  *buffer;    /**< Non-NULL for buffer bindings.               */
     const CgfxTexture *texture;   /**< Non-NULL for texture bindings (uses view).  */
     WGPUSampler        sampler;   /**< Non-NULL for sampler bindings.              */
+    uint64_t           offset;    /**< Buffer sub-range offset. 0 = start.         */
+    uint64_t           size;      /**< Buffer sub-range size. 0 = entire buffer.   */
 } CgfxBindGroupEntry;
 
 /**
  * Create a bind group with mixed buffer, texture, and sampler entries.
  *
- * Unlike cgfx_shader_create_bind_group() (buffer-only, positional),
+ * Unlike cgfx_bind_group_create_buffers() (buffer-only, positional),
  * this function uses explicit binding indices and supports all resource
  * types.
  *
@@ -197,7 +207,7 @@ typedef struct CgfxBindGroupEntry {
  * @param group_index  The @group(N) index.
  * @param entries      Array of bind group entries.
  * @param entry_count  Number of entries.
- * @return             Bind group handle. Caller releases with wgpuBindGroupRelease().
+ * @return             Bind group handle. Caller releases with cgfx_bind_group_destroy().
  */
 CGFX_API WGPUBindGroup cgfx_bind_group_create(const CgfxCtx *ctx,
                                                const CgfxShader *shader,
@@ -234,11 +244,52 @@ CGFX_API void cgfx_shader_bind_compute(WGPUComputePassEncoder pass,
                                         uint32_t group_count);
 
 /**
+ * Set a single bind group on a render pass with dynamic offsets.
+ *
+ * Use with bind groups whose layout entries have has_dynamic_offset = true.
+ * Each dynamic-offset binding consumes one uint32_t from the offsets array,
+ * in binding-index order.
+ *
+ * @param pass          Active render pass encoder.
+ * @param group_index   The @group(N) index to bind to.
+ * @param group         Bind group handle.
+ * @param offsets       Array of byte offsets into the dynamic buffers.
+ * @param offset_count  Number of offsets (must match dynamic binding count).
+ */
+CGFX_API void cgfx_shader_bind_dynamic(WGPURenderPassEncoder pass,
+                                        uint32_t group_index,
+                                        WGPUBindGroup group,
+                                        const uint32_t *offsets,
+                                        uint32_t offset_count);
+
+/**
+ * Set a single bind group on a compute pass with dynamic offsets.
+ *
+ * @param pass          Active compute pass encoder.
+ * @param group_index   The @group(N) index to bind to.
+ * @param group         Bind group handle.
+ * @param offsets       Array of byte offsets into the dynamic buffers.
+ * @param offset_count  Number of offsets (must match dynamic binding count).
+ */
+CGFX_API void cgfx_shader_bind_compute_dynamic(WGPUComputePassEncoder pass,
+                                                uint32_t group_index,
+                                                WGPUBindGroup group,
+                                                const uint32_t *offsets,
+                                                uint32_t offset_count);
+
+/**
+ * Release a bind group.
+ *
+ * @param group  Bind group to release (NULL-safe).
+ */
+CGFX_API void cgfx_bind_group_destroy(WGPUBindGroup group);
+
+/**
  * Destroy a shader and release all owned resources.
  *
  * Releases the shader module, pipeline layout, and all bind group layouts.
- * Does NOT release bind groups created via cgfx_shader_create_bind_group
- * — those are owned by the caller.
+ * Does NOT release bind groups created via cgfx_bind_group_create_buffers
+ * or cgfx_bind_group_create — those are owned by the caller.
  *
  * @param shader  Shader to destroy.
  */

@@ -8,10 +8,6 @@
 #include <stdio.h>
 #include "cgfx.h"
 
-#ifdef WEBGPU_BACKEND_WGPU
-#  include <webgpu/wgpu.h>
-#endif
-
 static const char *compute_shader =
     "@group(0) @binding(0) var<storage, read>       input_a : array<f32>;\n"
     "@group(0) @binding(1) var<storage, read>       input_b : array<f32>;\n"
@@ -26,12 +22,6 @@ static const char *compute_shader =
     "}\n";
 
 #define N 256
-
-static void on_buffer_mapped(WGPUBufferMapAsyncStatus status, void *user_data) {
-    CgfxBuffer *buf = (CgfxBuffer *)user_data;
-    if (status == WGPUBufferMapAsyncStatus_Success)
-        buf->ready = true;
-}
 
 int main(void) {
     CgfxCtx ctx;
@@ -81,7 +71,7 @@ int main(void) {
     CgfxBuffer buf_out = cgfx_buffer_create_storage(&ctx, nullptr, sizeof(a));
 
     /* Create bind group */
-    WGPUBindGroup bg = cgfx_shader_create_bind_group(&ctx, &shader, 0,
+    WGPUBindGroup bg = cgfx_bind_group_create_buffers(&ctx, &shader, 0,
         (CgfxBuffer[]){ buf_a, buf_b, buf_out }, 3);
 
     /* Dispatch compute shader */
@@ -93,20 +83,15 @@ int main(void) {
     cgfx_compute_end(&ctx, &cp);
 
     /* Read back results */
-    CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, nullptr, sizeof(a), N);
+    CgfxBuffer readback = cgfx_buffer_create_mapping(&ctx, sizeof(a), N);
     cgfx_buffer_copy(&ctx, &buf_out, &readback, 0);
 
-    wgpuBufferMapAsync(readback.buffer, WGPUMapMode_Read, 0, readback.size,
-                        &on_buffer_mapped, &readback);
-    while (!readback.ready) {
-#if defined(WEBGPU_BACKEND_DAWN)
-        wgpuDeviceTick(ctx.device);
-#elif defined(WEBGPU_BACKEND_WGPU)
-        wgpuDevicePoll(ctx.device, true, nullptr);
-#endif
+    float result[N];
+    if (!cgfx_buffer_read(&ctx, &readback, result, sizeof(result))) {
+        fprintf(stderr, "Failed to read back compute results\n");
+        return 1;
     }
 
-    const float *result = wgpuBufferGetConstMappedRange(readback.buffer, 0, readback.size);
     printf("Vector addition: a[i] + b[i] where a[i]=i, b[i]=i*2\n");
     printf("First 8 results: ");
     for (int i = 0; i < 8; i++)
@@ -126,15 +111,13 @@ int main(void) {
     if (correct)
         printf("All %d results correct!\n", N);
 
-    wgpuBufferUnmap(readback.buffer);
-
     /* Cleanup */
-    wgpuBindGroupRelease(bg);
+    cgfx_bind_group_destroy(bg);
     cgfx_buffer_destroy(&readback);
     cgfx_buffer_destroy(&buf_out);
     cgfx_buffer_destroy(&buf_b);
     cgfx_buffer_destroy(&buf_a);
-    wgpuComputePipelineRelease(pipeline);
+    cgfx_compute_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 

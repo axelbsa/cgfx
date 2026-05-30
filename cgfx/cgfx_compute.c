@@ -30,6 +30,12 @@ WGPUComputePipeline cgfx_compute_pipeline_create(const CgfxCtx *ctx,
 }
 
 
+void cgfx_compute_pipeline_destroy(WGPUComputePipeline pipeline) {
+    if (pipeline)
+        wgpuComputePipelineRelease(pipeline);
+}
+
+
 bool cgfx_compute_begin(const CgfxCtx *ctx, CgfxComputePass *cp) {
     memset(cp, 0, sizeof(*cp));
 

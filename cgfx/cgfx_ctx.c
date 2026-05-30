@@ -46,6 +46,9 @@ static void cgfx__device_error_callback(WGPUErrorType type,
 WGPURequiredLimits cgfx_default_limits(void) {
     WGPURequiredLimits limits = {0};
     limits.nextInChain = nullptr;
+    /* 0xFF fills every u32 with WGPU_LIMIT_U32_UNDEFINED (0xFFFFFFFF) and
+       every u64 with WGPU_LIMIT_U64_UNDEFINED. This works because the
+       WGPULimits struct contains only integer limit fields. */
     memset(&limits.limits, 0xFF, sizeof(limits.limits));
     return limits;
 }
@@ -83,7 +86,12 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
                                     WGPUPresentMode present_mode,
                                     const WGPURequiredLimits *limits,
                                     bool depth_buffer,
-                                    WGPUInstance instance) {
+                                    WGPUInstance instance,
+                                    uint32_t feature_count,
+                                    const WGPUFeatureName *features,
+                                    CgfxDeviceLostCallback on_device_lost,
+                                    CgfxDeviceErrorCallback on_device_error,
+                                    void *callback_user_data) {
     /* ── Request adapter ─────────────────────────────────────────── */
     fprintf(stderr, "[cgfx] Requesting adapter...\n");
     WGPURequestAdapterOptions adapter_opts = {};
@@ -111,16 +119,26 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
     // much noise
 #endif
 
+    /* ── Check requested features ───────────────────────────────── */
+    for (uint32_t i = 0; i < feature_count; i++) {
+        if (!wgpuAdapterHasFeature(adapter, features[i]))
+            fprintf(stderr, "[cgfx] Warning: adapter does not support feature %d\n",
+                    (int)features[i]);
+    }
+
     /* ── Request device ──────────────────────────────────────────── */
     fprintf(stderr, "[cgfx] Requesting device...\n");
     WGPUDeviceDescriptor device_desc = {};
     device_desc.nextInChain = nullptr;
     device_desc.label = "cgfx device";
-    device_desc.requiredFeatureCount = 0;
+    device_desc.requiredFeatureCount = feature_count;
+    device_desc.requiredFeatures = features;
     device_desc.requiredLimits = limits;
     device_desc.defaultQueue.nextInChain = nullptr;
     device_desc.defaultQueue.label = "cgfx default queue";
-    device_desc.deviceLostCallback = &cgfx__device_lost_callback;
+    device_desc.deviceLostCallback = on_device_lost
+        ? on_device_lost : &cgfx__device_lost_callback;
+    device_desc.deviceLostUserdata = callback_user_data;
     ctx->device = cgfx__request_device_sync(adapter, &device_desc);
     fprintf(stderr, "[cgfx] Got device: %p\n", (void *)ctx->device);
 
@@ -132,9 +150,10 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
     }
 
     /* ── Error callback ──────────────────────────────────────────── */
-    wgpuDeviceSetUncapturedErrorCallback(ctx->device,
-                                          &cgfx__device_error_callback,
-                                          nullptr);
+    wgpuDeviceSetUncapturedErrorCallback(
+        ctx->device,
+        on_device_error ? on_device_error : &cgfx__device_error_callback,
+        callback_user_data);
 
     /* ── Get default queue ───────────────────────────────────────── */
     ctx->queue = wgpuDeviceGetQueue(ctx->device);
@@ -157,6 +176,15 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
             .format = WGPUTextureFormat_Depth24Plus,
             .usage  = WGPUTextureUsage_RenderAttachment,
         });
+
+        if (!ctx->depth_texture.ok) {
+            fprintf(stderr, "[cgfx] Failed to create depth buffer\n");
+            wgpuSurfaceUnconfigure(ctx->surface);
+            wgpuQueueRelease(ctx->queue);
+            wgpuSurfaceRelease(ctx->surface);
+            wgpuDeviceRelease(ctx->device);
+            return false;
+        }
     }
 
     return true;
@@ -196,7 +224,10 @@ bool cgfx_ctx_init(CgfxCtx *ctx, const CgfxCtxDesc *desc) {
     ctx->surface = glfwGetWGPUSurface(instance, ctx->window);
 
     if (!cgfx__init_from_surface(ctx, width, height, present_mode,
-                                 &desc->limits, desc->depth_buffer, instance)) {
+                                 &desc->limits, desc->depth_buffer, instance,
+                                 desc->feature_count, desc->features,
+                                 desc->on_device_lost, desc->on_device_error,
+                                 desc->callback_user_data)) {
         glfwDestroyWindow(ctx->window);
         glfwTerminate();
         return false;
@@ -239,7 +270,10 @@ bool cgfx_ctx_init_external(CgfxCtx *ctx, const CgfxCtxExternalDesc *desc) {
 
     return cgfx__init_from_surface(ctx, desc->width, desc->height,
                                    present_mode, &desc->limits,
-                                   desc->depth_buffer, instance);
+                                   desc->depth_buffer, instance,
+                                   desc->feature_count, desc->features,
+                                   desc->on_device_lost, desc->on_device_error,
+                                   desc->callback_user_data);
 #else
     (void)present_mode;
     fprintf(stderr, "[cgfx] cgfx_ctx_init_external() is only supported on Windows\n");
@@ -271,6 +305,11 @@ bool cgfx_ctx_resize(CgfxCtx *ctx, uint32_t width, uint32_t height) {
             .format = depth_fmt,
             .usage  = WGPUTextureUsage_RenderAttachment,
         });
+
+        if (!ctx->depth_texture.ok) {
+            fprintf(stderr, "[cgfx] Failed to recreate depth buffer on resize\n");
+            return false;
+        }
     }
 
     ctx->width = width;

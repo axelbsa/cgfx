@@ -185,14 +185,14 @@ int main(void) {
         }
     }
 
-    wgpuBindGroupRelease(render_bg);
-    wgpuBindGroupRelease(compute_bg);
+    cgfx_bind_group_destroy(render_bg);
+    cgfx_bind_group_destroy(compute_bg);
     cgfx_buffer_destroy(&params_buf);
-    wgpuRenderPipelineRelease(render_pipeline);
-    wgpuComputePipelineRelease(compute_pipeline);
+    cgfx_pipeline_destroy(render_pipeline);
+    cgfx_compute_pipeline_destroy(compute_pipeline);
     cgfx_shader_destroy(&render_shader);
     cgfx_shader_destroy(&compute_shader);
-    wgpuSamplerRelease(sampler);
+    cgfx_sampler_destroy(sampler);
     cgfx_texture_destroy(&tex);
     cgfx_ctx_destroy(&ctx);
 

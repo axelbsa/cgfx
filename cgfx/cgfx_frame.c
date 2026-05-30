@@ -5,6 +5,7 @@
 #include "cgfx_frame.h"
 
 #include <stddef.h>
+#include <stdio.h>
 
 #include <webgpu/webgpu.h>
 #ifdef WEBGPU_BACKEND_WGPU
@@ -15,22 +16,40 @@
 /**
  * Acquire the next surface texture and create a view for rendering.
  *
- * Gets the current surface texture from the swap chain, checks its status,
- * and creates a 2D texture view configured for rendering.
+ * Gets the current surface texture from the swap chain and checks its status.
+ * On Outdated or Lost (common after resize, DPI change, or compositor event),
+ * reconfigures the surface with the current ctx dimensions and retries once.
+ * Returns NULL only for genuinely unrecoverable statuses (Timeout, OOM,
+ * DeviceLost) so the caller can safely skip the frame.
  *
  * Backend difference: On non-wgpu-native backends, the surface texture is
  * released after creating the view (the view holds a reference). On
  * wgpu-native, surface textures must NOT be manually released.
  *
- * @param surface  The window surface to acquire from.
- * @return         A texture view for rendering, or NULL if unavailable.
+ * @param ctx  The initialized context (surface, device, format, dimensions).
+ * @return     A texture view for rendering, or NULL if unavailable.
  */
-static WGPUTextureView cgfx__get_surface_texture_view(WGPUSurface surface) {
+static WGPUTextureView cgfx__get_surface_texture_view(const CgfxCtx *ctx) {
     WGPUSurfaceTexture surface_texture;
-    wgpuSurfaceGetCurrentTexture(surface, &surface_texture);
-    if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
-        return nullptr;
+    wgpuSurfaceGetCurrentTexture(ctx->surface, &surface_texture);
+
+    if (surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
+        surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Lost) {
+        WGPUSurfaceConfiguration config = {
+            .device      = ctx->device,
+            .format      = ctx->surface_format,
+            .usage       = WGPUTextureUsage_RenderAttachment,
+            .width       = ctx->width,
+            .height      = ctx->height,
+            .presentMode = ctx->present_mode,
+            .alphaMode   = WGPUCompositeAlphaMode_Auto,
+        };
+        wgpuSurfaceConfigure(ctx->surface, &config);
+        wgpuSurfaceGetCurrentTexture(ctx->surface, &surface_texture);
     }
+
+    if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success)
+        return nullptr;
 
     WGPUTextureViewDescriptor view_desc = {};
     view_desc.nextInChain = nullptr;
@@ -59,7 +78,7 @@ static WGPUTextureView cgfx__get_surface_texture_view(WGPUSurface surface) {
 
 
 bool cgfx_frame_begin_encoder(const CgfxCtx *ctx, CgfxFrame *frame) {
-    frame->target_view = cgfx__get_surface_texture_view(ctx->surface);
+    frame->target_view = cgfx__get_surface_texture_view(ctx);
     if (!frame->target_view)
         return false;
 
@@ -73,41 +92,79 @@ bool cgfx_frame_begin_encoder(const CgfxCtx *ctx, CgfxFrame *frame) {
 }
 
 
-void cgfx_frame_begin_render_pass(const CgfxCtx *ctx,
-                                   CgfxFrame *frame,
-                                   WGPUColor clear_color) {
-    WGPURenderPassColorAttachment color_attachment = {};
-    color_attachment.view = frame->target_view;
-    color_attachment.resolveTarget = nullptr;
-    color_attachment.loadOp = WGPULoadOp_Clear;
-    color_attachment.storeOp = WGPUStoreOp_Store;
-    color_attachment.clearValue = clear_color;
+#define CGFX_MAX_COLOR_ATTACHMENTS 8 /* WebGPU default maxColorAttachments */
 
+void cgfx_frame_begin_render_pass_ex(const CgfxCtx *ctx,
+                                     CgfxFrame *frame,
+                                     const CgfxRenderPassDesc *desc) {
+    WGPURenderPassColorAttachment colors[CGFX_MAX_COLOR_ATTACHMENTS] = {};
+
+    uint32_t count = desc->color_count ? desc->color_count : 1;
+    if (count > CGFX_MAX_COLOR_ATTACHMENTS) {
+        fprintf(stderr, "[cgfx_frame] color_count %u exceeds max %d; clamping\n",
+                count, CGFX_MAX_COLOR_ATTACHMENTS);
+        count = CGFX_MAX_COLOR_ATTACHMENTS;
+    }
+
+    for (uint32_t i = 0; i < count; i++) {
+        colors[i].view = (desc->color_count && desc->color_views)
+                             ? desc->color_views[i]
+                             : frame->target_view;
+        colors[i].resolveTarget = desc->resolve_views
+            ? desc->resolve_views[i] : nullptr;
+        colors[i].loadOp = WGPULoadOp_Clear;
+        colors[i].storeOp = WGPUStoreOp_Store;
+        colors[i].clearValue = desc->clear_color;
 #ifndef WEBGPU_BACKEND_WGPU
-    color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+        colors[i].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif
+    }
+
+    /* Depth: explicit view, else the context depth buffer, unless suppressed. */
+    WGPUTextureView depth_view = nullptr;
+    if (!desc->no_depth)
+        depth_view = desc->depth_view ? desc->depth_view : ctx->depth_texture.view;
 
     WGPURenderPassDepthStencilAttachment depth_stencil = {};
-    if (ctx->depth_texture.view) {
-        depth_stencil.view = ctx->depth_texture.view;
+    if (depth_view) {
+        depth_stencil.view = depth_view;
         depth_stencil.depthClearValue = 1.0f;
         depth_stencil.depthLoadOp = WGPULoadOp_Clear;
         depth_stencil.depthStoreOp = WGPUStoreOp_Store;
         depth_stencil.depthReadOnly = false;
         depth_stencil.stencilClearValue = 0;
-        depth_stencil.stencilLoadOp = WGPULoadOp_Clear;
-        depth_stencil.stencilStoreOp = WGPUStoreOp_Store;
-        depth_stencil.stencilReadOnly = true;
+        depth_stencil.stencilLoadOp = WGPULoadOp_Undefined;
+        depth_stencil.stencilStoreOp = WGPUStoreOp_Undefined;
+        depth_stencil.stencilReadOnly = false;
     }
 
     WGPURenderPassDescriptor pass_desc = {};
     pass_desc.nextInChain = nullptr;
-    pass_desc.colorAttachmentCount = 1;
-    pass_desc.colorAttachments = &color_attachment;
-    pass_desc.depthStencilAttachment = ctx->depth_texture.view ? &depth_stencil : nullptr;
+    pass_desc.colorAttachmentCount = count;
+    pass_desc.colorAttachments = colors;
+    pass_desc.depthStencilAttachment = depth_view ? &depth_stencil : nullptr;
     pass_desc.timestampWrites = nullptr;
 
     frame->render_pass = wgpuCommandEncoderBeginRenderPass(frame->encoder, &pass_desc);
+}
+
+
+void cgfx_frame_begin_render_pass(const CgfxCtx *ctx,
+                                   CgfxFrame *frame,
+                                   WGPUColor clear_color) {
+    cgfx_frame_begin_render_pass_ex(ctx, frame, &(CgfxRenderPassDesc){
+        .color_count = 0,           /* surface target */
+        .clear_color = clear_color, /* depth from ctx if present */
+    });
+}
+
+
+void cgfx_frame_end_render_pass(CgfxFrame *frame) {
+    if (!frame->render_pass)
+        return;
+    wgpuRenderPassEncoderEnd(frame->render_pass);
+    wgpuRenderPassEncoderRelease(frame->render_pass);
+    frame->render_pass = nullptr;
 }
 
 
@@ -120,9 +177,17 @@ bool cgfx_frame_begin(const CgfxCtx *ctx, CgfxFrame *frame, WGPUColor clear_colo
 
 
 void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame) {
-    /* Finalize the render pass — no more draw commands after this */
-    wgpuRenderPassEncoderEnd(frame->render_pass);
-    wgpuRenderPassEncoderRelease(frame->render_pass);
+    /*
+     * Finalize the current render pass, if one is still open. It may already
+     * be closed (multi-pass frames call cgfx_frame_end_render_pass between
+     * passes) or never have started (compute-only frames), so guard against a
+     * NULL render pass rather than calling End on it unconditionally.
+     */
+    if (frame->render_pass) {
+        wgpuRenderPassEncoderEnd(frame->render_pass);
+        wgpuRenderPassEncoderRelease(frame->render_pass);
+        frame->render_pass = nullptr;
+    }
 
     /*
      * Finish the command encoder to produce a command buffer.

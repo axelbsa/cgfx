@@ -9,6 +9,7 @@
  */
 #include "cgfx_buffer.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #include <webgpu/webgpu.h>
@@ -35,6 +36,7 @@ CgfxBuffer cgfx_buffer_create_vertex(const CgfxCtx *ctx,
 
     result.size = data_size;
     result.count = count;
+    result.ok = (result.buffer != nullptr);
 
     return result;
 }
@@ -48,7 +50,7 @@ CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
 
     WGPUBufferDescriptor bufferDesc = {};
     bufferDesc.nextInChain = nullptr;
-    bufferDesc.label = "cgfx vertex buffer";
+    bufferDesc.label = "cgfx index buffer";
     bufferDesc.usage =  WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
     bufferDesc.size = size;
     bufferDesc.mappedAtCreation = false;
@@ -58,6 +60,7 @@ CgfxBuffer cgfx_buffer_create_index(const CgfxCtx *ctx,
 
     result.size = size;
     result.count = count;
+    result.ok = (result.buffer != nullptr);
 
     return result;
 }
@@ -80,7 +83,6 @@ CgfxBuffer cgfx_buffer_create_uniform(const CgfxCtx *ctx,
 
 
 CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
-                                      const void *data,
                                       const uint64_t data_size,
                                       const uint32_t count) {
     CgfxBuffer result = {.buffer = nullptr, .size = 0, .count = 0};
@@ -95,8 +97,7 @@ CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
     result.buffer = wgpuDeviceCreateBuffer(ctx->device, &bufferDesc);
     result.size = data_size;
     result.count = count;
-
-    (void) data;
+    result.ok = (result.buffer != nullptr);
 
     return result;
 }
@@ -131,8 +132,60 @@ CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
     }
 
     result.size = data_size;
+    result.ok = (result.buffer != nullptr);
 
     return result;
+}
+
+
+/* ── Synchronous map-read ─────────────────────────────────────────── */
+
+typedef struct {
+    bool done;
+    bool ok;
+} CgfxMapRequestData;
+
+static void cgfx__on_buffer_mapped(WGPUBufferMapAsyncStatus status,
+                                   void *user_data) {
+    CgfxMapRequestData *data = user_data;
+    data->ok   = (status == WGPUBufferMapAsyncStatus_Success);
+    data->done = true;
+}
+
+bool cgfx_buffer_read(const CgfxCtx *ctx,
+                      const CgfxBuffer *buf,
+                      void *out,
+                      uint64_t size) {
+    if (!buf || !buf->buffer || !out)
+        return false;
+
+    if (size == 0)
+        size = buf->size;
+
+    CgfxMapRequestData data = { .done = false, .ok = false };
+    wgpuBufferMapAsync(buf->buffer, WGPUMapMode_Read, 0, size,
+                       &cgfx__on_buffer_mapped, &data);
+
+#if defined(__EMSCRIPTEN__)
+    while (!data.done)
+        emscripten_sleep(100);
+#elif defined(WEBGPU_BACKEND_WGPU)
+    wgpuDevicePoll(ctx->device, true, nullptr);
+#elif defined(WEBGPU_BACKEND_DAWN)
+    wgpuDeviceTick(ctx->device);
+#endif
+
+    if (!data.ok) {
+        fprintf(stderr, "[cgfx_buffer] Buffer map failed\n");
+        return false;
+    }
+
+    const void *mapped = wgpuBufferGetConstMappedRange(buf->buffer, 0, size);
+    if (mapped)
+        memcpy(out, mapped, size);
+
+    wgpuBufferUnmap(buf->buffer);
+    return mapped != nullptr;
 }
 
 

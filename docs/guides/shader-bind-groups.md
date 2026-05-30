@@ -14,7 +14,7 @@ When you create a `CgfxShader`, it compiles the WGSL source and builds a set of 
 
 ### What the Caller Owns
 
-- `WGPUBindGroup` -- created via `cgfx_shader_create_bind_group()` or `cgfx_uniform_create()`
+- `WGPUBindGroup` -- created via `cgfx_bind_group_create_buffers()` or `cgfx_uniform_create()`
 - `CgfxBuffer` / `WGPUBuffer` -- the GPU buffers holding actual data
 - The CPU-side data that gets uploaded to those buffers
 
@@ -224,7 +224,7 @@ int main(void) {
     /* Cleanup */
     cgfx_uniform_destroy(&u_a);
     cgfx_uniform_destroy(&u_b);
-    wgpuRenderPipelineRelease(pipeline);
+    cgfx_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 
@@ -279,7 +279,7 @@ For more control, use the building blocks directly:
 CgfxBuffer buf = cgfx_buffer_create_uniform(&ctx, &my_data, sizeof(my_data));
 
 /* Create a bind group from the shader's layout */
-WGPUBindGroup group = cgfx_shader_create_bind_group(&ctx, &shader, 0, &buf, 1);
+WGPUBindGroup group = cgfx_bind_group_create_buffers(&ctx, &shader, 0, &buf, 1);
 
 /* Upload data each frame */
 wgpuQueueWriteBuffer(ctx.queue, buf.buffer, 0, &my_data, sizeof(my_data));
@@ -288,7 +288,7 @@ wgpuQueueWriteBuffer(ctx.queue, buf.buffer, 0, &my_data, sizeof(my_data));
 wgpuRenderPassEncoderSetBindGroup(frame.render_pass, 0, group, 0, NULL);
 
 /* Cleanup */
-wgpuBindGroupRelease(group);
+cgfx_bind_group_destroy(group);
 cgfx_buffer_destroy(&buf);
 ```
 
@@ -300,7 +300,7 @@ cgfx_buffer_destroy(&buf);
 - You need non-buffer resources (textures, samplers) -- use `cgfx_bind_group_create()` with `CgfxBindGroupEntry`
 
 !!! warning "Low-Level Bind Group Creation"
-    `cgfx_shader_create_bind_group` assumes consecutive buffer bindings: `buffers[0]` maps to `@binding(0)`, `buffers[1]` to `@binding(1)`, etc. For non-consecutive bindings or mixed resource types (textures, samplers), use `cgfx_bind_group_create()` with explicit `CgfxBindGroupEntry` entries.
+    `cgfx_bind_group_create_buffers` assumes consecutive buffer bindings: `buffers[0]` maps to `@binding(0)`, `buffers[1]` to `@binding(1)`, etc. For non-consecutive bindings or mixed resource types (textures, samplers), use `cgfx_bind_group_create()` with explicit `CgfxBindGroupEntry` entries.
 
 ### Comparison
 

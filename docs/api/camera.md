@@ -22,7 +22,6 @@ Configuration for creating a camera. Zero-initialize for sensible defaults.
 | `eye` | `vec3` | `{0, 0, 0}` | Camera position. |
 | `center` | `vec3` | `{0, 0, 0}` | Look-at target. |
 | `up` | `vec3` | `{0, 0, 0}` = `{0, 1, 0}` | Up direction. |
-| `group_index` | `uint32_t` | `0` = `@group(0)` | Bind group index for the camera uniform. |
 
 ### CgfxCamera
 
@@ -33,8 +32,7 @@ Camera state with projection/view matrices and GPU resources.
 | `projection` | `mat4` | -- | Perspective projection matrix. |
 | `view` | `mat4` | -- | View matrix (from look-at). |
 | `buffer` | `CgfxBuffer` | -- | GPU uniform buffer (2 x `sizeof(mat4)` = 128 bytes). |
-| `bind_group` | `WGPUBindGroup` | -- | Bind group for the camera buffer. |
-| `group_index` | `uint32_t` | -- | The `@group(N)` this camera binds to. |
+| `ok` | `bool` | -- | `true` if creation succeeded. Check before use. |
 
 ---
 
@@ -42,18 +40,16 @@ Camera state with projection/view matrices and GPU resources.
 
 ### cgfx_camera_create
 
-Create a camera with projection and view matrices, upload to GPU, and create a bind group.
+Create a camera with projection and view matrices and upload to GPU.
 
 ```c
-CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,
-                               const CgfxShader *shader,
+CGFX_API CgfxCamera cgfx_camera_create(const CgfxCtx *ctx,
                                const CgfxCameraDesc *desc);
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `ctx` | `const CgfxCtx *` | Initialized context. |
-| `shader` | `const CgfxShader *` | Shader with bind group layouts (used to create the bind group). |
 | `desc` | `const CgfxCameraDesc *` | Camera configuration. Zero-initialized fields use defaults. |
 
 **Returns:** A `CgfxCamera`. Call `cgfx_camera_destroy()` to release.
@@ -67,7 +63,7 @@ The aspect ratio is automatically computed from `ctx->width / ctx->height`.
 Recalculate the projection matrix.
 
 ```c
-void cgfx_camera_perspective(CgfxCamera *cam, float fovy_deg,
+CGFX_API void cgfx_camera_perspective(CgfxCamera *cam, float fovy_deg,
                               float aspect, float near_z, float far_z);
 ```
 
@@ -89,7 +85,7 @@ void cgfx_camera_perspective(CgfxCamera *cam, float fovy_deg,
 Recalculate the view matrix.
 
 ```c
-void cgfx_camera_look_at(CgfxCamera *cam, vec3 eye, vec3 center, vec3 up);
+CGFX_API void cgfx_camera_look_at(CgfxCamera *cam, vec3 eye, vec3 center, vec3 up);
 ```
 
 | Parameter | Type | Description |
@@ -106,7 +102,7 @@ void cgfx_camera_look_at(CgfxCamera *cam, vec3 eye, vec3 center, vec3 up);
 Upload both projection and view matrices to the GPU.
 
 ```c
-void cgfx_camera_write(const CgfxCtx *ctx, const CgfxCamera *cam);
+CGFX_API void cgfx_camera_write(const CgfxCtx *ctx, const CgfxCamera *cam);
 ```
 
 | Parameter | Type | Description |
@@ -120,18 +116,21 @@ Call this each frame, or after modifying the projection or view matrices via `cg
 
 ### cgfx_camera_bind
 
-Set the camera's bind group on a render pass.
+Set a bind group on a render pass for the camera.
 
 ```c
-void cgfx_camera_bind(WGPURenderPassEncoder pass, const CgfxCamera *cam);
+CGFX_API void cgfx_camera_bind(WGPURenderPassEncoder pass,
+                                WGPUBindGroup bind_group,
+                                uint32_t group_index);
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `pass` | `WGPURenderPassEncoder` | Active render pass encoder. |
-| `cam` | `const CgfxCamera *` | Camera whose bind group to set. |
+| `bind_group` | `WGPUBindGroup` | Bind group containing the camera buffer. |
+| `group_index` | `uint32_t` | The `@group(N)` index to bind to. |
 
-Sets the bind group at the camera's `group_index` (e.g. `@group(0)`).
+Sets the given bind group at the specified `group_index` (e.g. `@group(0)`).
 
 ---
 
@@ -140,14 +139,14 @@ Sets the bind group at the camera's `group_index` (e.g. `@group(0)`).
 Release the camera's GPU resources.
 
 ```c
-void cgfx_camera_destroy(CgfxCamera *cam);
+CGFX_API void cgfx_camera_destroy(CgfxCamera *cam);
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `cam` | `CgfxCamera *` | Camera to destroy. |
 
-Releases the bind group and uniform buffer.
+Releases the uniform buffer.
 
 ---
 
@@ -168,11 +167,15 @@ struct Camera {
 ### Basic camera setup
 
 ```c
-CgfxCamera cam = cgfx_camera_create(&ctx, &shader, &(CgfxCameraDesc){
+CgfxCamera cam = cgfx_camera_create(&ctx, &(CgfxCameraDesc){
     .fovy   = 45.0f,
     .eye    = {1.0f, 1.0f, -2.0f},
     .center = {0.0f, 0.0f,  0.0f},
 });
+
+// Create a bind group from the camera's buffer
+WGPUBindGroup cam_bg = cgfx_bind_group_create_buffers(
+    &ctx, &shader, 0, &cam.buffer, 1);
 
 // In render loop:
 while (cgfx_ctx_is_running(&ctx)) {
@@ -183,12 +186,13 @@ while (cgfx_ctx_is_running(&ctx)) {
     CgfxFrame frame;
     if (cgfx_frame_begin(&ctx, &frame, (WGPUColor){0.1, 0.1, 0.2, 1.0})) {
         wgpuRenderPassEncoderSetPipeline(frame.render_pass, pipeline);
-        cgfx_camera_bind(frame.render_pass, &cam);
+        cgfx_camera_bind(frame.render_pass, cam_bg, 0);
         cgfx_mesh_draw(frame.render_pass, &mesh);
         cgfx_frame_end(&ctx, &frame);
     }
 }
 
+cgfx_bind_group_destroy(cam_bg);
 cgfx_camera_destroy(&cam);
 ```
 

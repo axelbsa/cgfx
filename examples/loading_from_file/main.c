@@ -6,6 +6,7 @@
  * back the data to verify the copy.
  */
 #include "cgfx.h"
+#include "cgfx_loader.h"
 
 int main(void) {
     /* Initialize the rendering context: window, device, queue, surface */
@@ -65,7 +66,7 @@ int main(void) {
 
     /* Cleanup */
     cgfx_mesh_destroy(&mesh);
-    wgpuRenderPipelineRelease(pipeline);
+    cgfx_pipeline_destroy(pipeline);
     cgfx_shader_destroy(&shader);
     cgfx_ctx_destroy(&ctx);
 

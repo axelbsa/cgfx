@@ -142,6 +142,7 @@ CgfxTexture cgfx_texture_create(const CgfxCtx *ctx,
     tex.height     = height;
     tex.depth      = depth;
     tex.mip_levels = mip_levels;
+    tex.ok         = (tex.texture != nullptr && tex.view != nullptr);
 
     return tex;
 }
@@ -256,4 +257,10 @@ WGPUSampler cgfx_sampler_create(const CgfxCtx *ctx,
     sampler_desc.lodMaxClamp = 32.0f;
 
     return wgpuDeviceCreateSampler(ctx->device, &sampler_desc);
+}
+
+
+void cgfx_sampler_destroy(WGPUSampler sampler) {
+    if (sampler)
+        wgpuSamplerRelease(sampler);
 }

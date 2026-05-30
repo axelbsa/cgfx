@@ -35,6 +35,7 @@ typedef struct CgfxTexture {
     uint32_t           height;      /**< Height in pixels.                           */
     uint32_t           depth;       /**< Depth or array layers (1 for 2D).           */
     uint32_t           mip_levels;  /**< Number of mip levels.                       */
+    bool               ok;          /**< True if creation succeeded — check before use. */
 } CgfxTexture;
 
 /**
@@ -151,8 +152,8 @@ typedef struct CgfxSamplerDesc {
 /**
  * Create a sampler.
  *
- * Returns a raw WGPUSampler handle. The caller owns it and must release
- * it with wgpuSamplerRelease() when done.
+ * Returns a WGPUSampler handle. The caller owns it and must release
+ * it with cgfx_sampler_destroy() when done.
  *
  * @param ctx   Initialized context.
  * @param desc  Sampler configuration. Pass zero-initialized for defaults.
@@ -160,5 +161,12 @@ typedef struct CgfxSamplerDesc {
  */
 CGFX_API WGPUSampler cgfx_sampler_create(const CgfxCtx *ctx,
                                           const CgfxSamplerDesc *desc);
+
+/**
+ * Release a sampler.
+ *
+ * @param sampler  Sampler to release (NULL-safe).
+ */
+CGFX_API void cgfx_sampler_destroy(WGPUSampler sampler);
 
 #endif /* CGFX_TEXTURE_H */

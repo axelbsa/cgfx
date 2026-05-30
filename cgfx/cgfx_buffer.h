@@ -28,7 +28,7 @@ typedef struct CgfxBuffer {
     WGPUBuffer  buffer;  /**< The WebGPU buffer handle.                        */
     uint64_t    size;    /**< Total size of the buffer in bytes.               */
     uint32_t    count;   /**< Number of elements (vertices or indices).        */
-    bool        ready;   /**< Set ready flag in callback                       */
+    bool        ok;      /**< True if creation succeeded — check before use.   */
 } CgfxBuffer;
 
 /**
@@ -118,9 +118,19 @@ CGFX_API CgfxBuffer cgfx_buffer_create_uniform(const CgfxCtx *ctx,
                                       const void *data,
                                       uint64_t data_size);
 
-/* Mapping buffer */
+/**
+ * Create a GPU mapping buffer for read-back.
+ *
+ * Creates a buffer with WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst.
+ * Use cgfx_buffer_copy() to fill it from a storage/compute buffer, then
+ * cgfx_buffer_read() to map and copy the data to the CPU.
+ *
+ * @param ctx        Initialized context.
+ * @param data_size  Size of the buffer in bytes.
+ * @param count      Number of elements (for metadata only).
+ * @return           A CgfxBuffer containing the GPU mapping buffer.
+ */
 CGFX_API CgfxBuffer cgfx_buffer_create_mapping(const CgfxCtx *ctx,
-                                      const void *data,
                                       uint64_t data_size,
                                       uint32_t count);
 
@@ -145,6 +155,25 @@ CGFX_API CgfxBuffer cgfx_buffer_create(const CgfxCtx *ctx,
                               WGPUBufferUsageFlags usage,
                               const void *data,    // NULL = don't upload
                               uint64_t data_size);
+
+/**
+ * Synchronously read back GPU buffer data to the CPU.
+ *
+ * Maps the buffer for reading, copies the mapped range into the caller-owned
+ * output buffer, and unmaps. Blocks until the map operation completes.
+ * The buffer must have WGPUBufferUsage_MapRead (e.g. from
+ * cgfx_buffer_create_mapping).
+ *
+ * @param ctx   Initialized context (used for device polling).
+ * @param buf   Buffer to read from. Must have MapRead usage.
+ * @param out   Caller-owned destination for the data.
+ * @param size  Number of bytes to read. 0 = buf->size.
+ * @return      True on success, false on map failure.
+ */
+CGFX_API bool cgfx_buffer_read(const CgfxCtx *ctx,
+                                const CgfxBuffer *buf,
+                                void *out,
+                                uint64_t size);
 
 /**
  * Copy one buffer to another via an immediate command submission.

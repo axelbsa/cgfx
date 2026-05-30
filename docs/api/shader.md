@@ -30,8 +30,10 @@ Describes a single binding slot within a bind group layout.
 | `kind` | `CgfxBindingKind` | `BUFFER` | The resource kind. |
 | `type` | `WGPUBufferBindingType` | `Uniform` | Buffer binding type (only for `BUFFER` kind). |
 | `min_binding_size` | `uint64_t` | `0` (none) | Minimum buffer size in bytes (only for `BUFFER` kind). |
+| `has_dynamic_offset` | `bool` | `false` | Buffer uses dynamic offset at bind time (only for `BUFFER` kind). Use with `cgfx_shader_bind_dynamic`. |
 | `sample_type` | `WGPUTextureSampleType` | `Float` | Texture sample type (only for `TEXTURE` kind). |
 | `view_dimension` | `WGPUTextureViewDimension` | `2D` | Texture view dimension (for `TEXTURE` and `STORAGE_TEXTURE` kinds). |
+| `sampler_type` | `WGPUSamplerBindingType` | `Filtering` | Sampler binding type (only for `SAMPLER` kind). Use `Comparison` for shadow mapping, `NonFiltering` for data textures. |
 | `storage_access` | `WGPUStorageTextureAccess` | `WriteOnly` | Storage texture access (only for `STORAGE_TEXTURE` kind). |
 | `storage_format` | `WGPUTextureFormat` | *(required)* | Storage texture format (only for `STORAGE_TEXTURE` kind). |
 
@@ -69,6 +71,7 @@ A compiled shader with its bind group layouts and pipeline layout. All fields ar
 | `pipeline_layout` | `WGPUPipelineLayout` | Pipeline layout built from group layouts. `NULL` when no descriptor was provided (automatic layout). |
 | `group_layouts` | `WGPUBindGroupLayout*` | Array of bind group layouts, one per `@group(N)`. |
 | `group_count` | `uint32_t` | Number of bind group layouts. |
+| `ok` | `bool` | `true` if creation succeeded. Check before use. A zeroed struct has `ok == false`. |
 
 ---
 
@@ -92,7 +95,7 @@ CGFX_API CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
 | `wgsl` | `const char*` | Null-terminated WGSL source code. |
 | `desc` | `const CgfxShaderDesc*` | Bind group layout description, or `NULL` for no bindings. |
 
-**Returns:** A `CgfxShader`. If `desc` is `NULL` or has no groups, only the shader module is created and `pipeline_layout` is `NULL`.
+**Returns:** A `CgfxShader`. Check `.ok` before use -- it is `false` if the shader module could not be created (e.g., file not found for `_from_file`, or invalid WGSL). If `desc` is `NULL` or has no groups, only the shader module is created and `pipeline_layout` is `NULL`.
 
 **Example (no bindings):**
 
@@ -157,16 +160,16 @@ CgfxShader shader = cgfx_shader_create_from_file(&ctx, "mesh shader",
 
 ---
 
-### cgfx_shader_create_bind_group
+### cgfx_bind_group_create_buffers
 
 Creates a bind group for a specific `@group` index using the shader's layout. Each buffer maps to consecutive binding indices.
 
 ```c
-CGFX_API WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
-                                                      const CgfxShader *shader,
-                                                      uint32_t group_index,
-                                                      const CgfxBuffer *buffers,
-                                                      uint32_t buffer_count);
+CGFX_API WGPUBindGroup cgfx_bind_group_create_buffers(const CgfxCtx *ctx,
+                                                       const CgfxShader *shader,
+                                                       uint32_t group_index,
+                                                       const CgfxBuffer *buffers,
+                                                       uint32_t buffer_count);
 ```
 
 | Parameter | Type | Description |
@@ -177,28 +180,28 @@ CGFX_API WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
 | `buffers` | `const CgfxBuffer*` | Array of `CgfxBuffer`, one per binding. `buffers[0]` maps to `@binding(0)`, `buffers[1]` to `@binding(1)`, etc. |
 | `buffer_count` | `uint32_t` | Number of buffers in the array. |
 
-**Returns:** A `WGPUBindGroup` handle, or `nullptr` if `group_index` is out of range. The caller owns this handle and must release it with `wgpuBindGroupRelease()`.
+**Returns:** A `WGPUBindGroup` handle, or `nullptr` if `group_index` is out of range. The caller owns this handle and must release it with `cgfx_bind_group_destroy()`.
 
 **Example:**
 
 ```c
 CgfxBuffer ubuf = cgfx_buffer_create_uniform(&ctx, &my_data, sizeof(my_data));
 
-WGPUBindGroup group = cgfx_shader_create_bind_group(
+WGPUBindGroup group = cgfx_bind_group_create_buffers(
     &ctx, &shader, 0,        // @group(0)
     &ubuf, 1                  // one buffer at @binding(0)
 );
 
 // Use during rendering, then release:
-wgpuBindGroupRelease(group);
+cgfx_bind_group_destroy(group);
 cgfx_buffer_destroy(&ubuf);
 ```
 
 !!! warning "Bind groups are caller-owned"
-    `cgfx_shader_destroy` does **not** release bind groups created with this function. You must call `wgpuBindGroupRelease()` yourself, or use `CgfxUniform` / `CgfxCamera` which handle this automatically.
+    `cgfx_shader_destroy` does **not** release bind groups created with this function. You must call `cgfx_bind_group_destroy()` yourself, or use `CgfxUniform` which handles this automatically.
 
 !!! note "Non-consecutive bindings"
-    `cgfx_shader_create_bind_group` assumes consecutive buffer bindings. For non-consecutive bindings or mixed resource types (textures, samplers), use `cgfx_bind_group_create` below.
+    `cgfx_bind_group_create_buffers` assumes consecutive buffer bindings. For non-consecutive bindings or mixed resource types (textures, samplers), use `cgfx_bind_group_create` below.
 
 ---
 
@@ -212,6 +215,8 @@ An entry in a general-purpose bind group, supporting buffers, textures, and samp
 | `buffer` | `const CgfxBuffer*` | Non-NULL for buffer bindings. |
 | `texture` | `const CgfxTexture*` | Non-NULL for texture bindings (uses `texture->view`). |
 | `sampler` | `WGPUSampler` | Non-NULL for sampler bindings. |
+| `offset` | `uint64_t` | Buffer sub-range offset in bytes. 0 = start. |
+| `size` | `uint64_t` | Buffer sub-range size in bytes. 0 = entire buffer. |
 
 ---
 
@@ -235,7 +240,7 @@ CGFX_API WGPUBindGroup cgfx_bind_group_create(const CgfxCtx *ctx,
 | `entries` | `const CgfxBindGroupEntry*` | Array of bind group entries. |
 | `entry_count` | `uint32_t` | Number of entries. |
 
-**Returns:** A `WGPUBindGroup` handle. The caller owns this handle and must release it with `wgpuBindGroupRelease()`.
+**Returns:** A `WGPUBindGroup` handle. The caller owns this handle and must release it with `cgfx_bind_group_destroy()`.
 
 **Example (texture + sampler):**
 
@@ -246,6 +251,20 @@ WGPUBindGroup bg = cgfx_bind_group_create(&ctx, &shader, 0,
         { .binding = 1, .sampler = my_sampler },
     }, 2);
 ```
+
+---
+
+### cgfx_bind_group_destroy
+
+Release a bind group.
+
+```c
+CGFX_API void cgfx_bind_group_destroy(WGPUBindGroup group);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `group` | `WGPUBindGroup` | Bind group to release. |
 
 ---
 
@@ -305,6 +324,76 @@ Mirror of `cgfx_shader_bind` for compute passes instead of render passes.
 
 ---
 
+### cgfx_shader_bind_dynamic
+
+Set a single bind group on a render pass with dynamic offsets. Use with bind groups whose layout entries have `has_dynamic_offset = true`.
+
+```c
+CGFX_API void cgfx_shader_bind_dynamic(WGPURenderPassEncoder pass,
+                                        uint32_t group_index,
+                                        WGPUBindGroup group,
+                                        const uint32_t *offsets,
+                                        uint32_t offset_count);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pass` | `WGPURenderPassEncoder` | Active render pass encoder. |
+| `group_index` | `uint32_t` | The `@group(N)` index to bind to. |
+| `group` | `WGPUBindGroup` | Bind group handle. |
+| `offsets` | `const uint32_t*` | Array of byte offsets into the dynamic buffers. |
+| `offset_count` | `uint32_t` | Number of offsets (must match the number of dynamic-offset bindings in the layout). |
+
+**Example (one uniform buffer with dynamic offset):**
+
+```c
+// Layout: one dynamic uniform
+CgfxShader shader = cgfx_shader_create(&ctx, "dyn", wgsl,
+    &(CgfxShaderDesc){
+        .group_count = 1,
+        .groups = (CgfxGroupDesc[]){{
+            .binding_count = 1,
+            .bindings = (CgfxBindingDesc[]){{
+                .binding = 0,
+                .min_binding_size = sizeof(ObjectData),
+                .has_dynamic_offset = true,
+            }},
+        }},
+    });
+
+// One big buffer, one bind group
+CgfxBuffer big_buf = cgfx_buffer_create_uniform(&ctx, all_objects,
+    object_count * aligned_size);
+WGPUBindGroup bg = cgfx_bind_group_create(&ctx, &shader, 0,
+    (CgfxBindGroupEntry[]){{
+        .binding = 0, .buffer = &big_buf,
+        .size = sizeof(ObjectData),
+    }}, 1);
+
+// Per-draw: change only the offset
+for (uint32_t i = 0; i < object_count; i++) {
+    uint32_t offset = i * aligned_size;
+    cgfx_shader_bind_dynamic(frame.render_pass, 0, bg, &offset, 1);
+    cgfx_mesh_draw(frame.render_pass, &mesh);
+}
+```
+
+---
+
+### cgfx_shader_bind_compute_dynamic
+
+Set a single bind group on a compute pass with dynamic offsets. Mirror of `cgfx_shader_bind_dynamic` for compute passes.
+
+```c
+CGFX_API void cgfx_shader_bind_compute_dynamic(WGPUComputePassEncoder pass,
+                                                uint32_t group_index,
+                                                WGPUBindGroup group,
+                                                const uint32_t *offsets,
+                                                uint32_t offset_count);
+```
+
+---
+
 ### cgfx_shader_destroy
 
 Releases the shader module, pipeline layout, and all bind group layouts.
@@ -318,6 +407,6 @@ CGFX_API void cgfx_shader_destroy(CgfxShader *shader);
 | `shader` | `CgfxShader*` | Shader to destroy. Must not be used after this call. |
 
 !!! warning "Does NOT release bind groups"
-    Bind groups created via `cgfx_shader_create_bind_group` are owned by the caller and are not released here. Release them with `wgpuBindGroupRelease()` before destroying the shader. `CgfxUniform` and `CgfxCamera` handle their own bind group cleanup in their respective `_destroy` functions.
+    Bind groups created via `cgfx_bind_group_create_buffers` are owned by the caller and are not released here. Release them with `cgfx_bind_group_destroy()` before destroying the shader. `CgfxUniform` handles its own bind group cleanup in its `_destroy` function.
 
 See the [Shader and Bind Group Ownership guide](../guides/shader-bind-groups.md) for a full explanation of the ownership model.

@@ -37,6 +37,81 @@ static WGPUShaderModule create_module(const CgfxCtx *ctx,
 }
 
 
+/* ── WGSL compilation diagnostics ────────────────────────────────── */
+
+/*
+ * wgpuShaderModuleGetCompilationInfo is not implemented in wgpu-native
+ * v0.19.x (panics at runtime). The detailed line/column error reporting
+ * is disabled until we update wgpu-native. Shader errors still reach
+ * stderr through the device uncaptured-error callback.
+ *
+ * When wgpu-native is updated, re-enable the block below and remove
+ * the simple NULL-check fallback.
+ */
+
+#if 0 /* requires wgpu-native > v0.19 */
+typedef struct {
+    bool        done;
+    bool        had_error;
+    const char *label;
+} CgfxCompileInfo;
+
+static void cgfx__on_compilation_info(WGPUCompilationInfoRequestStatus status,
+                                      const WGPUCompilationInfo *info,
+                                      void *user_data) {
+    CgfxCompileInfo *data = user_data;
+    data->done = true;
+
+    if (status != WGPUCompilationInfoRequestStatus_Success || !info)
+        return;
+
+    for (size_t i = 0; i < info->messageCount; i++) {
+        const WGPUCompilationMessage *m = &info->messages[i];
+        if (m->type != WGPUCompilationMessageType_Error)
+            continue;
+
+        data->had_error = true;
+        fprintf(stderr, "[cgfx_shader] WGSL compile error in '%s' at %llu:%llu: %s\n",
+                data->label ? data->label : "(unnamed)",
+                (unsigned long long)m->lineNum,
+                (unsigned long long)m->linePos,
+                m->message ? m->message : "");
+    }
+}
+
+static bool shader_compile_ok(const CgfxCtx *ctx, WGPUShaderModule module,
+                              const char *label) {
+    (void)ctx;
+    if (!module)
+        return false;
+
+    CgfxCompileInfo data = { .done = false, .had_error = false, .label = label };
+    wgpuShaderModuleGetCompilationInfo(module, &cgfx__on_compilation_info, &data);
+
+#if defined(__EMSCRIPTEN__)
+    while (!data.done)
+        emscripten_sleep(100);
+#elif defined(WEBGPU_BACKEND_WGPU)
+    if (!data.done)
+        wgpuDevicePoll(ctx->device, true, nullptr);
+#endif
+
+    return !data.had_error;
+}
+#endif
+
+static bool shader_compile_ok(const CgfxCtx *ctx, WGPUShaderModule module,
+                              const char *label) {
+    (void)ctx;
+    if (!module) {
+        fprintf(stderr, "[cgfx_shader] Shader module creation failed: '%s'\n",
+                label ? label : "(unnamed)");
+        return false;
+    }
+    return true;
+}
+
+
 static char *read_file(const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) {
@@ -80,8 +155,12 @@ CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
     CgfxShader shader = {};
     shader.module = create_module(ctx, label, wgsl);
 
-    if (!desc || desc->group_count == 0)
+    bool compiled = shader_compile_ok(ctx, shader.module, label);
+
+    if (!desc || desc->group_count == 0) {
+        shader.ok = compiled;
         return shader;
+    }
 
     shader.group_count = desc->group_count;
     shader.group_layouts = malloc(desc->group_count * sizeof(WGPUBindGroupLayout));
@@ -120,6 +199,7 @@ CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
             case CGFX_BINDING_BUFFER:
                 entries[j].buffer = (WGPUBufferBindingLayout){
                     .type = b->type ? b->type : WGPUBufferBindingType_Uniform,
+                    .hasDynamicOffset = b->has_dynamic_offset,
                     .minBindingSize = b->min_binding_size,
                 };
                 break;
@@ -131,7 +211,7 @@ CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
                 break;
             case CGFX_BINDING_SAMPLER:
                 entries[j].sampler = (WGPUSamplerBindingLayout){
-                    .type = WGPUSamplerBindingType_Filtering,
+                    .type = b->sampler_type ? b->sampler_type : WGPUSamplerBindingType_Filtering,
                 };
                 break;
             case CGFX_BINDING_STORAGE_TEXTURE:
@@ -159,6 +239,13 @@ CgfxShader cgfx_shader_create(const CgfxCtx *ctx,
     };
     shader.pipeline_layout = wgpuDeviceCreatePipelineLayout(ctx->device, &pl_desc);
 
+    bool layouts_ok = (shader.pipeline_layout != nullptr);
+    for (uint32_t i = 0; i < shader.group_count; i++) {
+        if (!shader.group_layouts[i])
+            layouts_ok = false;
+    }
+    shader.ok = compiled && layouts_ok;
+
     return shader;
 }
 
@@ -177,7 +264,7 @@ CgfxShader cgfx_shader_create_from_file(const CgfxCtx *ctx,
 }
 
 
-WGPUBindGroup cgfx_shader_create_bind_group(const CgfxCtx *ctx,
+WGPUBindGroup cgfx_bind_group_create_buffers(const CgfxCtx *ctx,
                                             const CgfxShader *shader,
                                             uint32_t group_index,
                                             const CgfxBuffer *buffers,
@@ -227,8 +314,8 @@ WGPUBindGroup cgfx_bind_group_create(const CgfxCtx *ctx,
 
         if (entries[i].buffer) {
             bg_entries[i].buffer = entries[i].buffer->buffer;
-            bg_entries[i].offset = 0;
-            bg_entries[i].size   = entries[i].buffer->size;
+            bg_entries[i].offset = entries[i].offset;
+            bg_entries[i].size   = entries[i].size ? entries[i].size : entries[i].buffer->size;
         } else if (entries[i].texture) {
             bg_entries[i].textureView = entries[i].texture->view;
         } else if (entries[i].sampler) {
@@ -248,6 +335,12 @@ WGPUBindGroup cgfx_bind_group_create(const CgfxCtx *ctx,
 }
 
 
+void cgfx_bind_group_destroy(WGPUBindGroup group) {
+    if (group)
+        wgpuBindGroupRelease(group);
+}
+
+
 void cgfx_shader_bind(WGPURenderPassEncoder pass,
                        const WGPUBindGroup *groups,
                        uint32_t group_count) {
@@ -263,6 +356,26 @@ void cgfx_shader_bind_compute(WGPUComputePassEncoder pass,
     for (uint32_t i = 0; i < group_count; i++) {
         wgpuComputePassEncoderSetBindGroup(pass, i, groups[i], 0, nullptr);
     }
+}
+
+
+void cgfx_shader_bind_dynamic(WGPURenderPassEncoder pass,
+                               uint32_t group_index,
+                               WGPUBindGroup group,
+                               const uint32_t *offsets,
+                               uint32_t offset_count) {
+    wgpuRenderPassEncoderSetBindGroup(pass, group_index, group,
+                                      offset_count, offsets);
+}
+
+
+void cgfx_shader_bind_compute_dynamic(WGPUComputePassEncoder pass,
+                                       uint32_t group_index,
+                                       WGPUBindGroup group,
+                                       const uint32_t *offsets,
+                                       uint32_t offset_count) {
+    wgpuComputePassEncoderSetBindGroup(pass, group_index, group,
+                                       offset_count, offsets);
 }
 
 

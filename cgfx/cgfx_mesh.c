@@ -23,6 +23,7 @@ CgfxMesh cgfx_mesh_create(const CgfxCtx *ctx,
 
     mesh.index_buffer = cgfx_buffer_create_index(ctx, indices, index_count);
     mesh.index_count = index_count;
+    mesh.ok = mesh.vertex_buffer.ok && mesh.index_buffer.ok;
 
     return mesh;
 }
@@ -44,6 +45,21 @@ void cgfx_mesh_draw(WGPURenderPassEncoder pass, const CgfxMesh *mesh) {
                                         WGPUIndexFormat_Uint32,
                                         0, mesh->index_buffer.size);
     wgpuRenderPassEncoderDrawIndexed(pass, mesh->index_count, 1, 0, 0, 0);
+}
+
+
+void cgfx_mesh_draw_instanced(WGPURenderPassEncoder pass,
+                               const CgfxMesh *mesh,
+                               uint32_t instance_count) {
+    wgpuRenderPassEncoderSetVertexBuffer(pass, 0,
+                                         mesh->vertex_buffer.buffer,
+                                         0, mesh->vertex_buffer.size);
+    wgpuRenderPassEncoderSetIndexBuffer(pass,
+                                        mesh->index_buffer.buffer,
+                                        WGPUIndexFormat_Uint32,
+                                        0, mesh->index_buffer.size);
+    wgpuRenderPassEncoderDrawIndexed(pass, mesh->index_count,
+                                     instance_count, 0, 0, 0);
 }
 
 

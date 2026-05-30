@@ -21,6 +21,7 @@ A GPU texture with its default view. All fields are public.
 | `height` | `uint32_t` | Height in pixels. |
 | `depth` | `uint32_t` | Depth or array layers (1 for 2D). |
 | `mip_levels` | `uint32_t` | Number of mip levels. |
+| `ok` | `bool` | `true` if creation succeeded. Check before use. |
 
 ---
 
@@ -186,15 +187,29 @@ CGFX_API WGPUSampler cgfx_sampler_create(const CgfxCtx *ctx,
 | `ctx` | `const CgfxCtx*` | Initialized context. |
 | `desc` | `const CgfxSamplerDesc*` | Sampler configuration. Zero-initialize for defaults. |
 
-**Returns:** A `WGPUSampler` handle. Release with `wgpuSamplerRelease()`.
+**Returns:** A `WGPUSampler` handle. Release with `cgfx_sampler_destroy()`.
 
 **Example:**
 
 ```c
 WGPUSampler sampler = cgfx_sampler_create(&ctx, &(CgfxSamplerDesc){});
 // ... use in bind group ...
-wgpuSamplerRelease(sampler);
+cgfx_sampler_destroy(sampler);
 ```
+
+---
+
+### cgfx_sampler_destroy
+
+Release a sampler.
+
+```c
+CGFX_API void cgfx_sampler_destroy(WGPUSampler sampler);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `sampler` | `WGPUSampler` | Sampler to release. |
 
 ---
 
