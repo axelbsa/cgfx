@@ -130,21 +130,48 @@ CGFX_API void cgfx_texture_write_layer(const CgfxCtx *ctx,
 CGFX_API void cgfx_texture_destroy(CgfxTexture *texture);
 
 /**
+ * Filter mode for sampler mag/min/mipmap. Uses cgfx's own enum (not WGPUFilterMode)
+ * because WGPUFilterMode_Nearest == 0 collides with the "zero-init = default" rule:
+ * if the desc held the WebGPU enum, an unset (0) field could not be distinguished
+ * from an explicit request for Nearest. Here 0 = DEFAULT (Linear), and NEAREST is
+ * a distinct, reachable value.
+ */
+typedef enum CgfxFilter {
+    CGFX_FILTER_DEFAULT = 0,   /**< Linear. */
+    CGFX_FILTER_NEAREST,       /**< Point sampling (crisp pixels). */
+    CGFX_FILTER_LINEAR,        /**< Explicit linear (same as default). */
+} CgfxFilter;
+
+/**
+ * Texture address (wrap) mode. Own enum for the same reason as CgfxFilter:
+ * WGPUAddressMode_Repeat == 0 would be unreachable. 0 = DEFAULT (ClampToEdge).
+ */
+typedef enum CgfxAddressMode {
+    CGFX_ADDRESS_DEFAULT = 0,  /**< ClampToEdge. */
+    CGFX_ADDRESS_CLAMP,        /**< ClampToEdge (explicit). */
+    CGFX_ADDRESS_REPEAT,       /**< Repeat (tiling). */
+    CGFX_ADDRESS_MIRROR,       /**< MirrorRepeat. */
+} CgfxAddressMode;
+
+/**
  * Configuration for creating a sampler.
  *
  * Zero-initialize for a linear-filtering, clamp-to-edge sampler:
  *   WGPUSampler sampler = cgfx_sampler_create(&ctx, &(CgfxSamplerDesc){});
  *
- * Zero-init defaults override WebGPU enum zero values to the most
- * commonly useful settings (Linear filtering, ClampToEdge addressing).
+ * Filter/address fields use cgfx enums whose 0 means DEFAULT (Linear / ClampToEdge),
+ * so the WebGPU zero values stay reachable. For crisp pixel-art upscaling:
+ *   cgfx_sampler_create(&ctx, &(CgfxSamplerDesc){
+ *       .mag_filter = CGFX_FILTER_NEAREST,
+ *       .min_filter = CGFX_FILTER_NEAREST });
  */
 typedef struct CgfxSamplerDesc {
-    WGPUFilterMode       mag_filter;     /**< Magnification filter. 0 = Linear.    */
-    WGPUFilterMode       min_filter;     /**< Minification filter. 0 = Linear.     */
-    WGPUMipmapFilterMode mipmap_filter;  /**< Mipmap filter. 0 = Linear.           */
-    WGPUAddressMode      address_u;      /**< U-axis address mode. 0 = ClampToEdge.*/
-    WGPUAddressMode      address_v;      /**< V-axis address mode. 0 = ClampToEdge.*/
-    WGPUAddressMode      address_w;      /**< W-axis address mode. 0 = ClampToEdge.*/
+    CgfxFilter           mag_filter;     /**< Magnification filter. 0 = Default (Linear). */
+    CgfxFilter           min_filter;     /**< Minification filter. 0 = Default (Linear).  */
+    CgfxFilter           mipmap_filter;  /**< Mipmap filter. 0 = Default (Linear).        */
+    CgfxAddressMode      address_u;      /**< U-axis address mode. 0 = Default (ClampToEdge). */
+    CgfxAddressMode      address_v;      /**< V-axis address mode. 0 = Default (ClampToEdge). */
+    CgfxAddressMode      address_w;      /**< W-axis address mode. 0 = Default (ClampToEdge). */
     uint16_t             max_anisotropy; /**< Max anisotropy. 0 = 1.               */
     WGPUCompareFunction  compare;        /**< Comparison function. 0 = none.       */
 } CgfxSamplerDesc;

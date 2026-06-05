@@ -58,6 +58,7 @@ cgfx_add_example(depth_texture          depth_texture/main.c)
 cgfx_add_example(projection_matrices   projection_matrices/main.c)
 cgfx_add_example(mrt                     mrt/main.c)
 cgfx_add_example(instanced_rendering    instanced_rendering/main.c)
+cgfx_add_example(software_framebuffer   software_framebuffer/main.c)
 
 # cgfx_add_example(external_window        external_window/main.c)
 

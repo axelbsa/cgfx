@@ -29,7 +29,7 @@ This is a C23 rendering engine library (`cgfx`) wrapping WebGPU, with GLFW for w
 | `cgfx_buffer` | GPU buffer creation (vertex, index, uniform, storage, mapping, generic). `cgfx_buffer_read()` for synchronous GPU-to-CPU readback. |
 | `cgfx_uniform` | CgfxUniform: buffer + bind group + data pointer bundle for per-object uniforms |
 | `cgfx_mesh` | CgfxVertex (96 bytes: pos + normal + tangent + texcoord0 + texcoord1 + color + joints + weights) + CgfxMesh + vertex layout + draw. `cgfx_mesh_draw_instanced` for instanced rendering. |
-| `cgfx_texture` | CgfxTexture (GPU texture + view) + sampler helper. Supports sampled, storage, render-target, and depth textures. Cube maps via `view_dimension` + `depth=6`. Per-layer writes with `cgfx_texture_write_layer()`. |
+| `cgfx_texture` | CgfxTexture (GPU texture + view) + sampler helper. Supports sampled, storage, render-target, and depth textures. Cube maps via `view_dimension` + `depth=6`. Per-layer writes with `cgfx_texture_write_layer()`. Sampler filter/address use cgfx tri-state enums `CgfxFilter`/`CgfxAddressMode` (`0 = Default` → Linear/ClampToEdge; `NEAREST`/`REPEAT` reachable). |
 | `cgfx_compute` | Compute pipeline creation, standalone and mixed compute passes, buffer copy helper |
 
 | `cgfx_camera` | CgfxCamera: projection + view matrices + GPU buffer. Caller creates bind group (composable with lights/time). Uses cglm, left-handed, depth [0,1]. |

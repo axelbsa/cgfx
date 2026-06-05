@@ -220,33 +220,34 @@ void cgfx_texture_destroy(CgfxTexture *texture) {
 }
 
 
+/* cgfx enum -> WebGPU enum. DEFAULT (0) maps to the sensible default; every other
+ * WebGPU value (incl. the enum's own 0, e.g. Nearest/Repeat) is reachable. */
+static WGPUFilterMode map_filter(CgfxFilter f) {
+    return f == CGFX_FILTER_NEAREST ? WGPUFilterMode_Nearest : WGPUFilterMode_Linear;
+}
+static WGPUMipmapFilterMode map_mipmap(CgfxFilter f) {
+    return f == CGFX_FILTER_NEAREST ? WGPUMipmapFilterMode_Nearest
+                                    : WGPUMipmapFilterMode_Linear;
+}
+static WGPUAddressMode map_address(CgfxAddressMode a) {
+    switch (a) {
+    case CGFX_ADDRESS_REPEAT: return WGPUAddressMode_Repeat;
+    case CGFX_ADDRESS_MIRROR: return WGPUAddressMode_MirrorRepeat;
+    default:                  return WGPUAddressMode_ClampToEdge; /* DEFAULT + CLAMP */
+    }
+}
+
 WGPUSampler cgfx_sampler_create(const CgfxCtx *ctx,
                                  const CgfxSamplerDesc *desc) {
     WGPUSamplerDescriptor sampler_desc = {};
 
-    sampler_desc.magFilter = desc->mag_filter
-        ? desc->mag_filter
-        : WGPUFilterMode_Linear;
+    sampler_desc.magFilter    = map_filter(desc->mag_filter);
+    sampler_desc.minFilter    = map_filter(desc->min_filter);
+    sampler_desc.mipmapFilter = map_mipmap(desc->mipmap_filter);
 
-    sampler_desc.minFilter = desc->min_filter
-        ? desc->min_filter
-        : WGPUFilterMode_Linear;
-
-    sampler_desc.mipmapFilter = desc->mipmap_filter
-        ? desc->mipmap_filter
-        : WGPUMipmapFilterMode_Linear;
-
-    sampler_desc.addressModeU = desc->address_u
-        ? desc->address_u
-        : WGPUAddressMode_ClampToEdge;
-
-    sampler_desc.addressModeV = desc->address_v
-        ? desc->address_v
-        : WGPUAddressMode_ClampToEdge;
-
-    sampler_desc.addressModeW = desc->address_w
-        ? desc->address_w
-        : WGPUAddressMode_ClampToEdge;
+    sampler_desc.addressModeU = map_address(desc->address_u);
+    sampler_desc.addressModeV = map_address(desc->address_v);
+    sampler_desc.addressModeW = map_address(desc->address_w);
 
     sampler_desc.maxAnisotropy = desc->max_anisotropy
         ? desc->max_anisotropy

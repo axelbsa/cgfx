@@ -47,16 +47,34 @@ Configuration for creating a texture. Zero-initialize for a standard sampled 2D 
 
 Configuration for creating a sampler. Zero-initialize for linear filtering with clamp-to-edge.
 
+Filter and address fields use cgfx enums (`CgfxFilter`, `CgfxAddressMode`) whose `0` value
+means `DEFAULT`. This keeps the sensible defaults (Linear / ClampToEdge) for a zero-initialized
+desc **while still letting you select the WebGPU zero values** — `Nearest` filtering and
+`Repeat` addressing — which a raw `WGPUFilterMode`/`WGPUAddressMode` field could not express
+(their `Nearest`/`Repeat` are `0`, indistinguishable from "unset").
+
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `mag_filter` | `WGPUFilterMode` | `Linear` | Magnification filter. |
-| `min_filter` | `WGPUFilterMode` | `Linear` | Minification filter. |
-| `mipmap_filter` | `WGPUMipmapFilterMode` | `Linear` | Mipmap filter. |
-| `address_u` | `WGPUAddressMode` | `ClampToEdge` | U-axis address mode. |
-| `address_v` | `WGPUAddressMode` | `ClampToEdge` | V-axis address mode. |
-| `address_w` | `WGPUAddressMode` | `ClampToEdge` | W-axis address mode. |
+| `mag_filter` | `CgfxFilter` | `Default` (Linear) | Magnification filter. `CGFX_FILTER_NEAREST` for crisp pixels. |
+| `min_filter` | `CgfxFilter` | `Default` (Linear) | Minification filter. |
+| `mipmap_filter` | `CgfxFilter` | `Default` (Linear) | Mipmap filter. |
+| `address_u` | `CgfxAddressMode` | `Default` (ClampToEdge) | U-axis address mode. `CGFX_ADDRESS_REPEAT`/`MIRROR` for tiling. |
+| `address_v` | `CgfxAddressMode` | `Default` (ClampToEdge) | V-axis address mode. |
+| `address_w` | `CgfxAddressMode` | `Default` (ClampToEdge) | W-axis address mode. |
 | `max_anisotropy` | `uint16_t` | `1` | Maximum anisotropy. |
-| `compare` | `WGPUCompareFunction` | none | Comparison function (for depth samplers). |
+| `compare` | `WGPUCompareFunction` | none | Comparison function (for depth/shadow samplers). |
+
+`CgfxFilter` is `CGFX_FILTER_DEFAULT` (0) / `CGFX_FILTER_NEAREST` / `CGFX_FILTER_LINEAR`.
+`CgfxAddressMode` is `CGFX_ADDRESS_DEFAULT` (0) / `CGFX_ADDRESS_CLAMP` / `CGFX_ADDRESS_REPEAT` /
+`CGFX_ADDRESS_MIRROR`.
+
+```c
+// Nearest (point) sampler for pixel-art / software-framebuffer upscaling:
+WGPUSampler nearest = cgfx_sampler_create(&ctx, &(CgfxSamplerDesc){
+    .mag_filter = CGFX_FILTER_NEAREST,
+    .min_filter = CGFX_FILTER_NEAREST,
+});
+```
 
 ---
 
