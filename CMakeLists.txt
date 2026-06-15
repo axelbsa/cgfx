@@ -5,6 +5,8 @@ project(
 	LANGUAGES C
 )
 
+option(BUILD_EXAMPLES "Building all examples" ON)
+
 # --- External dependencies ---
 if (NOT EMSCRIPTEN)
 	add_subdirectory(vendor/glfw)
@@ -24,4 +26,6 @@ add_subdirectory(vendor/slang)
 add_subdirectory(cgfx)
 
 # --- Examples ---
-add_subdirectory(examples)
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
