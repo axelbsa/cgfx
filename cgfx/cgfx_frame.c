@@ -7,10 +7,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include <webgpu/webgpu.h>
-#ifdef WEBGPU_BACKEND_WGPU
-#  include <webgpu/wgpu.h>
-#endif
+#include "cgfx_webgpu.h"
 
 
 /**
@@ -48,12 +45,12 @@ static WGPUTextureView cgfx__get_surface_texture_view(const CgfxCtx *ctx) {
         wgpuSurfaceGetCurrentTexture(ctx->surface, &surface_texture);
     }
 
-    if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success)
+    if (!cgfx__surface_texture_ok(surface_texture.status))
         return nullptr;
 
     WGPUTextureViewDescriptor view_desc = {};
     view_desc.nextInChain = nullptr;
-    view_desc.label = "cgfx surface texture view";
+    view_desc.label = CGFX_STR("cgfx surface texture view");
     view_desc.format = wgpuTextureGetFormat(surface_texture.texture);
     view_desc.dimension = WGPUTextureViewDimension_2D;
     view_desc.baseMipLevel = 0;
@@ -84,7 +81,7 @@ bool cgfx_frame_begin_encoder(const CgfxCtx *ctx, CgfxFrame *frame) {
 
     WGPUCommandEncoderDescriptor encoder_desc = {};
     encoder_desc.nextInChain = nullptr;
-    encoder_desc.label = "cgfx frame encoder";
+    encoder_desc.label = CGFX_STR("cgfx frame encoder");
     frame->encoder = wgpuDeviceCreateCommandEncoder(ctx->device, &encoder_desc);
     frame->render_pass = nullptr;
 
@@ -196,7 +193,7 @@ void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame) {
      */
     WGPUCommandBufferDescriptor cmd_desc = {};
     cmd_desc.nextInChain = nullptr;
-    cmd_desc.label = "cgfx frame commands";
+    cmd_desc.label = CGFX_STR("cgfx frame commands");
     WGPUCommandBuffer commands = wgpuCommandEncoderFinish(frame->encoder, &cmd_desc);
     wgpuCommandEncoderRelease(frame->encoder);
 
@@ -216,9 +213,5 @@ void cgfx_frame_end(const CgfxCtx *ctx, CgfxFrame *frame) {
     wgpuSurfacePresent(ctx->surface);
 #endif
 
-#if defined(WEBGPU_BACKEND_DAWN)
-    wgpuDeviceTick(ctx->device);
-#elif defined(WEBGPU_BACKEND_WGPU)
-    wgpuDevicePoll(ctx->device, false, nullptr);
-#endif
+    cgfx__device_sync(ctx->instance, ctx->device, false);
 }

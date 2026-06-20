@@ -15,7 +15,7 @@
 #ifndef CGFX_MESH_H
 #define CGFX_MESH_H
 
-#include <webgpu/webgpu.h>
+#include "cgfx_webgpu.h"
 #include <stdint.h>
 #include "cgfx_ctx.h"
 #include "cgfx_buffer.h"

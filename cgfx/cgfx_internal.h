@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include <webgpu/webgpu.h>
+#include "cgfx_webgpu.h"
 
 
 /* ── Adapter request (synchronous wrapper) ────────────────────────── */
@@ -24,6 +24,23 @@ typedef struct {
     bool request_ended;
 } CgfxAdapterRequestData;
 
+#if CGFX_WEBGPU_MODERN
+static void cgfx__on_adapter_request_ended(WGPURequestAdapterStatus status,
+                                            WGPUAdapter adapter,
+                                            WGPUStringView message,
+                                            void *userdata1,
+                                            void *userdata2) {
+    (void)userdata2;
+    CgfxAdapterRequestData *data = userdata1;
+    if (status == WGPURequestAdapterStatus_Success) {
+        data->adapter = adapter;
+    } else {
+        fprintf(stderr, "[cgfx] Could not get WebGPU adapter: %.*s\n",
+                (int)message.length, message.data ? message.data : "");
+    }
+    data->request_ended = true;
+}
+#else
 static void cgfx__on_adapter_request_ended(WGPURequestAdapterStatus status,
                                             WGPUAdapter adapter,
                                             char const *message,
@@ -36,13 +53,15 @@ static void cgfx__on_adapter_request_ended(WGPURequestAdapterStatus status,
     }
     data->request_ended = true;
 }
+#endif
 
 /**
  * Request a WebGPU adapter synchronously.
  *
  * Internally calls wgpuInstanceRequestAdapter with a callback that captures
- * the result. On Emscripten, polls with emscripten_sleep until the async
- * operation completes. On native backends the callback fires synchronously.
+ * the result. On the modern API the callback is delivered via a CallbackInfo
+ * and drained with wgpuInstanceProcessEvents. On Emscripten, polls with
+ * emscripten_sleep. On legacy native backends the callback fires synchronously.
  *
  * @param instance  The WebGPU instance to request from.
  * @param options   Adapter request options (e.g., compatible surface).
@@ -52,14 +71,24 @@ static WGPUAdapter cgfx__request_adapter_sync(WGPUInstance instance,
                                                const WGPURequestAdapterOptions *options) {
     CgfxAdapterRequestData data = { .adapter = nullptr, .request_ended = false };
 
+#if CGFX_WEBGPU_MODERN
+    WGPURequestAdapterCallbackInfo cb = {
+        .mode = WGPUCallbackMode_AllowProcessEvents,
+        .callback = &cgfx__on_adapter_request_ended,
+        .userdata1 = (void *)&data,
+    };
+    wgpuInstanceRequestAdapter(instance, options, cb);
+    while (!data.request_ended)
+        wgpuInstanceProcessEvents(instance);
+#else
     wgpuInstanceRequestAdapter(instance, options,
                                &cgfx__on_adapter_request_ended,
                                (void *)&data);
-
-#ifdef __EMSCRIPTEN__
+#  ifdef __EMSCRIPTEN__
     while (!data.request_ended) {
         emscripten_sleep(100);
     }
+#  endif
 #endif
 
     assert(data.request_ended);
@@ -74,6 +103,23 @@ typedef struct {
     bool request_ended;
 } CgfxDeviceRequestData;
 
+#if CGFX_WEBGPU_MODERN
+static void cgfx__on_device_request_ended(WGPURequestDeviceStatus status,
+                                           WGPUDevice device,
+                                           WGPUStringView message,
+                                           void *userdata1,
+                                           void *userdata2) {
+    (void)userdata2;
+    CgfxDeviceRequestData *data = userdata1;
+    if (status == WGPURequestDeviceStatus_Success) {
+        data->device = device;
+    } else {
+        fprintf(stderr, "[cgfx] Could not get WebGPU device: %.*s\n",
+                (int)message.length, message.data ? message.data : "");
+    }
+    data->request_ended = true;
+}
+#else
 static void cgfx__on_device_request_ended(WGPURequestDeviceStatus status,
                                            WGPUDevice device,
                                            char const *message,
@@ -86,29 +132,44 @@ static void cgfx__on_device_request_ended(WGPURequestDeviceStatus status,
     }
     data->request_ended = true;
 }
+#endif
 
 /**
  * Request a WebGPU device synchronously.
  *
- * Same pattern as cgfx__request_adapter_sync: wraps the async callback
- * into a blocking call. On Emscripten, polls with emscripten_sleep.
+ * Same pattern as cgfx__request_adapter_sync: wraps the async callback into a
+ * blocking call. The modern path drains via wgpuInstanceProcessEvents, so it
+ * needs the owning instance.
  *
+ * @param instance    The owning instance (modern process-events drain).
  * @param adapter     The adapter to request the device from.
  * @param descriptor  Device descriptor (features, limits, queue label, etc.).
  * @return            The device handle, or NULL on failure.
  */
-static WGPUDevice cgfx__request_device_sync(WGPUAdapter adapter,
+static WGPUDevice cgfx__request_device_sync(WGPUInstance instance,
+                                             WGPUAdapter adapter,
                                              const WGPUDeviceDescriptor *descriptor) {
     CgfxDeviceRequestData data = { .device = nullptr, .request_ended = false };
 
+#if CGFX_WEBGPU_MODERN
+    WGPURequestDeviceCallbackInfo cb = {
+        .mode = WGPUCallbackMode_AllowProcessEvents,
+        .callback = &cgfx__on_device_request_ended,
+        .userdata1 = (void *)&data,
+    };
+    wgpuAdapterRequestDevice(adapter, descriptor, cb);
+    while (!data.request_ended)
+        wgpuInstanceProcessEvents(instance);
+#else
+    (void)instance;
     wgpuAdapterRequestDevice(adapter, descriptor,
                              &cgfx__on_device_request_ended,
                              (void *)&data);
-
-#ifdef __EMSCRIPTEN__
+#  ifdef __EMSCRIPTEN__
     while (!data.request_ended) {
         emscripten_sleep(100);
     }
+#  endif
 #endif
 
     assert(data.request_ended);
@@ -120,6 +181,18 @@ static WGPUDevice cgfx__request_device_sync(WGPUAdapter adapter,
 #ifndef NDEBUG
 
 #include <string.h>
+
+#if CGFX_WEBGPU_MODERN
+
+/* The modern API renamed adapter inspection (WGPUAdapterInfo / wgpuAdapterGetInfo,
+ * wgpuAdapterGetFeatures) and changed several WGPULimits field names. Porting the
+ * verbose banner is deferred; provide no-op stubs so the debug calls compile. */
+static void cgfx__inspect_adapter(WGPUAdapter adapter) { (void)adapter; }
+static void cgfx__inspect_limits(const char *label, const WGPULimits *l) {
+    (void)label; (void)l;
+}
+
+#else
 
 static const char *cgfx__adapter_type_str(WGPUAdapterType type) {
     switch (type) {
@@ -194,6 +267,8 @@ static void cgfx__inspect_limits(const char *label, const WGPULimits *l) {
     fprintf(stderr, "         maxComputeWorkgroupSizeZ        = %u\n",  l->maxComputeWorkgroupSizeZ);
     fprintf(stderr, "         maxComputeWorkgroupsPerDim      = %u\n",  l->maxComputeWorkgroupsPerDimension);
 }
+
+#endif /* CGFX_WEBGPU_MODERN */
 
 #endif /* !NDEBUG */
 

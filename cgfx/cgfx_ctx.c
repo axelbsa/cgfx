@@ -8,10 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <webgpu/webgpu.h>
-#ifdef WEBGPU_BACKEND_WGPU
-#  include <webgpu/wgpu.h>
-#endif
+#include "cgfx_webgpu.h"
 
 #include <GLFW/glfw3.h>
 #include <glfw3webgpu.h>
@@ -22,6 +19,35 @@
 
 
 /* ── Internal error callbacks ─────────────────────────────────────── */
+
+#if CGFX_WEBGPU_MODERN
+
+/* Modern WebGPU (Dawn): callbacks carry the device handle, a WGPUStringView
+ * message and two userdata pointers, and are registered via CallbackInfo
+ * structs on the device descriptor (see cgfx__init_from_surface). */
+static void cgfx__device_lost_callback(WGPUDevice const *device,
+                                        WGPUDeviceLostReason reason,
+                                        WGPUStringView message,
+                                        void *userdata1, void *userdata2) {
+    (void)device; (void)userdata1; (void)userdata2;
+    fprintf(stderr, "[cgfx] Device lost: reason %d", reason);
+    if (message.data && message.length > 0)
+        fprintf(stderr, " (%.*s)", (int)message.length, message.data);
+    fprintf(stderr, "\n");
+}
+
+static void cgfx__device_error_callback(WGPUDevice const *device,
+                                         WGPUErrorType type,
+                                         WGPUStringView message,
+                                         void *userdata1, void *userdata2) {
+    (void)device; (void)userdata1; (void)userdata2;
+    fprintf(stderr, "[cgfx] Uncaptured device error: type %d", type);
+    if (message.data)
+        fprintf(stderr, " (%.*s)", (int)message.length, message.data);
+    fprintf(stderr, "\n");
+}
+
+#else
 
 static void cgfx__device_lost_callback(WGPUDeviceLostReason reason,
                                         char const *message,
@@ -43,13 +69,19 @@ static void cgfx__device_error_callback(WGPUErrorType type,
     fprintf(stderr, "\n");
 }
 
+#endif
+
 WGPURequiredLimits cgfx_default_limits(void) {
     WGPURequiredLimits limits = {0};
     limits.nextInChain = nullptr;
     /* 0xFF fills every u32 with WGPU_LIMIT_U32_UNDEFINED (0xFFFFFFFF) and
-       every u64 with WGPU_LIMIT_U64_UNDEFINED. This works because the
-       WGPULimits struct contains only integer limit fields. */
+       every u64 with WGPU_LIMIT_U64_UNDEFINED, requesting "no preference". */
     memset(&limits.limits, 0xFF, sizeof(limits.limits));
+#if CGFX_WEBGPU_MODERN
+    /* The modern WGPULimits leads with a nextInChain pointer; the blanket
+       0xFF fill would leave it as a garbage pointer, so reset it to null. */
+    limits.limits.nextInChain = nullptr;
+#endif
     return limits;
 }
 
@@ -100,11 +132,15 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
     WGPUAdapter adapter = cgfx__request_adapter_sync(instance, &adapter_opts);
     fprintf(stderr, "[cgfx] Got adapter: %p\n", (void *)&adapter);
 
-    wgpuInstanceRelease(instance);
+    /* Keep the instance alive for the context's lifetime: the modern API
+     * drains async work via wgpuInstanceProcessEvents (see cgfx__device_sync).
+     * Released in cgfx_ctx_destroy. */
+    ctx->instance = instance;
 
     if (!adapter) {
         fprintf(stderr, "[cgfx] Failed to obtain WebGPU adapter\n");
         wgpuSurfaceRelease(ctx->surface);
+        wgpuInstanceRelease(ctx->instance);
         return false;
     }
 
@@ -113,7 +149,11 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
 
     WGPUSupportedLimits supported = {0};
     supported.nextInChain = nullptr;
+#if CGFX_WEBGPU_MODERN
+    wgpuAdapterGetLimits(adapter, &supported.limits);
+#else
     wgpuAdapterGetLimits(adapter, &supported);
+#endif
     cgfx__inspect_limits("Adapter supported", &supported.limits);
     // cgfx__inspect_limits("Requested", &limits->limits);  // This makes to
     // much noise
@@ -130,36 +170,64 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
     fprintf(stderr, "[cgfx] Requesting device...\n");
     WGPUDeviceDescriptor device_desc = {};
     device_desc.nextInChain = nullptr;
-    device_desc.label = "cgfx device";
+    device_desc.label = CGFX_STR("cgfx device");
     device_desc.requiredFeatureCount = feature_count;
     device_desc.requiredFeatures = features;
+#if CGFX_WEBGPU_MODERN
+    /* Modern takes a bare WGPULimits*; unwrap our compat wrapper. */
+    device_desc.requiredLimits = limits ? &limits->limits : nullptr;
+#else
     device_desc.requiredLimits = limits;
+#endif
     device_desc.defaultQueue.nextInChain = nullptr;
-    device_desc.defaultQueue.label = "cgfx default queue";
+    device_desc.defaultQueue.label = CGFX_STR("cgfx default queue");
+
+#if CGFX_WEBGPU_MODERN
+    /* Modern WebGPU: device-lost and uncaptured-error handlers are registered
+     * via CallbackInfo structs on the descriptor. The public cgfx callback
+     * typedefs still use the legacy signature, so user-supplied callbacks are
+     * not wired on this path yet (PoC) — the internal defaults are always used. */
+    (void)on_device_lost;
+    (void)on_device_error;
+    device_desc.deviceLostCallbackInfo = (WGPUDeviceLostCallbackInfo){
+        .mode = WGPUCallbackMode_AllowSpontaneous,
+        .callback = &cgfx__device_lost_callback,
+        .userdata1 = callback_user_data,
+    };
+    device_desc.uncapturedErrorCallbackInfo = (WGPUUncapturedErrorCallbackInfo){
+        .callback = &cgfx__device_error_callback,
+        .userdata1 = callback_user_data,
+    };
+#else
     device_desc.deviceLostCallback = on_device_lost
         ? on_device_lost : &cgfx__device_lost_callback;
     device_desc.deviceLostUserdata = callback_user_data;
-    ctx->device = cgfx__request_device_sync(adapter, &device_desc);
+#endif
+
+    ctx->device = cgfx__request_device_sync(instance, adapter, &device_desc);
     fprintf(stderr, "[cgfx] Got device: %p\n", (void *)ctx->device);
 
     if (!ctx->device) {
         fprintf(stderr, "[cgfx] Failed to obtain WebGPU device\n");
         wgpuAdapterRelease(adapter);
         wgpuSurfaceRelease(ctx->surface);
+        wgpuInstanceRelease(ctx->instance);
         return false;
     }
 
-    /* ── Error callback ──────────────────────────────────────────── */
+#if !CGFX_WEBGPU_MODERN
+    /* ── Error callback (legacy: set after device creation) ──────── */
     wgpuDeviceSetUncapturedErrorCallback(
         ctx->device,
         on_device_error ? on_device_error : &cgfx__device_error_callback,
         callback_user_data);
+#endif
 
     /* ── Get default queue ───────────────────────────────────────── */
     ctx->queue = wgpuDeviceGetQueue(ctx->device);
 
     /* ── Configure surface ───────────────────────────────────────── */
-    ctx->surface_format = wgpuSurfaceGetPreferredFormat(ctx->surface, adapter);
+    ctx->surface_format = cgfx__surface_preferred_format(ctx->surface, adapter);
     ctx->present_mode = present_mode;
     cgfx__configure_surface(ctx, width, height);
 
@@ -183,6 +251,7 @@ static bool cgfx__init_from_surface(CgfxCtx *ctx,
             wgpuQueueRelease(ctx->queue);
             wgpuSurfaceRelease(ctx->surface);
             wgpuDeviceRelease(ctx->device);
+            wgpuInstanceRelease(ctx->instance);
             return false;
         }
     }
@@ -325,6 +394,8 @@ void cgfx_ctx_destroy(CgfxCtx *ctx) {
     wgpuQueueRelease(ctx->queue);
     wgpuSurfaceRelease(ctx->surface);
     wgpuDeviceRelease(ctx->device);
+    if (ctx->instance)
+        wgpuInstanceRelease(ctx->instance);
     if (ctx->window) {
         glfwDestroyWindow(ctx->window);
         glfwTerminate();

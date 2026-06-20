@@ -12,7 +12,7 @@
 #ifndef CGFX_BUFFER_H
 #define CGFX_BUFFER_H
 
-#include <webgpu/webgpu.h>
+#include "cgfx_webgpu.h"
 #include <stdint.h>
 #include "cgfx_ctx.h"
 #include "cgfx_export.h"

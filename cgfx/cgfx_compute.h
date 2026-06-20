@@ -28,7 +28,7 @@
 #ifndef CGFX_COMPUTE_H
 #define CGFX_COMPUTE_H
 
-#include <webgpu/webgpu.h>
+#include "cgfx_webgpu.h"
 #include <stdbool.h>
 #include "cgfx_ctx.h"
 #include "cgfx_shader.h"

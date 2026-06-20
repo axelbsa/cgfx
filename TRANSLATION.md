@@ -85,6 +85,7 @@ device_desc.uncapturedErrorCallbackInfo = (WGPUUncapturedErrorCallbackInfo){
 13. [Removed / Renamed Types](#13-renames)
 14. [wgpu-native Extension (wgpu.h) Changes](#14-wgpu-ext)
 15. [New Constants & Macros](#15-constants)
+16. [Google Dawn vs wgpu-native v29](#16-dawn)
 
 ---
 
@@ -845,3 +846,120 @@ WGPUSurfaceCapabilities caps = {};
 wgpuSurfaceGetCapabilities(surface, adapter, &caps);
 WGPUTextureFormat format = caps.formats[0];
 ```
+
+---
+
+## 16. Google Dawn vs wgpu-native v29 {#16-dawn}
+
+Sections 1-15 map Elie Michel's v0.19 tutorial onto **wgpu-native v29**. Google
+Dawn ships the *same* modern `webgpu.h`, so almost every rename above
+(`WGPUStringView`, CallbackInfo + Future, `WGPUSurfaceSourceXlibWindow`,
+`WGPUTexelCopyTextureInfo`, flattened `WGPULimits`, `SuccessOptimal`, …) applies
+to Dawn **unchanged**. This section captures only the places where current Dawn
+differs from that v29 baseline — discovered while wiring the optional
+`-DWEBGPU_BACKEND=DAWN_LOCAL` backend (a locally-built Dawn at
+`~/src/dawn/out/Release`).
+
+cgfx papers over both generations from one source tree. The split is decided at
+compile time by probing **`WGPU_STRLEN`** (a macro only the modern header
+defines) in `cgfx/cgfx_webgpu.h`, which sets `CGFX_WEBGPU_MODERN` and provides
+the `CGFX_STR()` label helper plus small inline shims (`cgfx__device_sync`,
+`cgfx__surface_preferred_format`, `cgfx__surface_texture_ok`). The legacy
+wgpu-native v0.19 build is unaffected — every modern branch is behind
+`CGFX_WEBGPU_MODERN`.
+
+### 16.1 Build & link model (the biggest practical difference)
+
+| | wgpu-native | Google Dawn (local build) |
+|---|---|---|
+| Artifact | prebuilt **C shared** lib `libwgpu_native.so` | monolithic **C++ static** lib `libwebgpu_dawn.a` |
+| Runtime copy | `.so` copied next to the exe (`target_copy_webgpu_binaries`) | none — statically linked |
+| Link deps | none extra | C++ runtime + platform: `stdc++ m dl rt pthread` |
+| Headers | bundled by the distribution | `<dawn>/include` + `<dawn>/out/<cfg>/gen/include` |
+
+Because Dawn is C++, a **C** executable must pull in the C++ runtime and Dawn's
+platform deps explicitly. cgfx wires this in `vendor/webgpu/webgpu.cmake` under
+the `DAWN_LOCAL` branch (path overridable with `-DCGFX_DAWN_DIR=...`):
+
+```cmake
+target_link_libraries(webgpu INTERFACE
+    "${CGFX_DAWN_DIR}/src/dawn/native/libwebgpu_dawn.a"
+    Threads::Threads ${CMAKE_DL_LIBS} stdc++ m rt)
+```
+
+Note: Dawn's generated `DawnConfig.cmake` points at a `DawnTargets.cmake` that
+lives in a different directory in the build tree, so `find_package(Dawn)` is not
+self-consistent there — cgfx wires the lib + include dirs by explicit path
+instead.
+
+### 16.2 Event pump / device synchronization
+
+`wgpuDevicePoll()` is a **wgpu-native** extension and does not exist in Dawn.
+
+| Purpose | wgpu-native | Dawn |
+|---|---|---|
+| Drain submitted work / fire callbacks | `wgpuDevicePoll(device, wait, NULL)` | `wgpuInstanceProcessEvents(instance)` (also `wgpuDeviceTick(device)`) |
+
+Consequence: Dawn must keep the **`WGPUInstance` alive** for the whole context
+(to call `wgpuInstanceProcessEvents`), whereas the v0.19 code released the
+instance right after requesting the adapter. cgfx now stores `instance` on
+`CgfxCtx` and releases it in `cgfx_ctx_destroy`. Async requests
+(adapter/device/buffer-map) are registered with
+`WGPUCallbackMode_AllowProcessEvents` and drained in a
+`while (!done) wgpuInstanceProcessEvents(instance);` loop. All of this is behind
+the `cgfx__device_sync()` shim.
+
+### 16.3 Compute pipeline stage struct (not in §1-15)
+
+The compute stage struct was renamed; field names are preserved.
+
+| v0.19 / v29 | Dawn (current) |
+|-------------|----------------|
+| `WGPUProgrammableStageDescriptor` | `WGPUComputeState` |
+
+```c
+// pipeline_desc.compute is WGPUComputeState in modern Dawn:
+pipeline_desc.compute = (WGPUComputeState){
+    .module = module,
+    .entryPoint = (WGPUStringView){ .data = "cs_main", .length = WGPU_STRLEN },
+};
+```
+
+### 16.4 `WGPULimits` now leads with `nextInChain` — the memset trap
+
+Modern `WGPULimits` begins with a `WGPUChainedStruct *nextInChain`. The old
+"fill every field with `0xFF` to mean *no preference*" trick
+(`memset(&limits, 0xFF, sizeof(limits))`) therefore corrupts that pointer, and
+Dawn crashes walking the bogus chain. Zero the pointer after the fill:
+
+```c
+memset(&limits, 0xFF, sizeof(limits));   // every u32/u64 = UNDEFINED
+limits.nextInChain = nullptr;            // ← required on modern Dawn
+```
+
+Requesting `UINT32_MAX` for every limit also makes Dawn print informational
+`maxDynamic*BuffersPerPipelineLayout artificially reduced ... to 16` warnings —
+harmless, but absent on wgpu-native.
+
+### 16.5 Adapter inspection
+
+Dawn replaced `WGPUAdapterProperties` / `wgpuAdapterGetProperties` with
+`WGPUAdapterInfo` / `wgpuAdapterGetInfo` (string fields are `WGPUStringView`),
+and `wgpuAdapterEnumerateFeatures` with `wgpuAdapterGetFeatures`;
+`WGPULimits.maxInterStageShaderComponents` is gone (only
+`maxInterStageShaderVariables` remains). cgfx currently compiles its verbose
+debug banner out on the modern path (`#if !CGFX_WEBGPU_MODERN`) — a full modern
+port of the banner is a follow-up.
+
+### 16.6 Validation strictness (why testing on Dawn is worth it)
+
+Dawn validates far more aggressively than wgpu-native and is the reference
+implementation for the spec. A clean run on Dawn (no validation errors on
+stderr) is a strong correctness signal. This is the main motivation for the
+optional backend: build with `-DWEBGPU_BACKEND=DAWN_LOCAL` to shake out spec
+violations that wgpu-native tolerates.
+
+> **Status:** proof-of-concept. The whole cgfx library compiles on both
+> backends and the `triangle` example renders cleanly on Dawn. Runtime
+> verification of the other examples (compute readback, textures, MRT,
+> instancing) on Dawn is a follow-up.

@@ -12,7 +12,7 @@
 #ifndef CGFX_CTX_H
 #define CGFX_CTX_H
 
-#include <webgpu/webgpu.h>
+#include "cgfx_webgpu.h"
 #include <GLFW/glfw3.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -76,6 +76,7 @@ typedef struct CgfxCtxDesc {
  */
 typedef struct CgfxCtx {
     GLFWwindow        *window;             /**< The GLFW window handle.                    */
+    WGPUInstance       instance;           /**< The WebGPU instance (kept for event pump). */
     WGPUDevice         device;             /**< The logical GPU device.                    */
     WGPUQueue          queue;              /**< The default command queue.                 */
     WGPUSurface        surface;            /**< The window surface for presenting frames.  */

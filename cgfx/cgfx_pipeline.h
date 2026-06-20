@@ -12,7 +12,7 @@
 #ifndef CGFX_PIPELINE_H
 #define CGFX_PIPELINE_H
 
-#include <webgpu/webgpu.h>
+#include "cgfx_webgpu.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include "cgfx_ctx.h"

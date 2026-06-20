@@ -9,10 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <webgpu/webgpu.h>
-#ifdef WEBGPU_BACKEND_WGPU
-#  include <webgpu/wgpu.h>
-#endif
+#include "cgfx_webgpu.h"
 
 
 static WGPUShaderModule create_module(const CgfxCtx *ctx,
@@ -20,18 +17,25 @@ static WGPUShaderModule create_module(const CgfxCtx *ctx,
                                       const char *wgsl) {
     WGPUShaderModuleDescriptor shader_desc = {};
 
-#ifdef WEBGPU_BACKEND_WGPU
+#if CGFX_WEBGPU_MODERN
+    /* Modern WebGPU renamed the WGSL source struct and made code a StringView. */
+    WGPUShaderSourceWGSL wgsl_desc = {};
+    wgsl_desc.chain.next = nullptr;
+    wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
+    wgsl_desc.code = CGFX_STR(wgsl);
+#else
+#  ifdef WEBGPU_BACKEND_WGPU
     shader_desc.hintCount = 0;
     shader_desc.hints = nullptr;
-#endif
-
+#  endif
     WGPUShaderModuleWGSLDescriptor wgsl_desc = {};
     wgsl_desc.chain.next = nullptr;
     wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
     wgsl_desc.code = wgsl;
+#endif
 
     shader_desc.nextInChain = &wgsl_desc.chain;
-    shader_desc.label = label;
+    shader_desc.label = CGFX_STR(label);
 
     return wgpuDeviceCreateShaderModule(ctx->device, &shader_desc);
 }

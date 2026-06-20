@@ -15,7 +15,7 @@
 #ifndef CGFX_TEXTURE_H
 #define CGFX_TEXTURE_H
 
-#include <webgpu/webgpu.h>
+#include "cgfx_webgpu.h"
 #include <stdint.h>
 #include "cgfx_export.h"
 

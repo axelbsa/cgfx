@@ -3,6 +3,7 @@
  * @brief Implementation of render pipeline creation with defaults.
  */
 #include "cgfx_pipeline.h"
+#include "cgfx_webgpu.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -31,7 +32,7 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
      * generate vertices procedurally (e.g., using vertex_index builtin).
      */
     pipeline_desc.vertex.module = desc->shader->module;
-    pipeline_desc.vertex.entryPoint = vs_entry;
+    pipeline_desc.vertex.entryPoint = CGFX_STR(vs_entry);
     pipeline_desc.vertex.constantCount = 0;
     pipeline_desc.vertex.constants = nullptr;
     pipeline_desc.vertex.bufferCount = desc->vertex_buffer_count;
@@ -60,7 +61,7 @@ WGPURenderPipeline cgfx_pipeline_create(const CgfxCtx *ctx,
      */
     WGPUFragmentState fragment_state = {};
     fragment_state.module = desc->shader->module;
-    fragment_state.entryPoint = fs_entry;
+    fragment_state.entryPoint = CGFX_STR(fs_entry);
     fragment_state.constantCount = 0;
     fragment_state.constants = nullptr;
 

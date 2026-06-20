@@ -72,6 +72,27 @@
 #include <GLFW/glfw3native.h>
 #endif
 
+/*
+ * The modern webgpu.h (Google Dawn / recent wgpu-native) renamed the surface
+ * "descriptor-from-X" chained structs to "surface-source-X" and turned the
+ * surface label into a WGPUStringView. WGPU_STRLEN exists only in that modern
+ * header, so we use it to pick the right names. The legacy distribution keeps
+ * the original names and a plain char* label.
+ */
+#ifdef WGPU_STRLEN
+#  define G3W_XLIB_STRUCT WGPUSurfaceSourceXlibWindow
+#  define G3W_XLIB_STYPE  WGPUSType_SurfaceSourceXlibWindow
+#  define G3W_WL_STRUCT   WGPUSurfaceSourceWaylandSurface
+#  define G3W_WL_STYPE    WGPUSType_SurfaceSourceWaylandSurface
+#  define G3W_LABEL_NULL  ((WGPUStringView){ NULL, 0 })
+#else
+#  define G3W_XLIB_STRUCT WGPUSurfaceDescriptorFromXlibWindow
+#  define G3W_XLIB_STYPE  WGPUSType_SurfaceDescriptorFromXlibWindow
+#  define G3W_WL_STRUCT   WGPUSurfaceDescriptorFromWaylandSurface
+#  define G3W_WL_STYPE    WGPUSType_SurfaceDescriptorFromWaylandSurface
+#  define G3W_LABEL_NULL  NULL
+#endif
+
 WGPUSurface glfwGetWGPUSurface(WGPUInstance instance, GLFWwindow* window) {
 #if WGPU_TARGET == WGPU_TARGET_MACOS
     {
@@ -96,15 +117,15 @@ WGPUSurface glfwGetWGPUSurface(WGPUInstance instance, GLFWwindow* window) {
         Display* x11_display = glfwGetX11Display();
         Window x11_window = glfwGetX11Window(window);
 
-        WGPUSurfaceDescriptorFromXlibWindow fromXlibWindow;
+        G3W_XLIB_STRUCT fromXlibWindow;
         fromXlibWindow.chain.next = NULL;
-        fromXlibWindow.chain.sType = WGPUSType_SurfaceDescriptorFromXlibWindow;
+        fromXlibWindow.chain.sType = G3W_XLIB_STYPE;
         fromXlibWindow.display = x11_display;
         fromXlibWindow.window = x11_window;
 
         WGPUSurfaceDescriptor surfaceDescriptor;
         surfaceDescriptor.nextInChain = &fromXlibWindow.chain;
-        surfaceDescriptor.label = NULL;
+        surfaceDescriptor.label = G3W_LABEL_NULL;
 
         return wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
     }
@@ -113,15 +134,15 @@ WGPUSurface glfwGetWGPUSurface(WGPUInstance instance, GLFWwindow* window) {
         struct wl_display* wayland_display = glfwGetWaylandDisplay();
         struct wl_surface* wayland_surface = glfwGetWaylandWindow(window);
 
-        WGPUSurfaceDescriptorFromWaylandSurface fromWaylandSurface;
+        G3W_WL_STRUCT fromWaylandSurface;
         fromWaylandSurface.chain.next = NULL;
-        fromWaylandSurface.chain.sType = WGPUSType_SurfaceDescriptorFromWaylandSurface;
+        fromWaylandSurface.chain.sType = G3W_WL_STYPE;
         fromWaylandSurface.display = wayland_display;
         fromWaylandSurface.surface = wayland_surface;
 
         WGPUSurfaceDescriptor surfaceDescriptor;
         surfaceDescriptor.nextInChain = &fromWaylandSurface.chain;
-        surfaceDescriptor.label = NULL;
+        surfaceDescriptor.label = G3W_LABEL_NULL;
 
         return wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
   }
