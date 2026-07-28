@@ -79,6 +79,15 @@ static void on_resize(GLFWwindow *window, int width, int height) {
     cgfx_ctx_resize(ctx, (uint32_t)width, (uint32_t)height);
 }
 
+/* Mouse-wheel zoom: scales the camera's distance from the grid. */
+static float g_zoom = 1.0f;
+static void on_scroll(GLFWwindow *window, double xoffset, double yoffset) {
+    (void)window; (void)xoffset;
+    g_zoom *= (yoffset > 0.0) ? (1.0f / 1.1f) : 1.1f; /* scroll up = zoom in */
+    if (g_zoom < 0.05f) g_zoom = 0.05f;
+    if (g_zoom > 6.0f)  g_zoom = 6.0f;
+}
+
 int main(void) {
     CgfxCtx ctx;
     char title[50];
@@ -94,6 +103,7 @@ int main(void) {
     }
     glfwSetWindowUserPointer(ctx.window, &ctx);
     glfwSetFramebufferSizeCallback(ctx.window, on_resize);
+    glfwSetScrollCallback(ctx.window, on_scroll);
 
     CgfxShader shader = cgfx_shader_create_from_file(&ctx,
         "instanced shader", "shaders/instanced_rendering.wgsl",
@@ -195,7 +205,7 @@ int main(void) {
         float cam_x = cosf(angle) * radius;
         float cam_z = sinf(angle) * radius;
         cgfx_camera_look_at(&camera,
-            (vec3){cam_x, 90.0f, cam_z},
+            (vec3){cam_x * g_zoom, 90.0f * g_zoom, cam_z * g_zoom},
             (vec3){0, 0, 0},
             (vec3){0, 1, 0});
         cgfx_camera_perspective(&camera, 80.0f,
