@@ -49,7 +49,8 @@ FetchContent_Declare(
     URL      "${SLANG_URL}"
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-FetchContent_Populate(slang-compiler)
+# FetchContent_Populate(slang-compiler)
+FetchContent_MakeAvailable(slang-compiler)
 
 set(SLANG_ROOT "${slang-compiler_SOURCE_DIR}")
 message(STATUS "Slang extracted to: ${SLANG_ROOT}")
